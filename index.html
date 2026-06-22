@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  index.html — the single page for the Gym App.
+  index.html — the single page for Athena's Arena.
 
   Phase 1 (the MVP): profiles + exercises.
   - Create profiles and pick the active one (Settings tab).
@@ -16,7 +16,7 @@
     <meta charset="UTF-8" />
     <!-- Makes the page size correctly on phones -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gym App</title>
+    <title>Athena's Arena</title>
 
     <!-- Load the Nunito font from Google Fonts (a <link> font is allowed). -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -36,12 +36,24 @@
       The "Switch" button jumps to the Settings tab where profiles are managed.
     -->
     <header class="topbar">
-      <span class="topbar__brand">Gym App 💪</span>
-      <button class="profile-chip" id="activeProfileChip" type="button">
-        <!-- Filled in by app.js with the active profile's name -->
-        <span id="activeProfileName">No profile</span>
-        <span class="profile-chip__hint">Switch</span>
-      </button>
+      <span class="topbar__brand">Athena's Arena 💪</span>
+      <div class="topbar__right">
+        <!-- Dark mode toggle. app.js swaps the icon + label with the theme. -->
+        <button
+          class="icon-btn"
+          id="themeToggle"
+          type="button"
+          aria-label="Switch to dark mode"
+          aria-pressed="false"
+        >
+          🌙
+        </button>
+        <button class="profile-chip" id="activeProfileChip" type="button">
+          <!-- Filled in by app.js with the active profile's name -->
+          <span id="activeProfileName">No profile</span>
+          <span class="profile-chip__hint">Switch</span>
+        </button>
+      </div>
     </header>
 
     <!--
@@ -52,8 +64,81 @@
     <main class="app">
       <!-- ===================== TODAY VIEW ===================== -->
       <section class="view view--active" id="view-today" data-view="today">
-        <h1 class="view__title">Today</h1>
-        <p class="view__subtitle" id="todaySubtitle">—</p>
+        <!--
+          Friendly hero header with a little mascot. The greeting and date are
+          filled in by app.js. The SVG is drawn inline so there's no image file
+          to load, and it's marked aria-hidden because it's decorative.
+        -->
+        <div class="hero">
+          <div class="hero__mascot" aria-hidden="true">
+            <!-- Sun mascot — shown in light mode. -->
+            <svg
+              class="mascot mascot--sun"
+              viewBox="0 0 100 100"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <!-- Face -->
+              <circle cx="50" cy="50" r="34" fill="#F6D365" />
+              <!-- Headband -->
+              <path d="M18 38 Q50 24 82 38 L82 30 Q50 16 18 30 Z" fill="#EF7C7C" />
+              <!-- Eyes -->
+              <circle cx="39" cy="52" r="4.2" fill="#2E2E33" />
+              <circle cx="61" cy="52" r="4.2" fill="#2E2E33" />
+              <!-- Rosy cheeks -->
+              <circle cx="33" cy="60" r="4.5" fill="#EF7C7C" opacity="0.55" />
+              <circle cx="67" cy="60" r="4.5" fill="#EF7C7C" opacity="0.55" />
+              <!-- Smile -->
+              <path
+                d="M40 62 Q50 71 60 62"
+                fill="none"
+                stroke="#2E2E33"
+                stroke-width="3.5"
+                stroke-linecap="round"
+              />
+              <!-- Little dumbbell arms -->
+              <rect x="10" y="60" width="12" height="6" rx="3" fill="#5FC4BC" />
+              <rect x="78" y="60" width="12" height="6" rx="3" fill="#5FC4BC" />
+            </svg>
+
+            <!-- Moon mascot — shown in dark mode (a smiling moon + stars). -->
+            <svg
+              class="mascot mascot--moon"
+              viewBox="0 0 100 100"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <!-- Moon disc -->
+              <circle cx="50" cy="50" r="34" fill="#EDEAF6" />
+              <!-- Craters -->
+              <circle cx="64" cy="38" r="5" fill="#D9D4EC" />
+              <circle cx="68" cy="57" r="3.5" fill="#D9D4EC" />
+              <circle cx="39" cy="35" r="3" fill="#D9D4EC" />
+              <!-- Eyes -->
+              <circle cx="42" cy="52" r="4.2" fill="#2E2E33" />
+              <circle cx="58" cy="52" r="4.2" fill="#2E2E33" />
+              <!-- Rosy cheeks -->
+              <circle cx="34" cy="60" r="4.5" fill="#EF7C7C" opacity="0.5" />
+              <circle cx="66" cy="60" r="4.5" fill="#EF7C7C" opacity="0.5" />
+              <!-- Smile -->
+              <path
+                d="M41 62 Q50 70 59 62"
+                fill="none"
+                stroke="#2E2E33"
+                stroke-width="3.5"
+                stroke-linecap="round"
+              />
+              <!-- Little dumbbell arms (still a workout buddy at night!) -->
+              <rect x="10" y="60" width="12" height="6" rx="3" fill="#5FC4BC" />
+              <rect x="78" y="60" width="12" height="6" rx="3" fill="#5FC4BC" />
+              <!-- Twinkly stars -->
+              <circle cx="86" cy="22" r="2.6" fill="#F6D365" />
+              <circle cx="16" cy="24" r="2" fill="#B9A7E0" />
+            </svg>
+          </div>
+          <div class="hero__text">
+            <h1 class="hero__greeting" id="heroGreeting">Hi there!</h1>
+            <p class="hero__date" id="heroDate">—</p>
+          </div>
+        </div>
 
         <!-- Starts a workout for today. app.js hides this when there's nothing to do. -->
         <button class="btn btn--primary btn--block" id="startTodayBtn" type="button" hidden>

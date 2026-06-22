@@ -1,4 +1,4 @@
-# Gym App — Build Roadmap
+# Athena's Arena — Build Roadmap
 
 A phased plan to follow while building the app with Claude Code. Build one phase at a
 time. Don't start a phase until the previous one works and is committed to git.
@@ -7,9 +7,10 @@ time. Don't start a phase until the previous one works and is committed to git.
 
 ## 1. Vision
 
-A friendly, personal gym app where I can set up a profile, add exercises (with sets,
-reps, an emoji icon, and a day of the week), and see my plan grouped by day. Later
-phases add a workout mode, a rest timer, and simple progress tracking.
+Athena's Arena is a friendly, personal gym app where I can set up a profile, add
+exercises (with sets, reps, an emoji icon, and a day of the week), and see my plan
+grouped by day. Later phases add a workout mode, a rest timer, and simple progress
+tracking.
 
 **Look & feel:** soft pastel "cute" style (cream background, rounded white cards,
 pill buttons, friendly emoji icons, floating bottom tab bar).

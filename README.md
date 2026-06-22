@@ -1,4 +1,4 @@
-# Gym App 💪
+# Athena's Arena 💪
 
 A friendly, personal gym planner that runs entirely in the browser. Create a profile,
 add exercises (sets, reps, an emoji icon, and a day of the week), and see your plan
@@ -25,7 +25,7 @@ See `ROADMAP.md`.
 
 ## Project structure
 ```
-gym-app/
+athenas-arena/
 ├── index.html      # the page
 ├── styles.css      # the cute pastel styling
 ├── app.js          # the app logic (profiles, exercises, storage)

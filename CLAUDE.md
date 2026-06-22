@@ -1,9 +1,9 @@
-# CLAUDE.md — Project guardrails for the Gym App
+# CLAUDE.md — Project guardrails for Athena's Arena
 
 Read this at the start of every session and follow it for all work in this project.
 
 ## What this project is
-A personal, browser-based gym app. The owner is a **beginner at front-end web
+Athena's Arena is a personal, browser-based gym app. The owner is a **beginner at front-end web
 development** (their strength is the Microsoft Power Platform, not JavaScript
 frameworks). Build accordingly: explain things simply and comment the code.
 

@@ -1,5 +1,5 @@
 /*
-  app.js — all the behaviour for the Gym App (Phase 1).
+  app.js — all the behaviour for Athena's Arena.
 
   What this file does, in plain English:
   - Saves and loads data from the browser's localStorage (so it survives refresh).
@@ -23,6 +23,7 @@ const STORAGE_KEYS = {
   activeProfileId: "gym:activeProfileId",
   exercises: "gym:exercises",
   sessions: "gym:sessions", // Phase 2: saved workout history
+  theme: "gym:theme", // Phase 4: "light" or "dark"
 };
 
 // The fixed list of emoji icons the user can pick from.
@@ -244,14 +245,25 @@ function renderToday() {
   const container = document.getElementById("todayList");
   container.innerHTML = "";
 
-  const subtitle = document.getElementById("todaySubtitle");
   const todayName = getTodayName();
-  subtitle.textContent = todayName;
 
+  // Fill in the hero header: a greeting and the full date.
+  const greeting = document.getElementById("heroGreeting");
+  const dateLine = document.getElementById("heroDate");
   const activeProfile = getActiveProfile();
+  greeting.textContent = activeProfile
+    ? "Hi, " + activeProfile.name + "!"
+    : "Hi there!";
+  dateLine.textContent = new Date().toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+
   if (!activeProfile) {
+    document.getElementById("startTodayBtn").hidden = true;
     container.appendChild(
-      createEmptyState("👤", "Create a profile in Settings to get started.")
+      createEmptyState("👋", "Create a profile in Settings to get started.")
     );
     return;
   }
@@ -873,6 +885,8 @@ function selectEmoji(emoji) {
 function openModal() {
   document.getElementById("formError").hidden = true;
   document.getElementById("exerciseModal").hidden = false;
+  // Move keyboard focus into the first field for easy typing.
+  document.getElementById("nameInput").focus();
 }
 
 // Hide the modal.
@@ -1329,7 +1343,7 @@ function gatherCleanData(profileIdFilter) {
 // "scopeLabel" is just used in the filename (e.g. "all" or the profile name).
 function downloadBackup(cleanData, activeProfileId, scopeLabel) {
   const backup = {
-    app: "gym-app",
+    app: "athenas-arena",
     version: 1,
     scope: scopeLabel,
     exportedAt: new Date().toISOString(),
@@ -1352,7 +1366,7 @@ function downloadBackup(cleanData, activeProfileId, scopeLabel) {
   const today = new Date().toISOString().slice(0, 10); // e.g. 2026-06-22
   // Make the scope safe for a filename (letters/numbers/dashes only).
   const safeScope = scopeLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-  link.download = "gym-app-backup-" + safeScope + "-" + today + ".json";
+  link.download = "athenas-arena-backup-" + safeScope + "-" + today + ".json";
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -1388,7 +1402,7 @@ function importData(file) {
 
       // A quick sanity check that this looks like our backup format.
       if (!data || !Array.isArray(data[STORAGE_KEYS.profiles])) {
-        window.alert("That file doesn't look like a Gym App backup.");
+        window.alert("That file doesn't look like an Athena's Arena backup.");
         return;
       }
 
@@ -1475,6 +1489,58 @@ function importData(file) {
 }
 
 /* =========================================================================
+   7d. DARK MODE (Phase 4)
+   We put data-theme="dark" on the <html> element; the CSS does the rest.
+   The choice is saved so it sticks between visits.
+   ========================================================================= */
+
+// Apply a theme ("light" or "dark") to the page and update the toggle button.
+function applyTheme(theme) {
+  const toggle = document.getElementById("themeToggle");
+
+  if (theme === "dark") {
+    document.documentElement.setAttribute("data-theme", "dark");
+    if (toggle) {
+      toggle.textContent = "☀️"; // tapping now switches back to light
+      toggle.setAttribute("aria-label", "Switch to light mode");
+      toggle.setAttribute("aria-pressed", "true");
+    }
+  } else {
+    document.documentElement.removeAttribute("data-theme");
+    if (toggle) {
+      toggle.textContent = "🌙"; // tapping switches to dark
+      toggle.setAttribute("aria-label", "Switch to dark mode");
+      toggle.setAttribute("aria-pressed", "false");
+    }
+  }
+}
+
+// Work out which theme to start with: a saved choice wins; otherwise we follow
+// the device's system setting.
+function getStartingTheme() {
+  const saved = localStorage.getItem(STORAGE_KEYS.theme);
+  if (saved === "dark" || saved === "light") {
+    return saved;
+  }
+  if (
+    window.matchMedia &&
+    window.matchMedia("(prefers-color-scheme: dark)").matches
+  ) {
+    return "dark";
+  }
+  return "light";
+}
+
+// Flip between light and dark, and remember the choice.
+function toggleTheme() {
+  const isDark =
+    document.documentElement.getAttribute("data-theme") === "dark";
+  const next = isDark ? "light" : "dark";
+  localStorage.setItem(STORAGE_KEYS.theme, next);
+  applyTheme(next);
+}
+
+/* =========================================================================
    8. TAB / VIEW SWITCHING
    ========================================================================= */
 
@@ -1506,6 +1572,10 @@ function switchView(viewName) {
 
 function init() {
   buildEmojiPicker();
+
+  // Dark mode: apply the saved/system theme, then wire up the toggle button.
+  applyTheme(getStartingTheme());
+  document.getElementById("themeToggle").addEventListener("click", toggleTheme);
 
   // Tab bar: clicking a tab switches view.
   document.querySelectorAll(".tab").forEach((tab) => {
@@ -1597,6 +1667,20 @@ function init() {
     input.value = ""; // clear the box for next time
   });
 
+  // Keyboard: pressing Escape closes whichever pop-up is open.
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") {
+      return;
+    }
+    if (!document.getElementById("exerciseModal").hidden) {
+      closeModal();
+    } else if (!document.getElementById("sessionModal").hidden) {
+      closeSessionModal();
+    } else if (!document.getElementById("workoutOverlay").hidden) {
+      cancelWorkout(); // asks before discarding the workout
+    }
+  });
+
   // Draw the initial screens from whatever is saved.
   renderAll();
 
@@ -1605,7 +1689,7 @@ function init() {
     switchView("settings");
   }
 
-  console.log("Gym App loaded — Phase 3 ready ✅");
+  console.log("Athena's Arena loaded — Phase 4 ready ✅");
 }
 
 // Wait until the page's HTML is ready, then start the app.

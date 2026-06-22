@@ -1,5 +1,5 @@
 /*
-  styles.css — the "cute" pastel design system for the Gym App.
+  styles.css — the "cute" pastel design system for Athena's Arena.
 
   Phase 1 styling: top bar, the four views, exercise cards, the add/edit form
   (in a pop-up modal), profiles, and the floating bottom tab bar.
@@ -13,17 +13,39 @@
   --bg: #faf6ee; /* warm cream page background */
   --card: #ffffff; /* white cards */
   --text: #2e2e33; /* charcoal text */
-  --muted: #9a9a9a; /* secondary/label text */
+  /* Slightly darker than the original #9A9A9A so small grey text meets
+     accessibility contrast guidelines on the cream/white backgrounds. */
+  --muted: #70707a; /* secondary/label text */
 
   --coral: #ef7c7c; /* primary / "today" */
   --mint: #5fc4bc; /* active states / accents */
   --butter: #f6d365; /* highlights */
   --lavender: #b9a7e0; /* highlights */
 
+  /* Form surfaces — kept as variables so dark mode can swap them. */
+  --input-bg: #ffffff; /* text boxes, emoji chips, set dots */
+  --border: #efe9dd; /* their soft cream-grey border */
+
   --radius-card: 24px; /* rounded corners on cards */
   --radius-pill: 999px; /* fully rounded (pill) shape */
   --shadow-soft: 0 10px 30px rgba(46, 46, 51, 0.08); /* soft diffuse shadow */
   --shadow-card: 0 6px 18px rgba(46, 46, 51, 0.06); /* lighter shadow for small cards */
+}
+
+/* ---- Dark mode palette ----
+   app.js puts data-theme="dark" on the <html> element. Because everything uses
+   the variables above, overriding them here re-themes the whole app at once. */
+:root[data-theme="dark"] {
+  --bg: #17171c; /* near-black background */
+  --card: #23232b; /* dark card surface */
+  --text: #f3f2ef; /* light text */
+  --muted: #a3a3ad; /* lighter grey for contrast on dark */
+
+  --input-bg: #2b2b34;
+  --border: #3a3a44;
+
+  --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.45);
+  --shadow-card: 0 6px 18px rgba(0, 0, 0, 0.35);
 }
 
 /* ---- Reset a few defaults so layout is predictable ---- */
@@ -277,8 +299,8 @@ body {
   font-size: 15px;
   font-weight: 600;
   color: var(--text);
-  background-color: #fff;
-  border: 2px solid #efe9dd; /* soft cream-grey border */
+  background-color: var(--input-bg);
+  border: 2px solid var(--border); /* soft border */
   border-radius: 14px;
   padding: 11px 14px;
 }
@@ -322,8 +344,8 @@ body {
   width: 46px;
   height: 46px;
   border-radius: 14px;
-  border: 2px solid #efe9dd;
-  background-color: #fff;
+  border: 2px solid var(--border);
+  background-color: var(--input-bg);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -523,8 +545,8 @@ body {
   width: 40px;
   height: 40px;
   border-radius: var(--radius-pill);
-  border: 2px solid #efe9dd;
-  background-color: #fff;
+  border: 2px solid var(--border);
+  background-color: var(--input-bg);
   color: var(--muted);
   font-weight: 800;
   font-size: 14px;
@@ -682,8 +704,10 @@ body {
 .chart-tooltip {
   position: fixed;
   z-index: 300;
+  /* Using text colour for the background and bg colour for the text means it
+     automatically flips to look right in both light and dark mode. */
   background-color: var(--text);
-  color: #fff;
+  color: var(--bg);
   font-weight: 700;
   font-size: 12px;
   padding: 6px 10px;
@@ -717,4 +741,159 @@ body {
 .backup__buttons {
   display: grid;
   gap: 8px;
+}
+
+/* =========================================================================
+   PHASE 4 — polish: hero header, animations, and accessibility
+   ========================================================================= */
+
+/* ---- Today hero header (mascot + greeting) ---- */
+.hero {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 22px;
+  margin-bottom: 18px;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  /* Soft pastel gradient, like the reference's header art */
+  background: linear-gradient(
+    135deg,
+    rgba(246, 211, 101, 0.55),
+    rgba(239, 124, 124, 0.4)
+  );
+}
+.hero__mascot {
+  width: 76px;
+  height: 76px;
+  flex-shrink: 0;
+}
+.hero__mascot svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.hero__greeting {
+  font-size: 24px;
+  font-weight: 800;
+}
+.hero__date {
+  margin-top: 2px;
+  font-weight: 700;
+  color: var(--text);
+  opacity: 0.72; /* charcoal at lower opacity keeps good contrast on the gradient */
+}
+
+/* ---- Small animations ---- */
+
+/* Fade + rise the active view in when you switch tabs. */
+.view--active {
+  animation: fade-in 0.25s ease both;
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Slide the pop-ups up from the bottom. */
+.modal__panel,
+.sheet__panel {
+  animation: slide-up 0.25s ease both;
+}
+@keyframes slide-up {
+  from {
+    transform: translateY(24px);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* Give the active tab's icon a tiny pop. */
+.tab__icon {
+  transition: transform 0.15s ease;
+}
+.tab--active .tab__icon {
+  transform: scale(1.15);
+}
+
+/* Lift cards a touch on hover (pointer devices only). */
+@media (hover: hover) {
+  .exercise,
+  .history-card {
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+  }
+  .exercise:hover,
+  .history-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-soft);
+  }
+}
+
+/* ---- Accessibility: a clear keyboard focus ring ---- */
+:focus-visible {
+  outline: 3px solid rgba(95, 196, 188, 0.65); /* mint ring */
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+
+/* ---- Respect "reduce motion" system setting ---- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* =========================================================================
+   DARK MODE — the toggle button and the sun/moon mascot swap
+   ========================================================================= */
+
+/* Group the toggle + profile chip on the right of the top bar */
+.topbar__right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* The round dark mode toggle button */
+.icon-btn {
+  border: none;
+  cursor: pointer;
+  background-color: var(--card);
+  box-shadow: var(--shadow-card);
+  border-radius: var(--radius-pill);
+  width: 40px;
+  height: 40px;
+  font-size: 18px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Show the right mascot for the current theme.
+   Light mode: sun visible, moon hidden. Dark mode: the opposite. */
+.mascot--moon {
+  display: none;
+}
+:root[data-theme="dark"] .mascot--sun {
+  display: none;
+}
+:root[data-theme="dark"] .mascot--moon {
+  display: block;
+}
+
+/* Make the page background change smoothly when toggling themes. */
+body {
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
