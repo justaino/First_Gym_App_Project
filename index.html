@@ -82,13 +82,17 @@
         <div id="scheduleList"></div>
       </section>
 
-      <!-- ===================== PROGRESS VIEW (placeholder) ===================== -->
+      <!-- ===================== PROGRESS VIEW ===================== -->
       <section class="view" id="view-progress" data-view="progress">
         <h1 class="view__title">Progress</h1>
-        <div class="card empty-state">
-          <div class="empty-state__emoji">📈</div>
-          <p>Progress tracking is coming in a later phase.</p>
-        </div>
+        <p class="view__subtitle" id="progressSubtitle">Your activity</p>
+
+        <!-- app.js fills this with the "This week" summary card -->
+        <div id="weekSummary"></div>
+
+        <!-- Per-exercise progress (heading hidden until there's history) -->
+        <h2 class="section-heading" id="byExerciseHeading" hidden>By exercise</h2>
+        <div id="exerciseProgressList"></div>
       </section>
 
       <!-- ===================== SETTINGS VIEW (profiles) ===================== -->
@@ -116,6 +120,31 @@
 
         <!-- app.js fills this with the list of profiles -->
         <div id="profileList"></div>
+
+        <!-- Backup: save everything to a file, or restore from one. -->
+        <h2 class="section-heading">Backup</h2>
+        <div class="card">
+          <p class="backup__text">
+            Save all your profiles, exercises, and history to a file — or restore
+            them from a file you saved before.
+          </p>
+          <div class="backup__buttons">
+            <button class="btn btn--primary" id="exportCurrentBtn" type="button">
+              Export this profile
+            </button>
+            <button class="btn btn--primary" id="exportAllBtn" type="button">
+              Export all profiles
+            </button>
+            <button class="btn btn--ghost" id="importBtn" type="button">Import</button>
+          </div>
+          <!-- Hidden file picker; the Import button clicks this for us. -->
+          <input
+            type="file"
+            id="importInput"
+            accept="application/json,.json"
+            hidden
+          />
+        </div>
       </section>
     </main>
 
@@ -182,6 +211,29 @@
             <button class="btn btn--primary" type="submit">Save</button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!--
+      Workout detail pop-up (Phase 3+). Opened by clicking a bar in a progress
+      chart; shows every exercise from that saved workout. Hidden by default.
+    -->
+    <div class="modal" id="sessionModal" hidden>
+      <div class="modal__backdrop" id="sessionBackdrop"></div>
+      <div
+        class="modal__panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="sessionTitle"
+      >
+        <h2 class="modal__title" id="sessionTitle">Workout</h2>
+        <!-- app.js fills this with the workout's exercises -->
+        <div id="sessionDetailList"></div>
+        <div class="modal__actions">
+          <button class="btn btn--primary" type="button" id="closeSessionBtn">
+            Close
+          </button>
+        </div>
       </div>
     </div>
 

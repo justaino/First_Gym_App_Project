@@ -415,6 +415,343 @@ function formatDate(isoString) {
   });
 }
 
+/* ---- Progress view (Phase 3) ---- */
+
+// Work out midnight on Monday of the current week (start of "this week").
+function getStartOfWeek() {
+  const now = new Date();
+  const jsDay = now.getDay(); // 0 = Sunday ... 6 = Saturday
+  // How many days back to Monday? (Sunday counts as 6 days after Monday.)
+  const daysSinceMonday = jsDay === 0 ? 6 : jsDay - 1;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - daysSinceMonday);
+  monday.setHours(0, 0, 0, 0);
+  return monday;
+}
+
+// Build a small, interactive bar chart (as an SVG element) from "points".
+// Each point is { date, setsDone, weight, session }. Bars show a tooltip on
+// hover and open that workout's details when clicked.
+function buildBarChartSvg(points) {
+  const width = 240;
+  const height = 60;
+  const gap = 4;
+  const namespace = "http://www.w3.org/2000/svg";
+
+  const svg = document.createElementNS(namespace, "svg");
+  svg.setAttribute("viewBox", "0 0 " + width + " " + height);
+  svg.setAttribute("class", "barchart");
+  svg.setAttribute("preserveAspectRatio", "none");
+
+  // The tallest bar maps to the full height. Avoid dividing by zero with "1".
+  const setCounts = points.map((point) => point.setsDone);
+  const max = Math.max.apply(null, setCounts.concat([1]));
+  const barWidth = (width - gap * (points.length - 1)) / points.length;
+
+  points.forEach((point, index) => {
+    // Always show at least a sliver so small sessions are still visible.
+    const barHeight = Math.max(2, (point.setsDone / max) * height);
+    const rect = document.createElementNS(namespace, "rect");
+    rect.setAttribute("x", index * (barWidth + gap));
+    rect.setAttribute("y", height - barHeight);
+    rect.setAttribute("width", barWidth);
+    rect.setAttribute("height", barHeight);
+    rect.setAttribute("rx", 3);
+    rect.setAttribute("class", "barchart__bar");
+
+    // The text shown in the tooltip (and as a plain-browser fallback below).
+    let label = formatDate(point.date) + " · " + point.setsDone + " sets";
+    if (point.weight !== null && point.weight !== undefined) {
+      label += " · " + point.weight;
+    }
+
+    // Fallback tooltip for any case where our custom one doesn't run.
+    const title = document.createElementNS(namespace, "title");
+    title.textContent = label;
+    rect.appendChild(title);
+
+    // Custom tooltip on hover (follows the pointer).
+    rect.addEventListener("mouseenter", (event) =>
+      showChartTooltip(label, event.clientX, event.clientY)
+    );
+    rect.addEventListener("mousemove", (event) =>
+      showChartTooltip(label, event.clientX, event.clientY)
+    );
+    rect.addEventListener("mouseleave", hideChartTooltip);
+
+    // Click (or tap) a bar to see that whole workout.
+    rect.addEventListener("click", () => {
+      hideChartTooltip();
+      showSessionDetail(point.session);
+    });
+
+    svg.appendChild(rect);
+  });
+
+  return svg;
+}
+
+/* ---- Custom chart tooltip (a single floating chip we reuse) ---- */
+
+let chartTooltipEl = null;
+
+// Get (or create once) the tooltip element that floats over the page.
+function getChartTooltip() {
+  if (!chartTooltipEl) {
+    chartTooltipEl = document.createElement("div");
+    chartTooltipEl.className = "chart-tooltip";
+    chartTooltipEl.hidden = true;
+    document.body.appendChild(chartTooltipEl);
+  }
+  return chartTooltipEl;
+}
+
+// Show the tooltip with some text, positioned near the pointer.
+function showChartTooltip(text, x, y) {
+  const tooltip = getChartTooltip();
+  tooltip.textContent = text;
+  tooltip.style.left = x + "px";
+  tooltip.style.top = y + "px";
+  tooltip.hidden = false;
+}
+
+function hideChartTooltip() {
+  if (chartTooltipEl) {
+    chartTooltipEl.hidden = true;
+  }
+}
+
+/* ---- Workout detail pop-up (opened by clicking a chart bar) ---- */
+
+// Show every exercise from one saved session in a pop-up.
+function showSessionDetail(session) {
+  // Title: e.g. "Monday workout — Mon, Jun 22"
+  const title = (session.day || "Workout") + " — " + formatDate(session.date);
+  document.getElementById("sessionTitle").textContent = title;
+
+  const list = document.getElementById("sessionDetailList");
+  list.innerHTML = "";
+
+  // We need exercise names/emojis, which live in the exercises list.
+  const allExercises = loadList(STORAGE_KEYS.exercises);
+
+  session.entries.forEach((entry) => {
+    const exercise = allExercises.find((item) => item.id === entry.exerciseId);
+
+    const row = document.createElement("div");
+    row.className = "exercise"; // reuse the exercise-row styling
+
+    const icon = document.createElement("div");
+    icon.className = "exercise__icon";
+    icon.textContent = exercise ? exercise.icon : "❓";
+
+    const info = document.createElement("div");
+    info.className = "exercise__info";
+
+    const name = document.createElement("div");
+    name.className = "exercise__name";
+    name.textContent = exercise ? exercise.name : "(deleted exercise)";
+
+    let detailText = entry.setsDone + " sets done";
+    if (entry.weight !== null && entry.weight !== undefined) {
+      detailText += " · weight " + entry.weight;
+    }
+    const detail = document.createElement("div");
+    detail.className = "exercise__detail";
+    detail.textContent = detailText;
+
+    info.appendChild(name);
+    info.appendChild(detail);
+    row.appendChild(icon);
+    row.appendChild(info);
+    list.appendChild(row);
+  });
+
+  document.getElementById("sessionModal").hidden = false;
+}
+
+function closeSessionModal() {
+  document.getElementById("sessionModal").hidden = true;
+}
+
+// Build one "this week" summary card with two stat tiles.
+function buildWeekSummaryCard(workouts, sets) {
+  const card = document.createElement("div");
+  card.className = "card";
+
+  const title = document.createElement("div");
+  title.className = "history-card__title";
+  title.textContent = "This week";
+  card.appendChild(title);
+
+  const stats = document.createElement("div");
+  stats.className = "stats";
+  stats.appendChild(buildStatTile(workouts, "workouts"));
+  stats.appendChild(buildStatTile(sets, "sets"));
+  card.appendChild(stats);
+
+  return card;
+}
+
+// A single tinted stat tile (big number + label).
+function buildStatTile(number, label) {
+  const tile = document.createElement("div");
+  tile.className = "stat";
+
+  const numberEl = document.createElement("div");
+  numberEl.className = "stat__number";
+  numberEl.textContent = number;
+
+  const labelEl = document.createElement("div");
+  labelEl.className = "stat__label";
+  labelEl.textContent = label;
+
+  tile.appendChild(numberEl);
+  tile.appendChild(labelEl);
+  return tile;
+}
+
+// Build a per-exercise progress card (totals + a small chart).
+function buildExerciseProgressCard(exercise, points, totalSets, lastWeight) {
+  const card = document.createElement("div");
+  card.className = "card";
+
+  // Top row: emoji + name (reuse the styles from the plan cards).
+  const top = document.createElement("div");
+  top.className = "workout-exercise__top";
+
+  const icon = document.createElement("div");
+  icon.className = "exercise__icon";
+  icon.textContent = exercise.icon;
+
+  const info = document.createElement("div");
+  info.className = "exercise__info";
+
+  const name = document.createElement("div");
+  name.className = "exercise__name";
+  name.textContent = exercise.name;
+
+  // Meta line: how many times trained, total sets, and last weight if any.
+  let metaText = points.length + " sessions · " + totalSets + " sets total";
+  if (lastWeight !== null) {
+    metaText += " · last " + lastWeight;
+  }
+  const meta = document.createElement("div");
+  meta.className = "progress-card__meta";
+  meta.textContent = metaText;
+
+  info.appendChild(name);
+  info.appendChild(meta);
+  top.appendChild(icon);
+  top.appendChild(info);
+
+  card.appendChild(top);
+  // Show a chart of the most recent sessions (up to 12 bars).
+  card.appendChild(buildBarChartSvg(points.slice(-12)));
+
+  // A small hint so people know the bars are interactive.
+  const hint = document.createElement("div");
+  hint.className = "chart-hint";
+  hint.textContent = "Tap a bar to see that workout";
+  card.appendChild(hint);
+
+  return card;
+}
+
+// Draw the whole Progress view.
+function renderProgress() {
+  const subtitle = document.getElementById("progressSubtitle");
+  const summary = document.getElementById("weekSummary");
+  const heading = document.getElementById("byExerciseHeading");
+  const list = document.getElementById("exerciseProgressList");
+  summary.innerHTML = "";
+  list.innerHTML = "";
+
+  const activeProfile = getActiveProfile();
+  if (!activeProfile) {
+    subtitle.textContent = "No profile selected";
+    heading.hidden = true;
+    summary.appendChild(
+      createEmptyState("👤", "Create a profile in Settings to get started.")
+    );
+    return;
+  }
+  subtitle.textContent = activeProfile.name + "'s activity";
+
+  const activeId = loadActiveProfileId();
+  const sessions = loadList(STORAGE_KEYS.sessions).filter(
+    (session) => session.profileId === activeId
+  );
+
+  // --- "This week" summary ---
+  const startOfWeek = getStartOfWeek();
+  const weekSessions = sessions.filter(
+    (session) => new Date(session.date) >= startOfWeek
+  );
+  const workoutsThisWeek = weekSessions.length;
+  const setsThisWeek = weekSessions.reduce(
+    (sum, session) =>
+      sum + session.entries.reduce((inner, entry) => inner + entry.setsDone, 0),
+    0
+  );
+  summary.appendChild(buildWeekSummaryCard(workoutsThisWeek, setsThisWeek));
+
+  // --- Per-exercise breakdown ---
+  if (sessions.length === 0) {
+    heading.hidden = true;
+    list.appendChild(
+      createEmptyState("📊", "No workouts yet — finish one to see your progress.")
+    );
+    return;
+  }
+
+  // Sort oldest → newest so the chart reads left (older) to right (newer).
+  const sortedSessions = sessions
+    .slice()
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  const exercises = getExercisesForActiveProfile();
+  exercises.forEach((exercise) => {
+    // For each session this exercise appears in, remember one "point" of data.
+    // We keep the whole session so a bar can show its full details when clicked.
+    const points = [];
+    let totalSets = 0;
+    let lastWeight = null;
+
+    sortedSessions.forEach((session) => {
+      const entry = session.entries.find(
+        (item) => item.exerciseId === exercise.id
+      );
+      if (entry) {
+        points.push({
+          date: session.date,
+          setsDone: entry.setsDone,
+          weight: entry.weight,
+          session: session,
+        });
+        totalSets += entry.setsDone;
+        if (entry.weight !== null && entry.weight !== undefined) {
+          lastWeight = entry.weight;
+        }
+      }
+    });
+
+    // Only show exercises that have actually been trained.
+    if (points.length > 0) {
+      list.appendChild(
+        buildExerciseProgressCard(exercise, points, totalSets, lastWeight)
+      );
+    }
+  });
+
+  heading.hidden = list.children.length === 0;
+  if (list.children.length === 0) {
+    list.appendChild(
+      createEmptyState("📊", "Finish a workout to see per-exercise progress.")
+    );
+  }
+}
+
 // Redraw everything at once (simple and reliable for a small app).
 function renderAll() {
   renderActiveProfileChip();
@@ -422,6 +759,7 @@ function renderAll() {
   renderSchedule();
   renderProfiles();
   renderHistory();
+  renderProgress();
 }
 
 /* =========================================================================
@@ -469,6 +807,11 @@ function deleteProfile(id) {
   let exercises = loadList(STORAGE_KEYS.exercises);
   exercises = exercises.filter((exercise) => exercise.profileId !== id);
   saveList(STORAGE_KEYS.exercises, exercises);
+
+  // Remove that profile's saved workout sessions too, so no orphan data is left.
+  let sessions = loadList(STORAGE_KEYS.sessions);
+  sessions = sessions.filter((session) => session.profileId !== id);
+  saveList(STORAGE_KEYS.sessions, sessions);
 
   // If we deleted the active profile, pick another one (or none).
   if (loadActiveProfileId() === id) {
@@ -663,12 +1006,14 @@ function startWorkout(day) {
     return;
   }
 
-  // Build the in-progress state: every set starts "not done" (false).
+  // Build the in-progress state: every set starts "not done" (false),
+  // and the optional weight starts empty (null).
   activeWorkout = {
     day: day,
     items: exercisesForDay.map((exercise) => ({
       exercise: exercise,
       done: new Array(exercise.sets).fill(false),
+      weight: null, // Phase 3: optional weight the user can type in
     })),
   };
 
@@ -730,8 +1075,35 @@ function renderWorkoutItems() {
       dots.appendChild(dot);
     });
 
+    // Optional weight field (Phase 3). The value is kept on the item so it
+    // survives when we redraw the list after ticking a set.
+    const weightWrap = document.createElement("div");
+    weightWrap.className = "workout-exercise__weight";
+
+    const weightLabel = document.createElement("label");
+    weightLabel.textContent = "Weight";
+
+    const weightInput = document.createElement("input");
+    weightInput.className = "input weight-input";
+    weightInput.type = "number";
+    weightInput.min = "0";
+    weightInput.step = "any";
+    weightInput.placeholder = "optional";
+    if (item.weight !== null) {
+      weightInput.value = item.weight;
+    }
+    // Remember what was typed (empty box = no weight recorded).
+    weightInput.addEventListener("input", () => {
+      const typed = weightInput.value.trim();
+      item.weight = typed === "" ? null : Number(typed);
+    });
+
+    weightLabel.appendChild(weightInput);
+    weightWrap.appendChild(weightLabel);
+
     card.appendChild(top);
     card.appendChild(dots);
+    card.appendChild(weightWrap);
     container.appendChild(card);
   });
 }
@@ -749,11 +1121,12 @@ function finishWorkout() {
     return;
   }
 
-  // Build the entries: one per exercise, with how many sets were ticked.
+  // Build the entries: one per exercise, with how many sets were ticked and
+  // the optional weight (null if the box was left empty).
   const entries = activeWorkout.items.map((item) => ({
     exerciseId: item.exercise.id,
     setsDone: item.done.filter(Boolean).length,
-    weight: null, // optional per-set weight comes in Phase 3
+    weight: item.weight,
   }));
 
   const totalSets = entries.reduce((sum, entry) => sum + entry.setsDone, 0);
@@ -914,6 +1287,194 @@ function playBeep() {
 }
 
 /* =========================================================================
+   7c. BACKUP — export everything to a file, and import it back (Phase 3)
+   ========================================================================= */
+
+// Gather a CLEAN copy of the data for export.
+// - profileIdFilter: null = all profiles, or a single profile's id.
+// It drops anything that no longer exists, so deleted items never get exported:
+//   * exercises belonging to a profile we're not exporting
+//   * sessions belonging to a profile we're not exporting
+//   * session entries that point at a deleted exercise (and now-empty sessions)
+function gatherCleanData(profileIdFilter) {
+  let profiles = loadList(STORAGE_KEYS.profiles);
+  if (profileIdFilter) {
+    profiles = profiles.filter((profile) => profile.id === profileIdFilter);
+  }
+  // The set of profile ids we're keeping (fast lookups with .includes()).
+  const keptProfileIds = profiles.map((profile) => profile.id);
+
+  // Keep only exercises that belong to a kept profile.
+  const exercises = loadList(STORAGE_KEYS.exercises).filter((exercise) =>
+    keptProfileIds.includes(exercise.profileId)
+  );
+  const keptExerciseIds = exercises.map((exercise) => exercise.id);
+
+  // Keep sessions for kept profiles, prune entries for deleted exercises,
+  // then drop any session that ends up with no entries left.
+  const sessions = loadList(STORAGE_KEYS.sessions)
+    .filter((session) => keptProfileIds.includes(session.profileId))
+    .map((session) => ({
+      ...session,
+      entries: session.entries.filter((entry) =>
+        keptExerciseIds.includes(entry.exerciseId)
+      ),
+    }))
+    .filter((session) => session.entries.length > 0);
+
+  return { profiles, exercises, sessions };
+}
+
+// Build the backup object and trigger a file download.
+// "scopeLabel" is just used in the filename (e.g. "all" or the profile name).
+function downloadBackup(cleanData, activeProfileId, scopeLabel) {
+  const backup = {
+    app: "gym-app",
+    version: 1,
+    scope: scopeLabel,
+    exportedAt: new Date().toISOString(),
+    data: {
+      [STORAGE_KEYS.profiles]: cleanData.profiles,
+      [STORAGE_KEYS.activeProfileId]: activeProfileId,
+      [STORAGE_KEYS.exercises]: cleanData.exercises,
+      [STORAGE_KEYS.sessions]: cleanData.sessions,
+    },
+  };
+
+  // Turn the data into nicely-formatted text and wrap it in a downloadable file.
+  const text = JSON.stringify(backup, null, 2);
+  const blob = new Blob([text], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+
+  // Trick to trigger a download: make a temporary link and "click" it.
+  const link = document.createElement("a");
+  link.href = url;
+  const today = new Date().toISOString().slice(0, 10); // e.g. 2026-06-22
+  // Make the scope safe for a filename (letters/numbers/dashes only).
+  const safeScope = scopeLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  link.download = "gym-app-backup-" + safeScope + "-" + today + ".json";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url); // tidy up
+}
+
+// Export EVERY profile's data.
+function exportAll() {
+  const cleanData = gatherCleanData(null);
+  downloadBackup(cleanData, loadActiveProfileId(), "all");
+}
+
+// Export only the currently active profile's data.
+function exportCurrentProfile() {
+  const activeProfile = getActiveProfile();
+  if (!activeProfile) {
+    window.alert("There's no active profile to export. Pick one in Settings.");
+    return;
+  }
+  const cleanData = gatherCleanData(activeProfile.id);
+  // The exported file makes this profile the active one when imported.
+  downloadBackup(cleanData, activeProfile.id, activeProfile.name);
+}
+
+// Read a backup file the user picked and restore the data from it.
+function importData(file) {
+  const reader = new FileReader();
+
+  reader.onload = () => {
+    try {
+      const backup = JSON.parse(reader.result);
+      const data = backup.data;
+
+      // A quick sanity check that this looks like our backup format.
+      if (!data || !Array.isArray(data[STORAGE_KEYS.profiles])) {
+        window.alert("That file doesn't look like a Gym App backup.");
+        return;
+      }
+
+      // The profiles/exercises/sessions coming in from the file.
+      const incomingProfiles = data[STORAGE_KEYS.profiles] || [];
+      const incomingExercises = data[STORAGE_KEYS.exercises] || [];
+      const incomingSessions = data[STORAGE_KEYS.sessions] || [];
+
+      // Which profiles in the file already exist here? (Matched by their id.)
+      const existingProfiles = loadList(STORAGE_KEYS.profiles);
+      const existingIds = existingProfiles.map((profile) => profile.id);
+      const incomingIds = incomingProfiles.map((profile) => profile.id);
+      const newCount = incomingProfiles.filter(
+        (profile) => !existingIds.includes(profile.id)
+      ).length;
+      const replacedCount = incomingProfiles.length - newCount;
+
+      const ok = window.confirm(
+        "Import this backup?\n\n" +
+          newCount +
+          " new profile(s) will be added.\n" +
+          replacedCount +
+          " existing profile(s) will be replaced.\n\n" +
+          "Your other profiles will be left untouched."
+      );
+      if (!ok) {
+        return;
+      }
+
+      // MERGE: drop any existing profile (and its data) that the file also
+      // contains, then add the incoming versions. Profiles not in the file are
+      // kept exactly as they were.
+      const mergedProfiles = existingProfiles
+        .filter((profile) => !incomingIds.includes(profile.id))
+        .concat(incomingProfiles);
+
+      const mergedExercises = loadList(STORAGE_KEYS.exercises)
+        .filter((exercise) => !incomingIds.includes(exercise.profileId))
+        .concat(incomingExercises);
+
+      const mergedSessions = loadList(STORAGE_KEYS.sessions)
+        .filter((session) => !incomingIds.includes(session.profileId))
+        .concat(incomingSessions);
+
+      saveList(STORAGE_KEYS.profiles, mergedProfiles);
+      saveList(STORAGE_KEYS.exercises, mergedExercises);
+      saveList(STORAGE_KEYS.sessions, mergedSessions);
+
+      // Keep the current active profile if it still exists. Otherwise fall back
+      // to the file's active profile, or just the first one available.
+      const currentActiveId = loadActiveProfileId();
+      const stillExists = mergedProfiles.some(
+        (profile) => profile.id === currentActiveId
+      );
+      if (!stillExists) {
+        const fileActiveId = data[STORAGE_KEYS.activeProfileId];
+        const fileActiveExists = mergedProfiles.some(
+          (profile) => profile.id === fileActiveId
+        );
+        if (fileActiveExists) {
+          saveActiveProfileId(fileActiveId);
+        } else {
+          saveActiveProfileId(
+            mergedProfiles.length > 0 ? mergedProfiles[0].id : null
+          );
+        }
+      }
+
+      renderAll();
+      window.alert(
+        "Import complete! " +
+          newCount +
+          " added, " +
+          replacedCount +
+          " replaced. 🎉"
+      );
+    } catch (error) {
+      console.error("Import failed:", error);
+      window.alert("Sorry, that file couldn't be read.");
+    }
+  };
+
+  reader.readAsText(file);
+}
+
+/* =========================================================================
    8. TAB / VIEW SWITCHING
    ========================================================================= */
 
@@ -997,6 +1558,32 @@ function init() {
     .getElementById("exerciseForm")
     .addEventListener("submit", handleExerciseFormSubmit);
 
+  // Workout detail pop-up: close button and backdrop both close it.
+  document
+    .getElementById("closeSessionBtn")
+    .addEventListener("click", closeSessionModal);
+  document
+    .getElementById("sessionBackdrop")
+    .addEventListener("click", closeSessionModal);
+
+  // ---- Backup (Phase 3) ----
+  document
+    .getElementById("exportCurrentBtn")
+    .addEventListener("click", exportCurrentProfile);
+  document.getElementById("exportAllBtn").addEventListener("click", exportAll);
+  // The visible "Import" button just opens the hidden file picker.
+  document.getElementById("importBtn").addEventListener("click", () => {
+    document.getElementById("importInput").click();
+  });
+  // When a file is chosen, import it.
+  document.getElementById("importInput").addEventListener("change", (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      importData(file);
+    }
+    event.target.value = ""; // reset so picking the same file again still works
+  });
+
   // Create-profile form submit.
   document.getElementById("profileForm").addEventListener("submit", (event) => {
     event.preventDefault();
@@ -1018,7 +1605,7 @@ function init() {
     switchView("settings");
   }
 
-  console.log("Gym App loaded — Phase 2 ready ✅");
+  console.log("Gym App loaded — Phase 3 ready ✅");
 }
 
 // Wait until the page's HTML is ready, then start the app.

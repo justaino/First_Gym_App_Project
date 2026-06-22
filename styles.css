@@ -608,3 +608,113 @@ body {
   font-size: 14px;
   margin-top: 2px;
 }
+
+/* ---- The optional weight field inside a workout exercise ---- */
+.workout-exercise__weight {
+  margin-top: 12px;
+}
+.workout-exercise__weight label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--muted);
+}
+.weight-input {
+  max-width: 130px;
+}
+
+/* =========================================================================
+   PHASE 3 — progress (stats + chart) and backup
+   ========================================================================= */
+
+/* A row of small tinted stat tiles (like the reference's 45% / 12mph / High) */
+.stats {
+  display: flex;
+  gap: 12px;
+  margin-top: 14px;
+}
+.stat {
+  flex: 1;
+  background-color: rgba(95, 196, 188, 0.12); /* faint mint */
+  border-radius: 16px;
+  padding: 14px;
+  text-align: center;
+}
+.stat__number {
+  font-size: 28px;
+  font-weight: 800;
+}
+.stat__label {
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+/* A small bar chart drawn with plain SVG (no chart library) */
+.barchart {
+  width: 100%;
+  height: 60px;
+  margin-top: 14px;
+  display: block;
+}
+.barchart__bar {
+  fill: var(--mint);
+  cursor: pointer; /* show it's clickable */
+  transition: fill 0.12s ease;
+}
+/* Highlight the bar you're pointing at */
+.barchart__bar:hover {
+  fill: var(--coral);
+}
+
+/* Little hint under a chart ("Tap a bar to see that workout") */
+.chart-hint {
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+/* The floating tooltip that follows the pointer over the chart */
+.chart-tooltip {
+  position: fixed;
+  z-index: 300;
+  background-color: var(--text);
+  color: #fff;
+  font-weight: 700;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  white-space: nowrap;
+  pointer-events: none; /* never block the mouse from the bars */
+  /* Sit just above the pointer, centred on it */
+  transform: translate(-50%, -130%);
+}
+.chart-tooltip[hidden] {
+  display: none;
+}
+
+/* The little meta line under a progress card's title */
+.progress-card__meta {
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 14px;
+  margin-top: 2px;
+}
+
+/* Explanatory text in the Backup card */
+.backup__text {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 14px;
+}
+
+/* The stacked Export/Import buttons in the Backup card */
+.backup__buttons {
+  display: grid;
+  gap: 8px;
+}
