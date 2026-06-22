@@ -55,8 +55,17 @@
         <h1 class="view__title">Today</h1>
         <p class="view__subtitle" id="todaySubtitle">—</p>
 
+        <!-- Starts a workout for today. app.js hides this when there's nothing to do. -->
+        <button class="btn btn--primary btn--block" id="startTodayBtn" type="button" hidden>
+          ▶ Start workout
+        </button>
+
         <!-- app.js fills this with today's exercises (or a friendly empty state) -->
         <div id="todayList"></div>
+
+        <!-- Recent workout history (filled by app.js; heading hidden when empty) -->
+        <h2 class="section-heading" id="historyHeading" hidden>Recent workouts</h2>
+        <div id="historyList"></div>
       </section>
 
       <!-- ===================== SCHEDULE VIEW ===================== -->
@@ -173,6 +182,42 @@
             <button class="btn btn--primary" type="submit">Save</button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!--
+      Workout mode (Phase 2). A focused full-screen sheet that covers the app
+      while you train: it lists the day's exercises with tick-able set dots,
+      a rest timer, and a "Finish & save" button. Hidden until you start.
+    -->
+    <div class="sheet" id="workoutOverlay" hidden>
+      <div class="sheet__panel" role="dialog" aria-modal="true" aria-labelledby="workoutTitle">
+        <header class="sheet__header">
+          <h2 class="sheet__title" id="workoutTitle">Workout</h2>
+          <button class="btn btn--ghost btn--small" type="button" id="cancelWorkoutBtn">
+            Cancel
+          </button>
+        </header>
+
+        <!-- app.js fills this with the day's exercises and their set dots -->
+        <div id="workoutList"></div>
+
+        <!-- Rest timer -->
+        <div class="card timer">
+          <div class="timer__display" id="timerDisplay">Rest timer</div>
+          <div class="timer__buttons">
+            <button class="timer-btn" type="button" data-seconds="60">60s</button>
+            <button class="timer-btn" type="button" data-seconds="90">90s</button>
+            <button class="timer-btn" type="button" data-seconds="120">120s</button>
+            <button class="timer-btn timer-btn--stop" type="button" id="stopTimerBtn">
+              Stop
+            </button>
+          </div>
+        </div>
+
+        <button class="btn btn--primary btn--block" type="button" id="finishWorkoutBtn">
+          Finish &amp; save
+        </button>
       </div>
     </div>
 
