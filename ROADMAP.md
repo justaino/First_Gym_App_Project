@@ -64,13 +64,13 @@ localStorage keys (suggested): `gym:profiles`, `gym:activeProfileId`,
 
 ## 5. Phases
 
-### Phase 0 — Setup ☐
+### Phase 0 — Setup ✅
 **Goal:** an empty app that loads in the browser, under git.
-- ☐ Create project folder and open it in VS Code
-- ☐ Scaffold `index.html`, `styles.css`, `app.js`
-- ☐ Apply the cream background + font + one test card (to confirm the look)
-- ☐ Install Live Server; confirm the page loads and auto-refreshes
-- ☐ `git init` + first commit
+- ✅ Create project folder and open it in VS Code
+- ✅ Scaffold `index.html`, `styles.css`, `app.js`
+- ✅ Apply the cream background + font + one test card (to confirm the look)
+- ✅ Install Live Server; confirm the page loads and auto-refreshes
+- ✅ `git init` + first commit
 
 **Done when:** a styled blank page loads via Live Server and is committed.
 
@@ -81,14 +81,14 @@ initial commit."
 
 ---
 
-### Phase 1 — Profiles + exercises (the MVP) ☐
+### Phase 1 — Profiles + exercises (the MVP) ✅
 **Goal:** create a profile, add/edit/delete exercises, see them grouped by day.
-- ☐ Create a profile (name only) and pick the active profile
-- ☐ Add exercise: name, sets, reps, emoji icon (from a preset list), day of week
-- ☐ Main screen: exercises grouped by day, each card shows emoji + name + "3 × 10"
-- ☐ Edit an exercise
-- ☐ Delete an exercise
-- ☐ Data persists after refresh (localStorage)
+- ✅ Create a profile (name only) and pick the active profile
+- ✅ Add exercise: name, sets, reps, emoji icon (from a preset list), day of week
+- ✅ Main screen: exercises grouped by day, each card shows emoji + name + "3 × 10"
+- ✅ Edit an exercise
+- ✅ Delete an exercise
+- ✅ Data persists after refresh (localStorage)
 
 **Done when:** I can add a few exercises across different days, refresh, and they're
 still there, all in the cute style.
@@ -101,12 +101,12 @@ we drafted. Remind it: Phase 1 only, then stop.
 
 ---
 
-### Phase 2 — Workout mode + rest timer ☐
+### Phase 2 — Workout mode + rest timer ✅
 **Goal:** actually train against a day's plan.
-- ☐ "Start workout" for a chosen day shows that day's exercises
-- ☐ Tick off each set as done
-- ☐ A rest timer (e.g. 60/90/120s) with a sound or visual cue
-- ☐ Save the finished session to history (date + what was done)
+- ✅ "Start workout" for a chosen day shows that day's exercises
+- ✅ Tick off each set as done
+- ✅ A rest timer (e.g. 60/90/120s) with a sound or visual cue
+- ✅ Save the finished session to history (date + what was done)
 
 **Done when:** I can run through a day, tick sets, use the timer, and the session is
 saved.
@@ -116,23 +116,23 @@ appears in history → refresh → still saved.
 
 ---
 
-### Phase 3 — Progress + backup ☐
+### Phase 3 — Progress + backup ✅
 **Goal:** see whether I'm showing up and improving.
-- ☐ "This week" summary (workouts done, sets completed)
-- ☐ A simple per-exercise chart or count over time (plain JS/SVG, no library if possible)
-- ☐ Optional weight per set, stored in the session
-- ☐ Export all data to a JSON file, and import it back (manual backup)
+- ✅ "This week" summary (workouts done, sets completed)
+- ✅ A simple per-exercise chart or count over time (plain JS/SVG, no library if possible)
+- ✅ Optional weight per set, stored in the session
+- ✅ Export all data to a JSON file, and import it back (manual backup)
 
 **Done when:** the progress screen reflects my real history and I can export/import a
 backup file.
 
 ---
 
-### Phase 4 — Polish ☐
-- ☐ Friendly empty states ("No exercises yet — add your first 💪")
-- ☐ A mascot illustration or nicer header art
-- ☐ Tidy the bottom nav, spacing, and small animations
-- ☐ Basic accessibility (labels, contrast, keyboard use)
+### Phase 4 — Polish ✅
+- ✅ Friendly empty states ("No exercises yet — add your first 💪")
+- ✅ A mascot illustration or nicer header art
+- ✅ Tidy the bottom nav, spacing, and small animations
+- ✅ Basic accessibility (labels, contrast, keyboard use)
 
 ---
 
@@ -157,4 +157,4 @@ set — note them, but don't let them block the phases above.
 - One feature per request beats one giant request — easier to review and fix.
 - After a working step, commit. Git is your undo button.
 - If a change breaks something, say so plainly; Claude Code can revert or fix.
-- Keep this file open and tick the ☐ boxes as you go.
+- Keep this file open and tick the ✅ boxes as you go.

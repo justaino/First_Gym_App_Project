@@ -41,5 +41,6 @@ browser/device) means starting fresh. Use the export/backup feature (Phase 3) to
 a copy.
 
 ## Status
-Early, in active development. Built phase by phase with Claude Code — see `ROADMAP.md`
-for what's done and what's next.
+Phases 0–4 complete ✅ — profiles & exercises, workout mode with a rest timer, progress
+tracking (with interactive charts and backups), and polish (dark mode, mascot, and
+accessibility). Built phase by phase with Claude Code — see `ROADMAP.md` for the details.
