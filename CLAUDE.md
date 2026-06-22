@@ -1,0 +1,55 @@
+# CLAUDE.md — Project guardrails for the Gym App
+
+Read this at the start of every session and follow it for all work in this project.
+
+## What this project is
+A personal, browser-based gym app. The owner is a **beginner at front-end web
+development** (their strength is the Microsoft Power Platform, not JavaScript
+frameworks). Build accordingly: explain things simply and comment the code.
+
+## Hard constraints (do not break these)
+- Use **plain HTML, CSS, and vanilla JavaScript only**. No frameworks (no React, Vue,
+  Svelte, etc.), no TypeScript, no build step, no bundlers, no npm packages.
+- Store all data in the browser with **localStorage**. No backend, no database.
+- The app must run by opening `index.html` with the Live Server VS Code extension.
+- Keep the file structure simple: `index.html`, `styles.css`, `app.js` (split JS into a
+  few clearly-named files only if it genuinely helps readability).
+
+## How to work
+- Build **one phase at a time** (see ROADMAP.md). Do not jump ahead. After finishing a
+  phase, stop and wait for confirmation before starting the next.
+- Prefer **small, reviewable changes**. One feature or fix per step.
+- **Comment the code** so a beginner can follow what each part does.
+- Before making a large or structural change, briefly explain the plan and ask first.
+- After a working change, suggest a short git commit message.
+
+## Important behaviour rule
+- **Never claim to have run, opened, tested, or inspected the app in the owner's browser
+  or on their machine.** You cannot see their local environment. Instead, give clear,
+  copy-pasteable steps for them to run and test it themselves, and describe what they
+  should expect to see.
+
+## Coding conventions
+- Plain, readable functions with descriptive names. Avoid clever one-liners.
+- No external JS libraries unless explicitly approved. (A Google Font via `<link>` is
+  fine.)
+- Validate user input lightly (e.g. don't allow empty exercise names; sets/reps are
+  positive numbers).
+- Handle the "no data yet" case gracefully (friendly empty states).
+
+## Design system (keep styling consistent)
+- Background cream `#FAF6EE`; white cards `#FFFFFF` with `24px` radius and soft shadow.
+- Text charcoal `#2E2E33`; muted `#9A9A9A`.
+- Accents: coral `#EF7C7C`, mint `#5FC4BC`, butter `#F6D365`, lavender `#B9A7E0`.
+- Font: Nunito or Quicksand (Google Fonts). Pill-shaped buttons. Floating, rounded
+  bottom tab bar with icon + label; active tab tinted. Emoji as exercise icons.
+- A visual style reference is saved at design-reference.png — open it when working on UI.
+
+## Data model
+```
+Profile  = { id, name, createdAt }
+Exercise = { id, profileId, name, sets, reps, icon, day, notes }
+Session  = { id, profileId, date, entries: [{ exerciseId, setsDone, weight }] }
+```
+Suggested localStorage keys: `gym:profiles`, `gym:activeProfileId`, `gym:exercises`,
+`gym:sessions`.

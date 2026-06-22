@@ -1,0 +1,126 @@
+/*
+  styles.css — the "cute" pastel design system for the Gym App.
+  Phase 0: just the basics (colours, font, one card, the tab bar).
+
+  Tip: the colours below are kept in one place as CSS variables so we can
+  reuse them everywhere and change them in a single spot later.
+*/
+
+/* ---- Design tokens (colours from CLAUDE.md / ROADMAP.md) ---- */
+:root {
+  --bg: #faf6ee; /* warm cream page background */
+  --card: #ffffff; /* white cards */
+  --text: #2e2e33; /* charcoal text */
+  --muted: #9a9a9a; /* secondary/label text */
+
+  --coral: #ef7c7c; /* primary / "today" */
+  --mint: #5fc4bc; /* active states / accents */
+  --butter: #f6d365; /* highlights */
+  --lavender: #b9a7e0; /* highlights */
+
+  --radius-card: 24px; /* rounded corners on cards */
+  --shadow-soft: 0 10px 30px rgba(46, 46, 51, 0.08); /* soft diffuse shadow */
+}
+
+/* ---- Reset a few defaults so layout is predictable ---- */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ---- Page base ---- */
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: "Nunito", system-ui, sans-serif;
+  min-height: 100vh;
+  /* Centre the app and keep it phone-width on big screens */
+  display: flex;
+  justify-content: center;
+}
+
+/* The main scrollable app column. */
+.app {
+  width: 100%;
+  max-width: 480px;
+  padding: 24px;
+  /* Leave room at the bottom so the floating tab bar never covers content. */
+  padding-bottom: 120px;
+}
+
+/* ---- Sample card (white, rounded, soft shadow) ---- */
+.card {
+  background-color: var(--card);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-soft);
+  padding: 32px;
+  text-align: center;
+}
+
+.card__title {
+  font-size: 32px;
+  font-weight: 800;
+}
+
+.card__subtitle {
+  margin-top: 8px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* ---- Floating bottom tab bar ---- */
+.tabbar {
+  /* Fixed so it floats above content and stays put while scrolling. */
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%); /* centre it horizontally */
+
+  width: calc(100% - 32px);
+  max-width: 448px;
+
+  background-color: var(--card);
+  border-radius: 28px;
+  box-shadow: var(--shadow-soft);
+
+  /* Lay the four tabs out in an even row. */
+  display: flex;
+  justify-content: space-around;
+  padding: 10px 8px;
+}
+
+/* Each tab is a button with an emoji on top and a label below. */
+.tab {
+  /* Strip the default button look so we control everything. */
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+
+  padding: 8px 12px;
+  border-radius: 18px;
+
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 12px;
+
+  /* Smooth colour change when a tab becomes active later. */
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.tab__icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+/* The active tab gets a soft tinted "chip" and coloured text. */
+.tab--active {
+  background-color: rgba(239, 124, 124, 0.15); /* faint coral tint */
+  color: var(--coral);
+}
