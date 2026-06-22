@@ -1682,12 +1682,8 @@ function init() {
   });
 
   // Draw the initial screens from whatever is saved.
+  // The app always opens on the Today tab (set as the active view in index.html).
   renderAll();
-
-  // Friendly first run: if there are no profiles, start on the Settings tab.
-  if (loadList(STORAGE_KEYS.profiles).length === 0) {
-    switchView("settings");
-  }
 
   console.log("Athena's Arena loaded — Phase 4 ready ✅");
 }
