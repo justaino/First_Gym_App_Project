@@ -1,8 +1,15 @@
 <!DOCTYPE html>
 <!--
   index.html — the single page for the Gym App.
-  Phase 0: just a styled shell so we can confirm the look.
-  No real features yet (that's Phase 1).
+
+  Phase 1 (the MVP): profiles + exercises.
+  - Create profiles and pick the active one (Settings tab).
+  - Add / edit / delete exercises for the active profile.
+  - See the plan grouped by day (Schedule tab) and today's exercises (Today tab).
+  - Everything is saved in the browser with localStorage, so it survives a refresh.
+
+  The HTML below is just the *structure* (the boxes). The styling lives in
+  styles.css and all the behaviour (buttons, saving, etc.) lives in app.js.
 -->
 <html lang="en">
   <head>
@@ -24,37 +31,172 @@
   </head>
 
   <body>
-    <!-- The main app area. Content scrolls here; the tab bar floats on top. -->
+    <!--
+      Top header bar. It always shows the app name and which profile is active.
+      The "Switch" button jumps to the Settings tab where profiles are managed.
+    -->
+    <header class="topbar">
+      <span class="topbar__brand">Gym App 💪</span>
+      <button class="profile-chip" id="activeProfileChip" type="button">
+        <!-- Filled in by app.js with the active profile's name -->
+        <span id="activeProfileName">No profile</span>
+        <span class="profile-chip__hint">Switch</span>
+      </button>
+    </header>
+
+    <!--
+      The main app area. It holds one <section> per tab ("view").
+      Only one view is shown at a time; app.js adds/removes the "view--active"
+      class to switch between them.
+    -->
     <main class="app">
-      <!-- Phase 0 sample card, just to confirm the design system looks right. -->
-      <section class="card">
-        <h1 class="card__title">Gym App</h1>
-        <p class="card__subtitle">Phase 0 — setup complete 💪</p>
+      <!-- ===================== TODAY VIEW ===================== -->
+      <section class="view view--active" id="view-today" data-view="today">
+        <h1 class="view__title">Today</h1>
+        <p class="view__subtitle" id="todaySubtitle">—</p>
+
+        <!-- app.js fills this with today's exercises (or a friendly empty state) -->
+        <div id="todayList"></div>
+      </section>
+
+      <!-- ===================== SCHEDULE VIEW ===================== -->
+      <section class="view" id="view-schedule" data-view="schedule">
+        <h1 class="view__title">Schedule</h1>
+        <p class="view__subtitle" id="scheduleSubtitle">Your weekly plan</p>
+
+        <!-- Pill button to open the "add exercise" form -->
+        <button class="btn btn--primary btn--block" id="addExerciseBtn" type="button">
+          ＋ Add exercise
+        </button>
+
+        <!-- app.js fills this with exercises grouped by day -->
+        <div id="scheduleList"></div>
+      </section>
+
+      <!-- ===================== PROGRESS VIEW (placeholder) ===================== -->
+      <section class="view" id="view-progress" data-view="progress">
+        <h1 class="view__title">Progress</h1>
+        <div class="card empty-state">
+          <div class="empty-state__emoji">📈</div>
+          <p>Progress tracking is coming in a later phase.</p>
+        </div>
+      </section>
+
+      <!-- ===================== SETTINGS VIEW (profiles) ===================== -->
+      <section class="view" id="view-settings" data-view="settings">
+        <h1 class="view__title">Profiles</h1>
+        <p class="view__subtitle">Create a profile and pick which one is active.</p>
+
+        <!-- Create-a-profile form -->
+        <div class="card">
+          <form id="profileForm" class="form">
+            <label class="form__label" for="profileNameInput">New profile name</label>
+            <div class="form__row">
+              <input
+                class="input"
+                id="profileNameInput"
+                type="text"
+                placeholder="e.g. Alex"
+                maxlength="30"
+                autocomplete="off"
+              />
+              <button class="btn btn--primary" type="submit">Create</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- app.js fills this with the list of profiles -->
+        <div id="profileList"></div>
       </section>
     </main>
 
     <!--
-      Floating bottom tab bar (placeholder).
-      Four tabs; the active one is tinted. These don't do anything yet.
+      The exercise form lives inside a "modal" (a pop-up panel over the page).
+      It is hidden by default; app.js shows it for both "add" and "edit".
+    -->
+    <div class="modal" id="exerciseModal" hidden>
+      <!-- Clicking the dark backdrop closes the modal -->
+      <div class="modal__backdrop" id="modalBackdrop"></div>
+
+      <div class="modal__panel" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <h2 class="modal__title" id="modalTitle">Add exercise</h2>
+
+        <form id="exerciseForm" class="form">
+          <!-- Hidden field: holds the id when we're EDITING (empty when adding) -->
+          <input type="hidden" id="exerciseIdInput" />
+
+          <label class="form__label" for="nameInput">Exercise name</label>
+          <input
+            class="input"
+            id="nameInput"
+            type="text"
+            placeholder="e.g. Push-ups"
+            maxlength="40"
+            autocomplete="off"
+            required
+          />
+
+          <!-- Sets and reps side by side -->
+          <div class="form__grid">
+            <div>
+              <label class="form__label" for="setsInput">Sets</label>
+              <input class="input" id="setsInput" type="number" min="1" max="99" value="3" required />
+            </div>
+            <div>
+              <label class="form__label" for="repsInput">Reps</label>
+              <input class="input" id="repsInput" type="number" min="1" max="999" value="10" required />
+            </div>
+          </div>
+
+          <!-- Emoji picker (filled by app.js from a fixed preset list) -->
+          <label class="form__label">Icon</label>
+          <div class="emoji-picker" id="emojiPicker"></div>
+
+          <!-- Day of week -->
+          <label class="form__label" for="dayInput">Day</label>
+          <select class="input" id="dayInput">
+            <option value="Monday">Monday</option>
+            <option value="Tuesday">Tuesday</option>
+            <option value="Wednesday">Wednesday</option>
+            <option value="Thursday">Thursday</option>
+            <option value="Friday">Friday</option>
+            <option value="Saturday">Saturday</option>
+            <option value="Sunday">Sunday</option>
+          </select>
+
+          <!-- A small spot to show validation messages -->
+          <p class="form__error" id="formError" hidden></p>
+
+          <!-- Action buttons -->
+          <div class="modal__actions">
+            <button class="btn btn--ghost" type="button" id="cancelExerciseBtn">Cancel</button>
+            <button class="btn btn--primary" type="submit">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!--
+      Floating bottom tab bar. Each button has a data-view that matches a
+      <section data-view="..."> above; app.js uses it to switch views.
     -->
     <nav class="tabbar" aria-label="Main navigation">
-      <!-- aria-current marks the active tab for screen readers. -->
-      <button class="tab tab--active" type="button" aria-current="page">
+      <button class="tab tab--active" type="button" data-view="today" aria-current="page">
         <span class="tab__icon" aria-hidden="true">☀️</span>
         <span class="tab__label">Today</span>
       </button>
 
-      <button class="tab" type="button">
+      <button class="tab" type="button" data-view="schedule">
         <span class="tab__icon" aria-hidden="true">📅</span>
         <span class="tab__label">Schedule</span>
       </button>
 
-      <button class="tab" type="button">
+      <button class="tab" type="button" data-view="progress">
         <span class="tab__icon" aria-hidden="true">📈</span>
         <span class="tab__label">Progress</span>
       </button>
 
-      <button class="tab" type="button">
+      <button class="tab" type="button" data-view="settings">
         <span class="tab__icon" aria-hidden="true">⚙️</span>
         <span class="tab__label">Settings</span>
       </button>

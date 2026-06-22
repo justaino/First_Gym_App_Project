@@ -1,9 +1,11 @@
 /*
   styles.css — the "cute" pastel design system for the Gym App.
-  Phase 0: just the basics (colours, font, one card, the tab bar).
 
-  Tip: the colours below are kept in one place as CSS variables so we can
-  reuse them everywhere and change them in a single spot later.
+  Phase 1 styling: top bar, the four views, exercise cards, the add/edit form
+  (in a pop-up modal), profiles, and the floating bottom tab bar.
+
+  Tip: the colours below are kept in one place as CSS variables (the :root block)
+  so we can reuse them everywhere and change them in a single spot later.
 */
 
 /* ---- Design tokens (colours from CLAUDE.md / ROADMAP.md) ---- */
@@ -19,7 +21,9 @@
   --lavender: #b9a7e0; /* highlights */
 
   --radius-card: 24px; /* rounded corners on cards */
+  --radius-pill: 999px; /* fully rounded (pill) shape */
   --shadow-soft: 0 10px 30px rgba(46, 46, 51, 0.08); /* soft diffuse shadow */
+  --shadow-card: 0 6px 18px rgba(46, 46, 51, 0.06); /* lighter shadow for small cards */
 }
 
 /* ---- Reset a few defaults so layout is predictable ---- */
@@ -35,43 +39,354 @@ body {
   color: var(--text);
   font-family: "Nunito", system-ui, sans-serif;
   min-height: 100vh;
-  /* Centre the app and keep it phone-width on big screens */
+  /* Centre everything and keep it phone-width on big screens */
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
 }
 
-/* The main scrollable app column. */
+/* ---- Top header bar (app name + active profile) ---- */
+.topbar {
+  width: 100%;
+  max-width: 480px;
+  padding: 18px 24px 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.topbar__brand {
+  font-weight: 800;
+  font-size: 18px;
+}
+
+/* The little pill that shows the active profile name */
+.profile-chip {
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text);
+
+  background-color: var(--card);
+  box-shadow: var(--shadow-card);
+  border-radius: var(--radius-pill);
+  padding: 8px 14px;
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-chip__hint {
+  color: var(--coral);
+  font-size: 12px;
+}
+
+/* ---- The main app column ---- */
 .app {
   width: 100%;
   max-width: 480px;
-  padding: 24px;
+  padding: 12px 24px;
   /* Leave room at the bottom so the floating tab bar never covers content. */
   padding-bottom: 120px;
 }
 
-/* ---- Sample card (white, rounded, soft shadow) ---- */
+/* ---- Views (one per tab). Hidden unless they have "view--active". ---- */
+.view {
+  display: none;
+}
+.view--active {
+  display: block;
+}
+
+.view__title {
+  font-size: 30px;
+  font-weight: 800;
+  margin-bottom: 2px;
+}
+
+.view__subtitle {
+  color: var(--muted);
+  font-weight: 600;
+  margin-bottom: 18px;
+}
+
+/* ---- Cards (white, rounded, soft shadow) ---- */
 .card {
   background-color: var(--card);
   border-radius: var(--radius-card);
-  box-shadow: var(--shadow-soft);
-  padding: 32px;
-  text-align: center;
+  box-shadow: var(--shadow-card);
+  padding: 20px;
+  margin-bottom: 16px;
 }
 
-.card__title {
-  font-size: 32px;
+/* ---- Buttons (pill-shaped) ---- */
+.btn {
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 15px;
+  border-radius: var(--radius-pill);
+  padding: 12px 20px;
+  transition: transform 0.08s ease, opacity 0.15s ease;
+}
+.btn:active {
+  transform: scale(0.97); /* tiny press effect */
+}
+
+.btn--primary {
+  background-color: var(--coral);
+  color: #fff;
+}
+
+.btn--ghost {
+  background-color: transparent;
+  color: var(--muted);
+}
+
+/* A button that fills the row width (used for "Add exercise") */
+.btn--block {
+  display: block;
+  width: 100%;
+  margin-bottom: 18px;
+}
+
+/* Small button used on exercise cards (Edit / Delete) */
+.btn--small {
+  font-size: 13px;
+  padding: 7px 14px;
+}
+
+/* ---- Day groups on the Schedule view ---- */
+.day-group {
+  margin-bottom: 22px;
+}
+
+.day-group__heading {
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 10px;
+  padding-left: 4px;
+}
+
+/* ---- Exercise card (emoji + name + "3 × 10") ---- */
+.exercise {
+  background-color: var(--card);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  padding: 16px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.exercise__icon {
+  font-size: 28px;
+  /* A soft tinted circle behind the emoji */
+  background-color: rgba(95, 196, 188, 0.15); /* faint mint */
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-pill);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.exercise__info {
+  flex: 1; /* take up the remaining space, pushing buttons to the right */
+  min-width: 0;
+}
+
+.exercise__name {
+  font-weight: 800;
+  font-size: 16px;
+  /* If the name is very long, show "..." instead of breaking the layout */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.exercise__detail {
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 14px;
+  margin-top: 2px;
+}
+
+.exercise__actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* ---- Profile rows on the Settings view ---- */
+.profile-row {
+  background-color: var(--card);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.profile-row__name {
+  flex: 1;
+  font-weight: 800;
+  font-size: 16px;
+}
+
+/* A small "Active" badge shown next to the active profile */
+.badge {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--mint);
+  background-color: rgba(95, 196, 188, 0.15);
+  border-radius: var(--radius-pill);
+  padding: 4px 10px;
+}
+
+/* ---- Empty states (friendly "nothing here yet" messages) ---- */
+.empty-state {
+  text-align: center;
+  color: var(--muted);
+  font-weight: 600;
+}
+.empty-state__emoji {
+  font-size: 40px;
+  margin-bottom: 8px;
+}
+
+/* ---- Forms ---- */
+.form__label {
+  display: block;
+  font-weight: 700;
+  font-size: 14px;
+  margin: 14px 0 6px;
+}
+
+.input {
+  width: 100%;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  background-color: #fff;
+  border: 2px solid #efe9dd; /* soft cream-grey border */
+  border-radius: 14px;
+  padding: 11px 14px;
+}
+.input:focus {
+  outline: none;
+  border-color: var(--mint); /* highlight the field you're typing in */
+}
+
+/* A row that lays out an input + button side by side (create profile) */
+.form__row {
+  display: flex;
+  gap: 8px;
+}
+.form__row .input {
+  flex: 1;
+}
+
+/* Two equal columns (used for Sets / Reps) */
+.form__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form__error {
+  color: var(--coral);
+  font-weight: 700;
+  font-size: 14px;
+  margin-top: 12px;
+}
+
+/* ---- Emoji picker (chips you tap to choose an icon) ---- */
+.emoji-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.emoji-option {
+  font-size: 22px;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  border: 2px solid #efe9dd;
+  background-color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* The currently chosen emoji gets a tinted highlight */
+.emoji-option--selected {
+  border-color: var(--mint);
+  background-color: rgba(95, 196, 188, 0.15);
+}
+
+/* ---- Modal (pop-up panel for the add/edit form) ---- */
+.modal {
+  position: fixed;
+  inset: 0; /* cover the whole screen (top/right/bottom/left = 0) */
+  z-index: 100;
+  display: flex;
+  align-items: flex-end; /* slide up from the bottom on phones */
+  justify-content: center;
+}
+
+/*
+  When the modal has the "hidden" attribute we must force it to disappear.
+  Without this, the "display: flex" rule above would keep it visible even
+  when hidden, so the form would block the whole app.
+*/
+.modal[hidden] {
+  display: none;
+}
+
+.modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(46, 46, 51, 0.35); /* dim the page behind */
+}
+
+.modal__panel {
+  position: relative; /* sit above the backdrop */
+  width: 100%;
+  max-width: 480px;
+  background-color: var(--card);
+  border-radius: 28px 28px 0 0; /* rounded top corners only */
+  box-shadow: var(--shadow-soft);
+  padding: 24px;
+  /* If the form is taller than the screen, let it scroll */
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal__title {
+  font-size: 22px;
   font-weight: 800;
 }
 
-.card__subtitle {
-  margin-top: 8px;
-  color: var(--muted);
-  font-weight: 600;
+.modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 22px;
 }
 
 /* ---- Floating bottom tab bar ---- */
 .tabbar {
-  /* Fixed so it floats above content and stays put while scrolling. */
   position: fixed;
   bottom: 20px;
   left: 50%;
@@ -84,15 +399,12 @@ body {
   border-radius: 28px;
   box-shadow: var(--shadow-soft);
 
-  /* Lay the four tabs out in an even row. */
   display: flex;
   justify-content: space-around;
   padding: 10px 8px;
 }
 
-/* Each tab is a button with an emoji on top and a label below. */
 .tab {
-  /* Strip the default button look so we control everything. */
   border: none;
   background: transparent;
   cursor: pointer;
@@ -110,7 +422,6 @@ body {
   font-weight: 700;
   font-size: 12px;
 
-  /* Smooth colour change when a tab becomes active later. */
   transition: background-color 0.15s ease, color 0.15s ease;
 }
 
