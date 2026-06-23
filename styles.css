@@ -882,14 +882,20 @@ body {
 }
 
 /* Show the right mascot for the current theme.
-   Light mode: sun visible, moon hidden. Dark mode: the opposite. */
-.mascot--moon {
+   Light mode: sun visible, moon hidden. Dark mode: the opposite.
+   These are scoped to ".hero__mascot ..." on purpose so they out-rank the
+   ".hero__mascot svg { display: block }" sizing rule above — otherwise that
+   rule keeps the hidden mascot visible (it would stack under the other one). */
+.hero__mascot .mascot--sun {
+  display: block;
+}
+.hero__mascot .mascot--moon {
   display: none;
 }
-:root[data-theme="dark"] .mascot--sun {
+:root[data-theme="dark"] .hero__mascot .mascot--sun {
   display: none;
 }
-:root[data-theme="dark"] .mascot--moon {
+:root[data-theme="dark"] .hero__mascot .mascot--moon {
   display: block;
 }
 
