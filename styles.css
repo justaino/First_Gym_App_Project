@@ -531,6 +531,53 @@ body {
   font-size: 24px;
   font-weight: 800;
 }
+/* Small "saves automatically" note under the workout header */
+.sheet__note {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 13px;
+  margin: -8px 0 16px;
+}
+/* Finish / Discard buttons row at the bottom of the workout sheet */
+.sheet__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+.sheet__actions .btn {
+  flex: 1;
+}
+
+/* ---- Editable per-set rows inside a workout ---- */
+.wset-row {
+  display: grid;
+  grid-template-columns: 40px 1fr 1fr 28px;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+/* The little column headings above the rows */
+.wset-row--head {
+  margin-bottom: 4px;
+}
+.wset-row--head span {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+/* Remove-a-set button */
+.wset-remove {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1;
+}
+.wset-add {
+  margin-top: 4px;
+}
 
 /* ---- A single exercise inside the workout ---- */
 .workout-exercise {

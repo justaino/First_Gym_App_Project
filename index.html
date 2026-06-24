@@ -342,19 +342,23 @@
 
     <!--
       Workout mode (Phase 2). A focused full-screen sheet that covers the app
-      while you train: it lists the day's exercises with tick-able set dots,
-      a rest timer, and a "Finish & save" button. Hidden until you start.
+      while you train: it lists the day's exercises with editable per-set rows,
+      a rest timer, and Finish / Discard buttons. Progress saves as you go, so
+      "Close" keeps it to resume later. Hidden until you start.
     -->
     <div class="sheet" id="workoutOverlay" hidden>
       <div class="sheet__panel" role="dialog" aria-modal="true" aria-labelledby="workoutTitle">
         <header class="sheet__header">
           <h2 class="sheet__title" id="workoutTitle">Workout</h2>
-          <button class="btn btn--ghost btn--small" type="button" id="cancelWorkoutBtn">
-            Cancel
+          <button class="btn btn--ghost btn--small" type="button" id="closeWorkoutBtn">
+            Close
           </button>
         </header>
 
-        <!-- app.js fills this with the day's exercises and their set dots -->
+        <!-- Saved-as-you-go note -->
+        <p class="sheet__note">Progress saves automatically as you go.</p>
+
+        <!-- app.js fills this with the day's exercises and their per-set rows -->
         <div id="workoutList"></div>
 
         <!-- Rest timer -->
@@ -370,9 +374,14 @@
           </div>
         </div>
 
-        <button class="btn btn--primary btn--block" type="button" id="finishWorkoutBtn">
-          Finish &amp; save
-        </button>
+        <div class="sheet__actions">
+          <button class="btn btn--ghost" type="button" id="discardWorkoutBtn">
+            Discard
+          </button>
+          <button class="btn btn--primary" type="button" id="finishWorkoutBtn">
+            Finish
+          </button>
+        </div>
       </div>
     </div>
 

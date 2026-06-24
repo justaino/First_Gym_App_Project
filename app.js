@@ -285,7 +285,8 @@ function renderSchedule() {
     const startBtn = document.createElement("button");
     startBtn.className = "btn btn--ghost btn--small";
     startBtn.type = "button";
-    startBtn.textContent = "▶ Start";
+    // Say "Resume" if there's an in-progress workout for this day.
+    startBtn.textContent = findInProgressSession(day) ? "▶ Resume" : "▶ Start";
     startBtn.addEventListener("click", () => startWorkout(day));
 
     headingRow.appendChild(heading);
@@ -332,9 +333,13 @@ function renderToday() {
     (exercise) => exercise.day === todayName
   );
 
-  // Only show the "Start workout" button if there's actually something to do.
+  // Only show the button if there's something to do; label it Resume if a
+  // workout for today is already in progress.
   const startBtn = document.getElementById("startTodayBtn");
   startBtn.hidden = todaysExercises.length === 0;
+  startBtn.textContent = findInProgressSession(todayName)
+    ? "▶ Resume workout"
+    : "▶ Start workout";
 
   if (todaysExercises.length === 0) {
     container.appendChild(
@@ -433,9 +438,12 @@ function renderHistory() {
   const activeId = loadActiveProfileId();
   const allSessions = loadList(STORAGE_KEYS.sessions);
 
-  // Only this profile's sessions, newest first.
+  // Only this profile's COMPLETED sessions (skip in-progress ones), newest first.
   const sessions = allSessions
-    .filter((session) => session.profileId === activeId)
+    .filter(
+      (session) =>
+        session.profileId === activeId && isCompletedSession(session)
+    )
     .sort((a, b) => new Date(b.date) - new Date(a.date));
 
   // No history yet → hide the heading and show nothing.
@@ -457,7 +465,7 @@ function renderHistory() {
 
     // Add up all the sets that were ticked off across the session.
     const totalSets = session.entries.reduce(
-      (sum, entry) => sum + entry.setsDone,
+      (sum, entry) => sum + entrySetsDone(entry),
       0
     );
 
@@ -624,16 +632,39 @@ function showSessionDetail(session) {
     name.className = "exercise__name";
     name.textContent = exercise ? exercise.name : "(deleted exercise)";
 
-    let detailText = entry.setsDone + " sets done";
-    if (entry.weight !== null && entry.weight !== undefined) {
-      detailText += " · weight " + entry.weight;
-    }
+    const setsDone = entrySetsDone(entry);
     const detail = document.createElement("div");
     detail.className = "exercise__detail";
-    detail.textContent = detailText;
 
-    info.appendChild(name);
-    info.appendChild(detail);
+    if (Array.isArray(entry.sets)) {
+      // New per-set shape: "2/3 sets done" plus a per-set breakdown line.
+      detail.textContent = setsDone + "/" + entry.sets.length + " sets done";
+      info.appendChild(name);
+      info.appendChild(detail);
+
+      const perSet = document.createElement("div");
+      perSet.className = "exercise__detail";
+      perSet.textContent = entry.sets
+        .map((set) => {
+          const weight =
+            set.weight !== null && set.weight !== undefined
+              ? "×" + set.weight
+              : "";
+          return (set.done ? "✓" : "·") + set.reps + weight;
+        })
+        .join("   ");
+      info.appendChild(perSet);
+    } else {
+      // Old shape: a single setsDone count (+ optional single weight).
+      let detailText = setsDone + " sets done";
+      if (entry.weight !== null && entry.weight !== undefined) {
+        detailText += " · weight " + entry.weight;
+      }
+      detail.textContent = detailText;
+      info.appendChild(name);
+      info.appendChild(detail);
+    }
+
     row.appendChild(icon);
     row.appendChild(info);
     list.appendChild(row);
@@ -751,8 +782,10 @@ function renderProgress() {
   subtitle.textContent = activeProfile.name + "'s activity";
 
   const activeId = loadActiveProfileId();
+  // Only finished workouts count towards progress (skip in-progress ones).
   const sessions = loadList(STORAGE_KEYS.sessions).filter(
-    (session) => session.profileId === activeId
+    (session) =>
+      session.profileId === activeId && isCompletedSession(session)
   );
 
   // --- "This week" summary ---
@@ -763,7 +796,8 @@ function renderProgress() {
   const workoutsThisWeek = weekSessions.length;
   const setsThisWeek = weekSessions.reduce(
     (sum, session) =>
-      sum + session.entries.reduce((inner, entry) => inner + entry.setsDone, 0),
+      sum +
+      session.entries.reduce((inner, entry) => inner + entrySetsDone(entry), 0),
     0
   );
   summary.appendChild(buildWeekSummaryCard(workoutsThisWeek, setsThisWeek));
@@ -795,15 +829,17 @@ function renderProgress() {
         (item) => item.exerciseId === exercise.id
       );
       if (entry) {
+        const setsDone = entrySetsDone(entry);
+        const entryWeight = entryLastWeight(entry);
         points.push({
           date: session.date,
-          setsDone: entry.setsDone,
-          weight: entry.weight,
+          setsDone: setsDone,
+          weight: entryWeight,
           session: session,
         });
-        totalSets += entry.setsDone;
-        if (entry.weight !== null && entry.weight !== undefined) {
-          lastWeight = entry.weight;
+        totalSets += setsDone;
+        if (entryWeight !== null) {
+          lastWeight = entryWeight;
         }
       }
     });
@@ -1204,37 +1240,118 @@ function showFormError(message) {
 }
 
 /* =========================================================================
-   7b. WORKOUT MODE + REST TIMER (Phase 2)
-   While a workout is running we keep its progress in "activeWorkout" (just in
-   memory). Only when you press "Finish & save" do we write a Session to
-   localStorage. The rest timer is separate and uses a 1-second countdown.
+   7b. WORKOUT MODE + REST TIMER (save as you go — Roadmap v2 Phase 3)
+   A workout is a Session with status "in-progress". It is saved to localStorage
+   continuously as you edit it, so progress survives a refresh. Each entry holds
+   a per-set list { reps, weight, done } seeded from the plan. You can edit
+   reps/weight, tick sets done, and add/remove sets — all of which affect ONLY
+   this day's session, never the saved exercise. "Finish" marks it completed.
    ========================================================================= */
 
-// Holds the workout currently in progress, or null when none is running.
-// Shape: { day, items: [ { exercise, done: [true/false per set] } ] }
-let activeWorkout = null;
+// The session open in workout mode (a working copy kept in sync with
+// localStorage), or null when the workout sheet is closed.
+let activeSession = null;
 
-// Begin a workout for a given day (e.g. "Monday").
-function startWorkout(day) {
-  const exercisesForDay = getExercisesForActiveProfile().filter(
-    (exercise) => exercise.day === day
+// --- Session helpers (also used by history & progress) ---
+
+// Is this a finished session? Old sessions (no status) count as completed.
+function isCompletedSession(session) {
+  return session.status !== "in-progress";
+}
+
+// How many sets were done in an entry. Works for both the new per-set shape
+// and the old { setsDone } shape, so existing history still reads correctly.
+function entrySetsDone(entry) {
+  if (Array.isArray(entry.sets)) {
+    return entry.sets.filter((set) => set.done).length;
+  }
+  return entry.setsDone || 0;
+}
+
+// The last weight recorded in an entry (per-set new shape, or old single weight).
+function entryLastWeight(entry) {
+  if (Array.isArray(entry.sets)) {
+    let weight = null;
+    entry.sets.forEach((set) => {
+      if (set.weight !== null && set.weight !== undefined) {
+        weight = set.weight;
+      }
+    });
+    return weight;
+  }
+  return entry.weight !== null && entry.weight !== undefined
+    ? entry.weight
+    : null;
+}
+
+// Find an in-progress session for the active profile + day (to resume), or null.
+function findInProgressSession(day) {
+  const activeId = loadActiveProfileId();
+  return (
+    loadList(STORAGE_KEYS.sessions).find(
+      (session) =>
+        session.profileId === activeId &&
+        session.day === day &&
+        session.status === "in-progress"
+    ) || null
   );
+}
 
-  if (exercisesForDay.length === 0) {
-    window.alert("There are no exercises planned for " + day + ".");
+// Save the active session into gym:sessions (replace if present, else add).
+function persistActiveSession() {
+  if (!activeSession) {
     return;
   }
+  activeSession.updatedAt = new Date().toISOString();
+  const sessions = loadList(STORAGE_KEYS.sessions);
+  const index = sessions.findIndex((s) => s.id === activeSession.id);
+  if (index === -1) {
+    sessions.push(activeSession);
+  } else {
+    sessions[index] = activeSession;
+  }
+  saveList(STORAGE_KEYS.sessions, sessions);
+}
 
-  // Build the in-progress state: every set starts "not done" (false),
-  // and the optional weight starts empty (null).
-  activeWorkout = {
-    day: day,
-    items: exercisesForDay.map((exercise) => ({
-      exercise: exercise,
-      done: new Array(exercise.sets).fill(false),
-      weight: null, // Phase 3: optional weight the user can type in
-    })),
-  };
+// Look up an exercise (for its name/icon) by id.
+function findExerciseById(id) {
+  return loadList(STORAGE_KEYS.exercises).find((ex) => ex.id === id) || null;
+}
+
+// Begin a NEW workout for a day, or resume the in-progress one if it exists.
+function startWorkout(day) {
+  let session = findInProgressSession(day);
+
+  if (!session) {
+    // No workout in progress for this day → build a fresh one from the plan.
+    const exercisesForDay = getExercisesForActiveProfile().filter(
+      (exercise) => exercise.day === day
+    );
+    if (exercisesForDay.length === 0) {
+      window.alert("There are no exercises planned for " + day + ".");
+      return;
+    }
+    session = {
+      id: makeId(),
+      profileId: loadActiveProfileId(),
+      date: new Date().toISOString(),
+      day: day,
+      status: "in-progress",
+      // Each entry's sets are seeded from the exercise's per-set plan, including
+      // the default weight. Editing them here won't change the plan.
+      entries: exercisesForDay.map((exercise) => ({
+        exerciseId: exercise.id,
+        sets: exercise.repsPerSet.map((reps, i) => ({
+          reps: reps,
+          weight: exercise.weightPerSet[i],
+          done: false,
+        })),
+      })),
+    };
+  }
+
+  activeSession = session;
+  persistActiveSession(); // a brand-new session is saved immediately
 
   document.getElementById("workoutTitle").textContent = day + " workout";
   resetTimerDisplay();
@@ -1242,145 +1359,202 @@ function startWorkout(day) {
   document.getElementById("workoutOverlay").hidden = false;
 }
 
-// Draw the list of exercises (with their set dots) inside the workout sheet.
+// Draw the workout: each exercise with editable per-set rows.
 function renderWorkoutItems() {
   const container = document.getElementById("workoutList");
   container.innerHTML = "";
 
-  activeWorkout.items.forEach((item, itemIndex) => {
+  activeSession.entries.forEach((entry, entryIndex) => {
+    const exercise = findExerciseById(entry.exerciseId);
+
     const card = document.createElement("div");
     card.className = "workout-exercise";
 
-    // Top row: emoji, name + "sets × reps", and a progress count.
+    // Top row: emoji, name, and a done/total count.
     const top = document.createElement("div");
     top.className = "workout-exercise__top";
 
     const icon = document.createElement("div");
     icon.className = "exercise__icon";
-    icon.textContent = item.exercise.icon;
+    icon.textContent = exercise ? exercise.icon : "❓";
 
     const info = document.createElement("div");
     info.className = "exercise__info";
-
     const name = document.createElement("div");
     name.className = "exercise__name";
-    name.textContent = item.exercise.name;
-
-    const detail = document.createElement("div");
-    detail.className = "exercise__detail";
-    detail.textContent = item.exercise.sets + " × " + item.exercise.reps;
-
+    name.textContent = exercise ? exercise.name : "(deleted exercise)";
     info.appendChild(name);
-    info.appendChild(detail);
 
-    const doneCount = item.done.filter(Boolean).length;
+    const doneCount = entry.sets.filter((set) => set.done).length;
     const progress = document.createElement("div");
     progress.className = "workout-exercise__progress";
-    progress.textContent = doneCount + "/" + item.exercise.sets;
+    progress.textContent = doneCount + "/" + entry.sets.length;
 
     top.appendChild(icon);
     top.appendChild(info);
     top.appendChild(progress);
-
-    // The row of tap-to-tick set dots.
-    const dots = document.createElement("div");
-    dots.className = "set-dots";
-    item.done.forEach((isDone, setIndex) => {
-      const dot = document.createElement("button");
-      dot.type = "button";
-      dot.className = "set-dot" + (isDone ? " set-dot--done" : "");
-      dot.textContent = isDone ? "✓" : String(setIndex + 1);
-      dot.addEventListener("click", () => toggleSet(itemIndex, setIndex));
-      dots.appendChild(dot);
-    });
-
-    // Optional weight field (Phase 3). The value is kept on the item so it
-    // survives when we redraw the list after ticking a set.
-    const weightWrap = document.createElement("div");
-    weightWrap.className = "workout-exercise__weight";
-
-    const weightLabel = document.createElement("label");
-    weightLabel.textContent = "Weight";
-
-    const weightInput = document.createElement("input");
-    weightInput.className = "input weight-input";
-    weightInput.type = "number";
-    weightInput.min = "0";
-    weightInput.step = "any";
-    weightInput.placeholder = "optional";
-    if (item.weight !== null) {
-      weightInput.value = item.weight;
-    }
-    // Remember what was typed (empty box = no weight recorded).
-    weightInput.addEventListener("input", () => {
-      const typed = weightInput.value.trim();
-      item.weight = typed === "" ? null : Number(typed);
-    });
-
-    weightLabel.appendChild(weightInput);
-    weightWrap.appendChild(weightLabel);
-
     card.appendChild(top);
-    card.appendChild(dots);
-    card.appendChild(weightWrap);
+
+    // Column headings for the set rows.
+    const head = document.createElement("div");
+    head.className = "wset-row wset-row--head";
+    head.innerHTML =
+      "<span></span><span>Reps</span><span>Weight</span><span></span>";
+    card.appendChild(head);
+
+    // One editable row per set.
+    entry.sets.forEach((set, setIndex) => {
+      card.appendChild(buildWorkoutSetRow(entryIndex, setIndex, set));
+    });
+
+    // "Add set" button (for this day only).
+    const addBtn = document.createElement("button");
+    addBtn.type = "button";
+    addBtn.className = "btn btn--ghost btn--small wset-add";
+    addBtn.textContent = "＋ Add set";
+    addBtn.addEventListener("click", () => addWorkoutSet(entryIndex));
+    card.appendChild(addBtn);
+
     container.appendChild(card);
   });
 }
 
-// Tick a set on or off, then redraw.
-function toggleSet(itemIndex, setIndex) {
-  const done = activeWorkout.items[itemIndex].done;
-  done[setIndex] = !done[setIndex];
+// Build one editable set row: [done] [reps] [weight] [remove].
+function buildWorkoutSetRow(entryIndex, setIndex, set) {
+  const row = document.createElement("div");
+  row.className = "wset-row";
+
+  // Done toggle (reuses the round set-dot look; shows the set number or a tick).
+  const doneBtn = document.createElement("button");
+  doneBtn.type = "button";
+  doneBtn.className = "set-dot" + (set.done ? " set-dot--done" : "");
+  doneBtn.textContent = set.done ? "✓" : String(setIndex + 1);
+  doneBtn.setAttribute("aria-label", "Mark set " + (setIndex + 1) + " done");
+  doneBtn.addEventListener("click", () => toggleWorkoutSet(entryIndex, setIndex));
+
+  const repsInput = document.createElement("input");
+  repsInput.className = "input";
+  repsInput.type = "number";
+  repsInput.min = "1";
+  repsInput.value = set.reps;
+  repsInput.setAttribute("aria-label", "Set " + (setIndex + 1) + " reps");
+  repsInput.addEventListener("input", () => {
+    set.reps = Number(repsInput.value) || 0;
+    persistActiveSession();
+  });
+
+  const weightInput = document.createElement("input");
+  weightInput.className = "input";
+  weightInput.type = "number";
+  weightInput.min = "0";
+  weightInput.step = "any";
+  weightInput.placeholder = "—";
+  if (set.weight !== null && set.weight !== undefined) {
+    weightInput.value = set.weight;
+  }
+  weightInput.setAttribute("aria-label", "Set " + (setIndex + 1) + " weight");
+  weightInput.addEventListener("input", () => {
+    const text = weightInput.value.trim();
+    set.weight = text === "" ? null : Number(text);
+    persistActiveSession();
+  });
+
+  // Remove this set (for the day only).
+  const removeBtn = document.createElement("button");
+  removeBtn.type = "button";
+  removeBtn.className = "wset-remove";
+  removeBtn.textContent = "✕";
+  removeBtn.setAttribute("aria-label", "Remove set " + (setIndex + 1));
+  removeBtn.addEventListener("click", () =>
+    removeWorkoutSet(entryIndex, setIndex)
+  );
+
+  row.appendChild(doneBtn);
+  row.appendChild(repsInput);
+  row.appendChild(weightInput);
+  row.appendChild(removeBtn);
+  return row;
+}
+
+// Tick a set done/undone (and save).
+function toggleWorkoutSet(entryIndex, setIndex) {
+  const set = activeSession.entries[entryIndex].sets[setIndex];
+  set.done = !set.done;
+  persistActiveSession();
   renderWorkoutItems();
 }
 
-// Save the workout as a Session and close the sheet.
-function finishWorkout() {
-  if (!activeWorkout) {
+// Add a set for today, seeded from the last set's values (and save).
+function addWorkoutSet(entryIndex) {
+  const sets = activeSession.entries[entryIndex].sets;
+  const last = sets[sets.length - 1];
+  sets.push({
+    reps: last ? last.reps : 10,
+    weight: last ? last.weight : null,
+    done: false,
+  });
+  persistActiveSession();
+  renderWorkoutItems();
+}
+
+// Remove a set for today (keep at least one), then save.
+function removeWorkoutSet(entryIndex, setIndex) {
+  const sets = activeSession.entries[entryIndex].sets;
+  if (sets.length <= 1) {
+    window.alert(
+      "An exercise needs at least one set. (This only affects today, not the plan.)"
+    );
     return;
   }
+  sets.splice(setIndex, 1);
+  persistActiveSession();
+  renderWorkoutItems();
+}
 
-  // Build the entries: one per exercise, with how many sets were ticked and
-  // the optional weight (null if the box was left empty).
-  const entries = activeWorkout.items.map((item) => ({
-    exerciseId: item.exercise.id,
-    setsDone: item.done.filter(Boolean).length,
-    weight: item.weight,
-  }));
+// Finish: mark the in-progress session completed, then close.
+function finishWorkout() {
+  if (!activeSession) {
+    return;
+  }
+  activeSession.status = "completed";
+  persistActiveSession();
 
-  const totalSets = entries.reduce((sum, entry) => sum + entry.setsDone, 0);
+  const totalSets = activeSession.entries.reduce(
+    (sum, entry) => sum + entry.sets.filter((set) => set.done).length,
+    0
+  );
 
-  const session = {
-    id: makeId(),
-    profileId: loadActiveProfileId(),
-    date: new Date().toISOString(),
-    day: activeWorkout.day, // handy for showing "Monday workout" in history
-    entries: entries,
-  };
-
-  const sessions = loadList(STORAGE_KEYS.sessions);
-  sessions.push(session);
-  saveList(STORAGE_KEYS.sessions, sessions);
-
-  closeWorkout();
+  closeWorkoutOverlay();
+  activeSession = null;
   renderAll();
   window.alert("Workout saved! " + totalSets + " sets done 💪");
 }
 
-// Close the workout sheet without saving (after a confirmation).
-function cancelWorkout() {
-  const ok = window.confirm("Discard this workout? It won't be saved.");
+// Discard: delete the in-progress session entirely (after a confirm).
+function discardWorkout() {
+  if (!activeSession) {
+    return;
+  }
+  const ok = window.confirm(
+    "Discard this workout? Today's progress will be deleted."
+  );
   if (!ok) {
     return;
   }
-  closeWorkout();
+  const sessions = loadList(STORAGE_KEYS.sessions).filter(
+    (session) => session.id !== activeSession.id
+  );
+  saveList(STORAGE_KEYS.sessions, sessions);
+
+  closeWorkoutOverlay();
+  activeSession = null;
+  renderAll();
 }
 
-// Shared cleanup: stop the timer, hide the sheet, clear the in-progress state.
-function closeWorkout() {
+// Close the sheet but KEEP the in-progress session, so it can be resumed later.
+function closeWorkoutOverlay() {
   stopRest();
   document.getElementById("workoutOverlay").hidden = true;
-  activeWorkout = null;
 }
 
 /* ---- Rest timer ---- */
@@ -1803,13 +1977,16 @@ function init() {
     .getElementById("startTodayBtn")
     .addEventListener("click", () => startWorkout(getTodayName()));
 
-  // Finish / cancel buttons inside the workout sheet.
+  // Workout sheet buttons: Finish (complete), Discard (delete), Close (keep).
   document
     .getElementById("finishWorkoutBtn")
     .addEventListener("click", finishWorkout);
   document
-    .getElementById("cancelWorkoutBtn")
-    .addEventListener("click", cancelWorkout);
+    .getElementById("discardWorkoutBtn")
+    .addEventListener("click", discardWorkout);
+  document
+    .getElementById("closeWorkoutBtn")
+    .addEventListener("click", closeWorkoutOverlay);
 
   // Rest timer: the 60/90/120 buttons each have a data-seconds value.
   document.querySelectorAll(".timer-btn[data-seconds]").forEach((button) => {
@@ -1893,7 +2070,7 @@ function init() {
     } else if (!document.getElementById("sessionModal").hidden) {
       closeSessionModal();
     } else if (!document.getElementById("workoutOverlay").hidden) {
-      cancelWorkout(); // asks before discarding the workout
+      closeWorkoutOverlay(); // keeps the in-progress workout to resume later
     }
   });
 

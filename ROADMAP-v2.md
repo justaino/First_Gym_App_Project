@@ -83,18 +83,18 @@ weight, edit it, and see it summarised correctly; old exercises still work.
 
 ---
 
-### Phase 3 — Save as you go ☐
+### Phase 3 — Save as you go ✅
 **Covers:** feedback #4
 **Goal:** a workout is saved continuously, not only at the end. On-the-day edits
 are **session-only** — they never change the saved exercise/plan.
-- ☐ New session-entry shape capturing per-set `{ reps, weight, done }`
-- ☐ Starting a workout creates/opens a session seeded from the plan
-- ☐ Each set row in workout mode shows reps + weight + a "done" toggle, all
+- ✅ New session-entry shape capturing per-set `{ reps, weight, done }`
+- ✅ Starting a workout creates/opens a session seeded from the plan
+- ✅ Each set row in workout mode shows reps + weight + a "done" toggle, all
       editable, and **persists immediately** on change
-- ☐ **Add or remove a set for that day** (e.g. planned 3, did 4) — the count is
+- ✅ **Add or remove a set for that day** (e.g. planned 3, did 4) — the count is
       per-session and does NOT change the master exercise
-- ☐ Leaving and reopening the day resumes the in-progress workout
-- ☐ "Finish" just marks it complete; progress/history read the new shape (and
+- ✅ Leaving and reopening the day resumes the in-progress workout
+- ✅ "Finish" just marks it complete; progress/history read the new shape (and
       still read old sessions via `entrySetsDone()`)
 
 **Done when:** I can start Pull Ups (planned 3×10), change it to 4 sets at
