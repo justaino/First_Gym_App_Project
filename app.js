@@ -534,12 +534,15 @@ function getStartOfWeek() {
 }
 
 // Build a small, interactive bar chart (as an SVG element) from "points".
-// Each point is { date, setsDone, weight, session }. Bars show a tooltip on
-// hover and open that workout's details when clicked.
+// Each point is { date, reps, weight, session }. When any session has a weight,
+// each session shows TWO bars: reps (mint) and weight (lavender). The two
+// colours are scaled to their OWN maximums, so each shows its trend over time.
+// Bars show a tooltip on hover and open that workout's details when clicked.
 function buildBarChartSvg(points) {
   const width = 240;
   const height = 60;
-  const gap = 4;
+  const groupGap = 6; // gap between sessions
+  const innerGap = 3; // gap between the two bars within a session
   const namespace = "http://www.w3.org/2000/svg";
 
   const svg = document.createElementNS(namespace, "svg");
@@ -547,49 +550,73 @@ function buildBarChartSvg(points) {
   svg.setAttribute("class", "barchart");
   svg.setAttribute("preserveAspectRatio", "none");
 
-  // The tallest bar maps to the full height. Avoid dividing by zero with "1".
-  const setCounts = points.map((point) => point.setsDone);
-  const max = Math.max.apply(null, setCounts.concat([1]));
-  const barWidth = (width - gap * (points.length - 1)) / points.length;
+  // Show the weight series only if at least one session recorded a weight.
+  const hasWeight = points.some(
+    (point) => point.weight !== null && point.weight !== undefined
+  );
+
+  // Each colour is normalised to its own max (avoid divide-by-zero with 1).
+  const maxReps = Math.max.apply(null, points.map((p) => p.reps).concat([1]));
+  const maxWeight = Math.max.apply(
+    null,
+    points.map((p) => p.weight || 0).concat([1])
+  );
+
+  const groupWidth =
+    (width - groupGap * (points.length - 1)) / points.length;
+  const barWidth = hasWeight ? (groupWidth - innerGap) / 2 : groupWidth;
 
   points.forEach((point, index) => {
-    // Always show at least a sliver so small sessions are still visible.
-    const barHeight = Math.max(2, (point.setsDone / max) * height);
-    const rect = document.createElementNS(namespace, "rect");
-    rect.setAttribute("x", index * (barWidth + gap));
-    rect.setAttribute("y", height - barHeight);
-    rect.setAttribute("width", barWidth);
-    rect.setAttribute("height", barHeight);
-    rect.setAttribute("rx", 3);
-    rect.setAttribute("class", "barchart__bar");
+    const groupX = index * (groupWidth + groupGap);
 
-    // The text shown in the tooltip (and as a plain-browser fallback below).
-    let label = formatDate(point.date) + " · " + point.setsDone + " sets";
+    // One tooltip per session, shared by both of its bars.
+    let label = formatDate(point.date) + " · " + point.reps + " reps";
     if (point.weight !== null && point.weight !== undefined) {
-      label += " · " + point.weight;
+      label += " · " + point.weight + " wt";
     }
 
-    // Fallback tooltip for any case where our custom one doesn't run.
-    const title = document.createElementNS(namespace, "title");
-    title.textContent = label;
-    rect.appendChild(title);
+    // Helper to add a single bar.
+    const addBar = (x, value, maxValue, modifierClass) => {
+      const barHeight = Math.max(2, (value / maxValue) * height);
+      const rect = document.createElementNS(namespace, "rect");
+      rect.setAttribute("x", x);
+      rect.setAttribute("y", height - barHeight);
+      rect.setAttribute("width", barWidth);
+      rect.setAttribute("height", barHeight);
+      rect.setAttribute("rx", 3);
+      rect.setAttribute("class", "barchart__bar " + modifierClass);
 
-    // Custom tooltip on hover (follows the pointer).
-    rect.addEventListener("mouseenter", (event) =>
-      showChartTooltip(label, event.clientX, event.clientY)
-    );
-    rect.addEventListener("mousemove", (event) =>
-      showChartTooltip(label, event.clientX, event.clientY)
-    );
-    rect.addEventListener("mouseleave", hideChartTooltip);
+      const title = document.createElementNS(namespace, "title");
+      title.textContent = label;
+      rect.appendChild(title);
 
-    // Click (or tap) a bar to see that whole workout.
-    rect.addEventListener("click", () => {
-      hideChartTooltip();
-      showSessionDetail(point.session);
-    });
+      rect.addEventListener("mouseenter", (event) =>
+        showChartTooltip(label, event.clientX, event.clientY)
+      );
+      rect.addEventListener("mousemove", (event) =>
+        showChartTooltip(label, event.clientX, event.clientY)
+      );
+      rect.addEventListener("mouseleave", hideChartTooltip);
+      rect.addEventListener("click", () => {
+        hideChartTooltip();
+        showSessionDetail(point.session);
+      });
 
-    svg.appendChild(rect);
+      svg.appendChild(rect);
+    };
+
+    // Reps bar (always). Weight bar second (only when we have weights).
+    addBar(groupX, point.reps, maxReps, "barchart__bar--reps");
+    if (hasWeight) {
+      const weightValue =
+        point.weight !== null && point.weight !== undefined ? point.weight : 0;
+      addBar(
+        groupX + barWidth + innerGap,
+        weightValue,
+        maxWeight,
+        "barchart__bar--weight"
+      );
+    }
   });
 
   return svg;
@@ -774,7 +801,16 @@ function buildExerciseProgressCard(exercise, points, totalSets, lastWeight) {
 
   card.appendChild(top);
   // Show a chart of the most recent sessions (up to 12 bars).
-  card.appendChild(buildBarChartSvg(points.slice(-12)));
+  const recentPoints = points.slice(-12);
+  card.appendChild(buildBarChartSvg(recentPoints));
+
+  // If any of those sessions had a weight, show a legend for the two colours.
+  const hasWeight = recentPoints.some(
+    (point) => point.weight !== null && point.weight !== undefined
+  );
+  if (hasWeight) {
+    card.appendChild(buildChartLegend());
+  }
 
   // A small hint so people know the bars are interactive.
   const hint = document.createElement("div");
@@ -783,6 +819,28 @@ function buildExerciseProgressCard(exercise, points, totalSets, lastWeight) {
   card.appendChild(hint);
 
   return card;
+}
+
+// A little legend explaining the two bar colours (reps vs weight).
+function buildChartLegend() {
+  const legend = document.createElement("div");
+  legend.className = "chart-legend";
+
+  const makeItem = (modifier, text) => {
+    const item = document.createElement("span");
+    item.className = "chart-legend__item";
+    const swatch = document.createElement("span");
+    swatch.className = "chart-legend__swatch " + modifier;
+    const labelText = document.createElement("span");
+    labelText.textContent = text;
+    item.appendChild(swatch);
+    item.appendChild(labelText);
+    return item;
+  };
+
+  legend.appendChild(makeItem("chart-legend__swatch--reps", "Reps"));
+  legend.appendChild(makeItem("chart-legend__swatch--weight", "Weight"));
+  return legend;
 }
 
 // Draw the whole Progress view.
@@ -857,8 +915,8 @@ function renderProgress() {
         const entryWeight = entryLastWeight(entry);
         points.push({
           date: session.date,
-          setsDone: setsDone,
-          weight: entryWeight,
+          reps: entryRepsDone(entry), // mint bar = total reps done
+          weight: entryMaxWeight(entry), // lavender bar = heaviest weight
           session: session,
         });
         totalSets += setsDone;
@@ -1302,6 +1360,33 @@ function entryLastWeight(entry) {
       }
     });
     return weight;
+  }
+  return entry.weight !== null && entry.weight !== undefined
+    ? entry.weight
+    : null;
+}
+
+// Total reps actually done in an entry (sum of done sets' reps). Old sessions
+// didn't store reps, so we fall back to the set count there.
+function entryRepsDone(entry) {
+  if (Array.isArray(entry.sets)) {
+    return entry.sets
+      .filter((set) => set.done)
+      .reduce((sum, set) => sum + (Number(set.reps) || 0), 0);
+  }
+  return entry.setsDone || 0;
+}
+
+// The heaviest weight used in an entry (for the weight progression bar).
+function entryMaxWeight(entry) {
+  if (Array.isArray(entry.sets)) {
+    let max = null;
+    entry.sets.forEach((set) => {
+      if (set.weight !== null && set.weight !== undefined) {
+        max = max === null ? set.weight : Math.max(max, set.weight);
+      }
+    });
+    return max;
   }
   return entry.weight !== null && entry.weight !== undefined
     ? entry.weight

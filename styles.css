@@ -766,9 +766,42 @@ body {
   cursor: pointer; /* show it's clickable */
   transition: fill 0.12s ease;
 }
+/* Two series: reps (mint) and weight (lavender) */
+.barchart__bar--reps {
+  fill: var(--mint);
+}
+.barchart__bar--weight {
+  fill: var(--lavender);
+}
 /* Highlight the bar you're pointing at */
 .barchart__bar:hover {
   fill: var(--coral);
+}
+
+/* Legend for the two bar colours */
+.chart-legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 10px;
+}
+.chart-legend__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.chart-legend__swatch {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+}
+.chart-legend__swatch--reps {
+  background-color: var(--mint);
+}
+.chart-legend__swatch--weight {
+  background-color: var(--lavender);
 }
 
 /* Little hint under a chart ("Tap a bar to see that workout") */

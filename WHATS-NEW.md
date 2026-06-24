@@ -88,9 +88,25 @@ or remove one entirely.
 
 ---
 
+## 5. Progress chart shows reps *and* weight
+**What it does:** On the **Progress** tab, each exercise's chart shows two bars per
+workout — a **mint** bar for **reps done** and a **lavender** bar for the **heaviest
+weight** that day — so you can see whether you're getting stronger over time. Each
+colour is scaled to its own size, so read them as separate trends (rising lavender =
+lifting heavier). Bodyweight exercises (no weight) just show the single mint bar.
+
+**Try it:**
+1. Do a few workouts for the same exercise on different days, nudging the weight up
+   (e.g. 20 → 25 → 30). Tip: you can also **Edit** past workouts to vary the numbers.
+2. Open the **Progress** tab → that exercise's chart shows paired **mint/lavender**
+   bars with a small **Reps / Weight** legend underneath.
+3. Hover (or tap) a bar — it shows that day's reps and weight; tapping opens the
+   full workout details.
+
+---
+
 ## Also worth a look
-- **Progress tab:** a "This week" summary and a small chart per exercise. **Tap a bar**
-  to see that workout's details.
+- **Progress tab:** also has a "This week" summary (workouts + sets).
 - **Dark mode:** the 🌙 button (top-right) switches light/dark — the sun mascot
   becomes a moon.
 - **Backup (Settings tab):** **Export** saves your data to a file; **Import** loads it
