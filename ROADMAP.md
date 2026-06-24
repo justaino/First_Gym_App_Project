@@ -138,9 +138,12 @@ backup file.
 
 ## 6. Later / out of scope for now (would need a backend)
 
-Real password sign-up, syncing across devices, AI-generated plans, Apple Health /
-wearable data, social feeds, and video demos. These need a server and a different skill
-set — note them, but don't let them block the phases above.
+AI-generated plans, Apple Health / wearable data, social feeds, and video demos. These
+need a server and a different skill set — note them, but don't let them block the phases
+above.
+
+> **Cross-device sync and real hosting** were originally listed here, but are now planned
+> as Phase 5 and Phase 6 in **section 8** below.
 
 ---
 
@@ -158,3 +161,48 @@ set — note them, but don't let them block the phases above.
 - After a working step, commit. Git is your undo button.
 - If a change breaks something, say so plainly; Claude Code can revert or fix.
 - Keep this file open and tick the ✅ boxes as you go.
+
+---
+
+## 8. Beyond v1 — going cross-device (this RELAXES the rules in section 2)
+
+> ⚠️ The phases below intentionally step outside the original "localStorage only, no
+> backend, no accounts" constraints. That's a deliberate evolution of the app, not a
+> mistake — do these only when you've decided you want sync, with eyes open about the
+> trade-offs (privacy: data now lives on a server; cost: small but no longer free-by-
+> default forever; maintenance: it becomes a system to keep running, not one HTML file).
+>
+> **Recommended order: do Phase 5 first** (high value, low risk, keeps your data on-device),
+> then decide on Phase 6 when you actually want accounts and sync.
+
+### Phase 5 — Real hosting + installable app (PWA) ☐
+**Goal:** the app lives at a public URL and can be installed on a phone's home screen.
+Data is still **localStorage**, so it stays per-device (no sync yet) and privacy is
+unchanged — this phase is purely "make it a real, installable app."
+- ☐ Confirm/finish hosting on a static host (Netlify / GitHub Pages / Cloudflare Pages)
+      so there's a public URL (a push from this repo may already deploy to Netlify)
+- ☐ Add a web app **manifest** (app name, theme colour, `display: standalone`)
+- ☐ Add app **icons** (reuse the owl / mascot art)
+- ☐ Add a **service worker** that caches the app shell so it works offline
+- ☐ Test **"Add to Home Screen"** on a real phone
+
+**Done when:** I can open the public URL on my phone, install it to the home screen, and
+use it offline — each device still keeps its own separate data.
+
+### Phase 6 — Accounts + cross-device sync (needs a backend) ☐
+**Goal:** log in and see the same workouts on any device.
+**This is the point where "no backend / no accounts / fully on-device" no longer holds.**
+Use a backend-as-a-service so we don't run our own server.
+- ☐ **Choose a backend:** Supabase (Postgres + built-in auth) — *recommended*; Firebase
+      or a Power Platform option (Dataverse / Power Automate, leaning on existing skills)
+      as alternatives
+- ☐ Add **sign up / log in** (email)
+- ☐ Move the data model (profiles / exercises / sessions) into the cloud database
+- ☐ Read/write through the backend, keeping **localStorage as an offline cache**
+- ☐ **Sync strategy:** load on login, save on change, handle being offline gracefully
+- ☐ **Migrate** existing on-device data up to the account on first login (reuse the
+      export/import logic we already have)
+- ☐ Write a short **privacy note** (what's stored, where, and how to delete it)
+
+**Done when:** I can log in on my laptop and my phone and see/edit the same workouts on
+both, and a brand-new device shows my data after login.
