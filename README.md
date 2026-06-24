@@ -6,6 +6,8 @@ grouped by day. Built as a learning project with a soft, pastel "cute" look.
 
 📖 **New here?** See the [User Guide](USER-GUIDE.md) for a friendly start-to-finish walkthrough.
 
+🛠️ **Tinkering or testing?** See the [Runbook](RUNBOOK.md) for storage keys, DevTools/console tricks, backup & cleanup behaviour, and the easter eggs.
+
 ## What it does (Phase 1)
 - Create a local profile and pick the active one
 - Add, edit, and delete exercises — each with a name, sets, reps, emoji icon, and day
@@ -32,6 +34,7 @@ athenas-arena/
 ├── styles.css      # the cute pastel styling
 ├── app.js          # the app logic (profiles, exercises, storage)
 ├── README.md       # this file
+├── RUNBOOK.md      # how-to reference: storage, console tricks, easter eggs
 ├── ROADMAP.md      # the phased build plan
 └── CLAUDE.md       # rules Claude Code follows automatically
 ```

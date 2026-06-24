@@ -24,7 +24,14 @@ const STORAGE_KEYS = {
   exercises: "gym:exercises",
   sessions: "gym:sessions", // Phase 2: saved workout history
   theme: "gym:theme", // Phase 4: "light" or "dark"
+  // Easter eggs: remembers which workout-count milestones we've already
+  // celebrated, per profile, so the trophy only ever plays once each.
+  celebratedMilestones: "gym:celebratedMilestones",
 };
+
+// Easter egg: a workout milestone shows a one-time trophy celebration when your
+// total completed-workout count first reaches one of these numbers.
+const WORKOUT_MILESTONES = [7, 30, 50, 100];
 
 // The fixed list of emoji icons the user can pick from.
 const EMOJI_PRESETS = ["💪", "🏋️", "🚴", "🏃", "🧘", "🤸", "🏊"];
@@ -1016,13 +1023,34 @@ function deleteProfile(id) {
    ========================================================================= */
 
 function deleteExercise(id) {
-  const ok = window.confirm("Delete this exercise?");
+  const ok = window.confirm(
+    "Delete this exercise? Its past workout history will be removed too. " +
+      "This cannot be undone (but a backup you exported earlier can restore it)."
+  );
   if (!ok) {
     return;
   }
+
+  // Remove the exercise itself.
   let exercises = loadList(STORAGE_KEYS.exercises);
   exercises = exercises.filter((exercise) => exercise.id !== id);
   saveList(STORAGE_KEYS.exercises, exercises);
+
+  // Clean up after it: remove this exercise from every saved workout, then
+  // drop any workout that's left with no exercises at all. This keeps history
+  // and personal-record data honest (no orphaned leftovers in storage).
+  const sessions = loadList(STORAGE_KEYS.sessions)
+    .map((session) => ({
+      ...session,
+      entries: session.entries.filter((entry) => entry.exerciseId !== id),
+    }))
+    .filter((session) => session.entries.length > 0);
+  saveList(STORAGE_KEYS.sessions, sessions);
+
+  // Removing workouts may lower a profile's count below a celebrated milestone,
+  // so reconcile the trophy tracker too.
+  reconcileCelebratedMilestones();
+
   renderAll();
 }
 
@@ -1633,10 +1661,18 @@ function finishWorkout() {
     0
   );
 
+  // Easter eggs: work out any celebrations BEFORE we clear activeSession.
+  // (detectWorkoutMilestone also records the milestone so it only plays once.)
+  const personalRecords = detectPersonalRecords(activeSession);
+  const milestone = detectWorkoutMilestone();
+
   closeWorkoutOverlay();
   activeSession = null;
   renderAll();
   window.alert("Workout saved! " + totalSets + " sets done 💪");
+
+  // After the alert is dismissed, play any celebrations on a clean screen.
+  celebrateAfterWorkout(personalRecords, milestone);
 }
 
 // Discard: delete the in-progress session entirely (after a confirm).
@@ -1735,6 +1771,9 @@ function deleteSession(sessionId) {
     (item) => item.id !== sessionId
   );
   saveList(STORAGE_KEYS.sessions, sessions);
+  // Easter egg upkeep: if this drop took you below a celebrated milestone,
+  // forget it so re-reaching that count triggers the trophy again.
+  reconcileCelebratedMilestones();
   renderAll();
 }
 
@@ -2101,6 +2140,338 @@ function toggleTheme() {
 }
 
 /* =========================================================================
+   7e. EASTER EGGS (just for fun) 🎉
+   None of this touches your saved workouts — it only adds little surprises:
+     1. Type "athena" anywhere to summon a flying owl + "Wisdom +1" toast.
+     3. Confetti + a "New PR!" card when you beat a past weight for an exercise.
+     4. A one-time trophy when your total workouts reaches a milestone (7, 30 …).
+     7. Tap the app title 5 times quickly to reveal a hidden credits card.
+   ========================================================================= */
+
+/* ---- Shared little effects (reused by several eggs) ---- */
+
+// Drop a burst of colourful confetti pieces from the top of the screen.
+// Each piece is a small <span> that falls and fades, then removes itself.
+function launchConfetti(pieceCount) {
+  const colors = ["#ef7c7c", "#5fc4bc", "#f6d365", "#b9a7e0"];
+  const count = pieceCount || 80;
+
+  for (let i = 0; i < count; i = i + 1) {
+    const piece = document.createElement("span");
+    piece.className = "confetti";
+    // Random horizontal start, colour, size, and timing so it looks natural.
+    piece.style.left = Math.random() * 100 + "vw";
+    piece.style.backgroundColor = colors[i % colors.length];
+    piece.style.animationDelay = Math.random() * 0.6 + "s";
+    piece.style.animationDuration = 2 + Math.random() * 1.5 + "s";
+    const size = 6 + Math.random() * 8;
+    piece.style.width = size + "px";
+    piece.style.height = size + "px";
+
+    document.body.appendChild(piece);
+    // Clean the piece up after it finishes falling (keeps the page tidy).
+    setTimeout(() => piece.remove(), 4000);
+  }
+}
+
+// Show a small chip at the top of the screen that fades away on its own.
+function showToast(message) {
+  const toast = document.createElement("div");
+  toast.className = "egg-toast";
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  // Remove after the CSS fade finishes.
+  setTimeout(() => toast.remove(), 3200);
+}
+
+// Show a big centred celebration card (emoji + title + subtitle) that
+// auto-dismisses. Used for both the "New PR!" and milestone trophies.
+function showCelebrationCard(emoji, title, subtitle) {
+  const card = document.createElement("div");
+  card.className = "celebrate";
+  card.innerHTML =
+    '<div class="celebrate__emoji">' +
+    emoji +
+    '</div><div class="celebrate__title"></div><div class="celebrate__subtitle"></div>';
+  // Use textContent (not innerHTML) for the user-derived text so names can't
+  // accidentally inject HTML.
+  card.querySelector(".celebrate__title").textContent = title;
+  card.querySelector(".celebrate__subtitle").textContent = subtitle;
+
+  document.body.appendChild(card);
+  // Tap anywhere on it to dismiss early; otherwise it clears itself.
+  card.addEventListener("click", () => card.remove());
+  setTimeout(() => card.remove(), 3600);
+}
+
+/* ---- Egg #1: type "athena" to summon Athena's owl ---- */
+
+// We keep the last few typed letters in a small buffer and watch for the word.
+let secretBuffer = "";
+
+function handleSecretTyping(event) {
+  // Ignore typing inside text boxes so it doesn't fire while naming exercises.
+  const tag = event.target.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA") {
+    return;
+  }
+  // Only single letters matter; ignore Shift, Enter, arrows, etc.
+  if (event.key.length !== 1) {
+    return;
+  }
+  secretBuffer = (secretBuffer + event.key.toLowerCase()).slice(-6); // keep last 6
+  if (secretBuffer === "athena") {
+    secretBuffer = ""; // reset so it can be triggered again
+    summonOwl();
+  }
+}
+
+// Summon the owl + toast (shared by the typing shortcut and the long-press).
+function summonOwl() {
+  flyOwl();
+  showToast("Athena's blessing — Wisdom +1 🦉");
+}
+
+// Touch-friendly version of egg #1: press and HOLD the hero mascot for ~1.5s.
+// This works on phones (where there's no physical keyboard) and on a mouse.
+let owlPressTimer = null;
+
+function startOwlPress() {
+  if (owlPressTimer !== null) {
+    return; // a press is already being timed (touch + mouse can both fire)
+  }
+  owlPressTimer = setTimeout(() => {
+    owlPressTimer = null;
+    summonOwl();
+  }, 1500);
+}
+
+// Cancel the hold if the finger/mouse lifts, leaves, or starts scrolling —
+// so a normal tap or a scroll never triggers the owl.
+function cancelOwlPress() {
+  if (owlPressTimer !== null) {
+    clearTimeout(owlPressTimer);
+    owlPressTimer = null;
+  }
+}
+
+// Send an owl gliding across the screen, then remove it.
+function flyOwl() {
+  const owl = document.createElement("div");
+  owl.className = "fly-owl";
+  owl.textContent = "🦉";
+  document.body.appendChild(owl);
+  setTimeout(() => owl.remove(), 3000);
+}
+
+/* ---- Egg #3: confetti + card when you set a new personal record ---- */
+
+// Compare the just-finished session against your earlier completed workouts.
+// For each exercise, if the heaviest weight today beats your previous best,
+// that's a personal record (PR). Returns a list like
+// [{ name: "Squat", weight: 60 }, ...] (empty if no PRs this time).
+function detectPersonalRecords(session) {
+  const activeId = loadActiveProfileId();
+
+  // Every OTHER completed session for this profile (exclude the one we just did).
+  const pastSessions = loadList(STORAGE_KEYS.sessions).filter(
+    (item) =>
+      item.profileId === activeId &&
+      item.id !== session.id &&
+      isCompletedSession(item)
+  );
+
+  const records = [];
+
+  session.entries.forEach((entry) => {
+    const todayMax = entryMaxWeight(entry);
+    // No weight recorded for this exercise today → it can't be a weight PR.
+    if (todayMax === null) {
+      return;
+    }
+
+    // Find the best weight ever lifted for this exercise before today.
+    let previousBest = null;
+    pastSessions.forEach((past) => {
+      const pastEntry = past.entries.find(
+        (item) => item.exerciseId === entry.exerciseId
+      );
+      if (pastEntry) {
+        const pastMax = entryMaxWeight(pastEntry);
+        if (pastMax !== null) {
+          previousBest =
+            previousBest === null ? pastMax : Math.max(previousBest, pastMax);
+        }
+      }
+    });
+
+    // A PR only counts if there was a previous best to beat.
+    if (previousBest !== null && todayMax > previousBest) {
+      const exercise = findExerciseById(entry.exerciseId);
+      records.push({
+        name: exercise ? exercise.name : "Exercise",
+        weight: todayMax,
+      });
+    }
+  });
+
+  return records;
+}
+
+/* ---- Egg #4: one-time trophy when you hit a workout milestone ---- */
+
+// Read/save the map of { profileId: [milestones already celebrated] }.
+function loadCelebratedMap() {
+  const text = localStorage.getItem(STORAGE_KEYS.celebratedMilestones);
+  if (!text) {
+    return {};
+  }
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    return {};
+  }
+}
+function saveCelebratedMap(map) {
+  localStorage.setItem(
+    STORAGE_KEYS.celebratedMilestones,
+    JSON.stringify(map)
+  );
+}
+
+// Keep the "already celebrated" list honest: if a profile's completed-workout
+// count has dropped below a milestone we'd celebrated (e.g. you deleted a
+// workout), forget that milestone so reaching it again re-triggers the trophy.
+// Safe to call any time; it only removes milestones above the current count.
+function reconcileCelebratedMilestones() {
+  const map = loadCelebratedMap();
+  let changed = false;
+
+  // For each profile we've recorded milestones for...
+  Object.keys(map).forEach((profileId) => {
+    const completedCount = loadList(STORAGE_KEYS.sessions).filter(
+      (item) => item.profileId === profileId && isCompletedSession(item)
+    ).length;
+
+    // Keep only milestones you've actually still reached.
+    const kept = (map[profileId] || []).filter(
+      (milestone) => milestone <= completedCount
+    );
+    if (kept.length !== (map[profileId] || []).length) {
+      changed = true;
+    }
+    map[profileId] = kept;
+  });
+
+  if (changed) {
+    saveCelebratedMap(map);
+  }
+}
+
+// If the active profile's completed-workout count has just reached a milestone
+// we haven't celebrated yet, record it and return that number. Otherwise null.
+function detectWorkoutMilestone() {
+  const activeId = loadActiveProfileId();
+  if (!activeId) {
+    return null;
+  }
+
+  const completedCount = loadList(STORAGE_KEYS.sessions).filter(
+    (item) => item.profileId === activeId && isCompletedSession(item)
+  ).length;
+
+  // Is this exact count one of our milestones?
+  if (!WORKOUT_MILESTONES.includes(completedCount)) {
+    return null;
+  }
+
+  // Have we already celebrated it for this profile? If so, do nothing.
+  const map = loadCelebratedMap();
+  const already = map[activeId] || [];
+  if (already.includes(completedCount)) {
+    return null;
+  }
+
+  // Remember it so the trophy only ever plays once per profile per milestone.
+  already.push(completedCount);
+  map[activeId] = already;
+  saveCelebratedMap(map);
+
+  return completedCount;
+}
+
+// Play the celebrations after a workout: PR first, then any milestone trophy.
+function celebrateAfterWorkout(personalRecords, milestone) {
+  let delay = 0;
+
+  if (personalRecords.length > 0) {
+    launchConfetti();
+    // Build a friendly line, e.g. "Squat 60 · Bench 40".
+    const summary = personalRecords
+      .map((record) => record.name + " " + record.weight)
+      .join(" · ");
+    showCelebrationCard("🏅", "New personal record!", summary);
+    delay = 3000; // let the PR card clear before the trophy appears
+  }
+
+  if (milestone) {
+    setTimeout(() => {
+      launchConfetti(120);
+      showCelebrationCard(
+        "🏆",
+        milestone + " workouts done!",
+        "What a streak — keep it up! 💪"
+      );
+    }, delay);
+  }
+}
+
+/* ---- Egg #7: tap the app title 5 times quickly for a credits card ---- */
+
+let brandTapCount = 0;
+let lastBrandTapTime = 0;
+
+function handleBrandTap() {
+  const now = Date.now();
+  // If it's been more than 2 seconds since the last tap, start counting over.
+  if (now - lastBrandTapTime > 2000) {
+    brandTapCount = 0;
+  }
+  lastBrandTapTime = now;
+  brandTapCount = brandTapCount + 1;
+
+  if (brandTapCount >= 5) {
+    brandTapCount = 0; // reset so it can be found again later
+    document.getElementById("creditsCard").hidden = false;
+    launchConfetti(40); // a small celebratory sprinkle
+  }
+}
+
+// Wire up the always-on eggs (typing + title taps). Called once at startup.
+function setupEasterEggs() {
+  // Egg #1 (PC): type "athena".
+  document.addEventListener("keydown", handleSecretTyping);
+
+  // Egg #1 (mobile + mouse): long-press the hero mascot. We start a timer on
+  // press-down and cancel it on any lift/leave/scroll so only a real hold fires.
+  const mascot = document.getElementById("heroMascot");
+  mascot.addEventListener("touchstart", startOwlPress);
+  mascot.addEventListener("touchend", cancelOwlPress);
+  mascot.addEventListener("touchmove", cancelOwlPress);
+  mascot.addEventListener("touchcancel", cancelOwlPress);
+  mascot.addEventListener("mousedown", startOwlPress);
+  mascot.addEventListener("mouseup", cancelOwlPress);
+  mascot.addEventListener("mouseleave", cancelOwlPress);
+
+  document.getElementById("appBrand").addEventListener("click", handleBrandTap);
+  document
+    .getElementById("creditsClose")
+    .addEventListener("click", () => {
+      document.getElementById("creditsCard").hidden = true;
+    });
+}
+
+/* =========================================================================
    8. TAB / VIEW SWITCHING
    ========================================================================= */
 
@@ -2254,6 +2625,9 @@ function init() {
       closeWorkoutOverlay(); // keeps the in-progress workout to resume later
     }
   });
+
+  // Wire up the just-for-fun easter eggs (typing "athena", title taps, etc.).
+  setupEasterEggs();
 
   // Draw the initial screens from whatever is saved.
   // The app always opens on the Today tab (set as the active view in index.html).

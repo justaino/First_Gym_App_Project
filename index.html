@@ -36,7 +36,9 @@
       The "Switch" button jumps to the Settings tab where profiles are managed.
     -->
     <header class="topbar">
-      <span class="topbar__brand">Jonathan's Journey 💪</span>
+      <!-- Tapping this title 5 times quickly reveals a hidden credits card
+           (a little easter egg). See app.js → EASTER EGGS section. -->
+      <span class="topbar__brand" id="appBrand">Jonathan's Journey 💪</span>
       <div class="topbar__right">
         <!-- Dark mode toggle. app.js swaps the icon + label with the theme. -->
         <button
@@ -70,7 +72,9 @@
           to load, and it's marked aria-hidden because it's decorative.
         -->
         <div class="hero">
-          <div class="hero__mascot" aria-hidden="true">
+          <!-- Long-pressing this mascot (~1.5s) summons Athena's owl — the
+               touch-friendly version of the "type athena" easter egg. -->
+          <div class="hero__mascot" id="heroMascot" aria-hidden="true">
             <!-- Sun mascot — shown in light mode. -->
             <svg
               class="mascot mascot--sun"
@@ -410,6 +414,26 @@
         <span class="tab__label">Settings</span>
       </button>
     </nav>
+
+    <!--
+      Hidden credits card (easter egg #7). It stays hidden until you tap the
+      app title 5 times quickly; app.js flips the `hidden` attribute off.
+    -->
+    <div class="credits-card" id="creditsCard" hidden>
+      <button
+        class="credits-card__close"
+        id="creditsClose"
+        type="button"
+        aria-label="Close"
+      >
+        ✕
+      </button>
+      <span class="credits-card__owl" aria-hidden="true">🦉</span>
+      <p class="credits-card__title">You found a secret!</p>
+      <p class="credits-card__text">
+        Built with ❤️ for your journey. Keep showing up. 💪
+      </p>
+    </div>
 
     <!-- Our app logic -->
     <script src="app.js"></script>

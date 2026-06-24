@@ -1,0 +1,150 @@
+# RUNBOOK — Athena's Arena
+
+A practical reference for running, testing, and poking at the app. This is a
+living document — it gets updated as the app grows. If something here ever
+disagrees with the code, the code wins (and the runbook should be fixed).
+
+---
+
+## 1. What this app is
+
+A personal, browser-based gym tracker. Plain HTML, CSS, and vanilla JavaScript —
+no frameworks, no build step, no backend. All data is stored in the browser with
+**localStorage**.
+
+**Files:**
+
+| File | What it holds |
+|------|---------------|
+| `index.html` | The page structure (all the screens live here, shown/hidden by JS). |
+| `styles.css` | All styling, including the design-system colours and animations. |
+| `app.js` | All behaviour: storage, rendering, workouts, easter eggs, etc. |
+
+---
+
+## 2. How to run it
+
+1. Open the project folder in VS Code.
+2. Install the **Live Server** extension (one time).
+3. Right-click `index.html` → **Open with Live Server**.
+4. It opens at something like `http://127.0.0.1:5500/index.html`.
+
+To stop: click "Port: 5500" in the VS Code status bar, or close the tab.
+
+---
+
+## 3. Where the data lives (localStorage keys)
+
+All keys start with `gym:`.
+
+| Key | What it stores |
+|-----|----------------|
+| `gym:profiles` | The list of profiles. |
+| `gym:activeProfileId` | Which profile is currently selected. |
+| `gym:exercises` | All exercises (each tagged with a `profileId`). |
+| `gym:sessions` | Saved + in-progress workouts (the history). |
+| `gym:theme` | `"light"` or `"dark"`. |
+| `gym:celebratedMilestones` | Easter-egg bookkeeping: which workout-count milestones each profile has already celebrated, so the trophy only plays once. |
+
+---
+
+## 4. How to access localStorage (DevTools)
+
+With the app open in your browser:
+
+1. Open DevTools: right-click the page → **Inspect**, or press `F12`
+   (`Cmd+Option+I` on Mac).
+2. Go to the **Application** tab (Chrome/Edge) or **Storage** tab (Firefox).
+3. In the sidebar, expand **Local Storage** and click your site's entry
+   (e.g. `http://127.0.0.1:5500`).
+4. You'll see a key/value table. Click any `gym:` row to see its JSON value.
+
+---
+
+## 5. Handy console tricks
+
+Switch to the **Console** tab in DevTools and paste any of these. After changing
+storage, **refresh the page** so the app re-reads it.
+
+```js
+// Pretty-print all your saved workouts
+JSON.parse(localStorage.getItem("gym:sessions"))
+
+// See which milestones have been celebrated
+localStorage.getItem("gym:celebratedMilestones")
+
+// Reset just the milestone tracker (handy for testing the trophy)
+localStorage.removeItem("gym:celebratedMilestones")
+
+// ⚠️ Wipe EVERYTHING the app has saved (all profiles/workouts) — careful!
+localStorage.clear()
+```
+
+---
+
+## 6. Backup & restore (import / export)
+
+Found in **Settings → Backup**.
+
+- **Export** downloads a `.json` file containing your data (it cleans out
+  deleted/orphaned items as it goes).
+- **Import** reads a backup file and merges it back in: profiles in the file
+  **replace** matching ones (by id) and new ones are **added**; profiles not in
+  the file are left untouched.
+
+**Key point:** deleting things (an exercise, a workout) removes them permanently
+from storage. They can only come back by **importing a backup you exported
+before the deletion**. So export a backup before any big cleanup.
+
+---
+
+## 7. Deletion & cleanup behaviour
+
+The app cleans up related data so nothing is left orphaned:
+
+- **Delete an exercise** → also removes that exercise from every saved workout,
+  deletes any workout left empty, and reconciles the milestone tracker.
+- **Delete a workout** → reconciles the milestone tracker (so re-earning a
+  milestone re-triggers its trophy).
+- **Delete a profile** → also removes that profile's exercises and workouts.
+
+---
+
+## 8. Easter eggs (the fun stuff) 🎉
+
+All live in the `7e. EASTER EGGS` section of `app.js`. None of them affect your
+saved workout data.
+
+| # | Trigger | What happens |
+|---|---------|--------------|
+| 1 | **PC:** type `athena` (not in a text box). **Mobile/mouse:** long-press the Today-header mascot (sun/moon) for ~1.5s. | An owl 🦉 glides across + a "Wisdom +1" toast. |
+| 3 | Finish a workout where you beat a past weight for an exercise | Confetti + a "New personal record!" card. |
+| 4 | Reach a workout-count milestone (7, 30, 50, 100) | One-time confetti + 🏆 trophy card per milestone. |
+| 7 | Tap the app title 5× within 2 seconds | A hidden credits card slides up. |
+
+### Testing the milestone trophy (#4)
+The trophy fires when a profile's **completed**-workout count first reaches a
+milestone. To preview it without doing 7 real workouts:
+
+1. In the console, run `localStorage.removeItem("gym:celebratedMilestones")`.
+2. Temporarily add `1` to the `WORKOUT_MILESTONES` list near the top of `app.js`.
+3. Finish one workout → trophy appears.
+4. Put `WORKOUT_MILESTONES` back to `[7, 30, 50, 100]`.
+
+### How personal records (#3) are decided
+PRs are matched by an exercise's internal **id**, not its name. Beating a past
+weight for the same exercise triggers it. A brand-new exercise has no history, so
+its first weighted workout won't fire a PR (there's nothing to beat yet).
+
+---
+
+## 9. Change log
+
+Newest first. Add a line here whenever behaviour changes.
+
+- **2026-06-24** — Easter egg #1 now also works on touchscreens: long-press the
+  Today-header mascot (~1.5s) to summon the owl. The "type athena" shortcut still
+  works on desktop.
+- **2026-06-24** — Added easter eggs (Athena's owl, PR confetti, milestone
+  trophy, hidden credits card). Made exercise deletion clean up related workout
+  history and reconcile milestones. Created this runbook.
