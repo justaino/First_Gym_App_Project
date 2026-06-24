@@ -4,7 +4,7 @@ A friendly, personal gym planner that runs entirely in the browser. Create a pro
 add exercises (sets, reps, an emoji icon, and a day of the week), and see your plan
 grouped by day. Built as a learning project with a soft, pastel "cute" look.
 
-📖 **New here?** See the [User Guide](USER-GUIDE.md) for a friendly start-to-finish walkthrough.
+📖 **New here?** See the [User Guide](Documentation/USER-GUIDE.md) for a friendly start-to-finish walkthrough.
 
 🛠️ **Tinkering or testing?** See the [Runbook](RUNBOOK.md) for storage keys, DevTools/console tricks, backup & cleanup behaviour, and the easter eggs.
 
