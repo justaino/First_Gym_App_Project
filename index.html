@@ -259,17 +259,35 @@
             required
           />
 
-          <!-- Sets and reps side by side -->
+          <!-- Sets + default reps side by side -->
           <div class="form__grid">
             <div>
               <label class="form__label" for="setsInput">Sets</label>
-              <input class="input" id="setsInput" type="number" min="1" max="99" value="3" required />
+              <input class="input" id="setsInput" type="number" min="1" max="20" value="3" required />
             </div>
             <div>
-              <label class="form__label" for="repsInput">Reps</label>
+              <label class="form__label" for="repsInput">Default reps</label>
               <input class="input" id="repsInput" type="number" min="1" max="999" value="10" required />
             </div>
           </div>
+
+          <!-- Optional default weight (fills every set; blank = none) -->
+          <label class="form__label" for="weightInput">Default weight (optional)</label>
+          <input
+            class="input"
+            id="weightInput"
+            type="number"
+            min="0"
+            step="any"
+            placeholder="e.g. 20"
+          />
+
+          <!--
+            Per-set breakdown, built by app.js. Each row lets you fine-tune the
+            reps and weight for that set; the defaults above pre-fill them.
+          -->
+          <label class="form__label">Reps &amp; weight per set</label>
+          <div class="set-rows" id="setRows"></div>
 
           <!-- Emoji picker (filled by app.js from a fixed preset list) -->
           <label class="form__label">Icon</label>

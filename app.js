@@ -92,14 +92,74 @@ function getActiveProfile() {
   return profiles.find((profile) => profile.id === activeId) || null;
 }
 
-// Get only the exercises that belong to the active profile.
+// Get only the exercises that belong to the active profile (normalized).
 function getExercisesForActiveProfile() {
   const activeId = loadActiveProfileId();
   if (!activeId) {
     return [];
   }
   const allExercises = loadList(STORAGE_KEYS.exercises);
-  return allExercises.filter((exercise) => exercise.profileId === activeId);
+  return allExercises
+    .filter((exercise) => exercise.profileId === activeId)
+    .map(normalizeExercise);
+}
+
+// Resize an array to "length": keep existing values, and fill any new slots
+// with "fillValue". Used to grow/shrink the per-set reps and weights.
+function resizeArray(array, length, fillValue) {
+  const result = [];
+  for (let i = 0; i < length; i = i + 1) {
+    result.push(i < array.length ? array[i] : fillValue);
+  }
+  return result;
+}
+
+// Make sure an exercise has the Phase-2 per-set fields. Older exercises (saved
+// before this feature) only had a single `reps`, so we build the per-set arrays
+// from it. This never changes what's stored — it just fills in gaps when read.
+function normalizeExercise(exercise) {
+  const sets = exercise.sets > 0 ? exercise.sets : 1;
+  const defaultReps =
+    exercise.reps !== undefined && exercise.reps !== null ? exercise.reps : 10;
+  const defaultWeight =
+    exercise.weight !== undefined && exercise.weight !== null
+      ? exercise.weight
+      : null;
+
+  const existingReps = Array.isArray(exercise.repsPerSet)
+    ? exercise.repsPerSet
+    : [];
+  const existingWeight = Array.isArray(exercise.weightPerSet)
+    ? exercise.weightPerSet
+    : [];
+
+  return {
+    ...exercise,
+    sets: sets,
+    reps: defaultReps,
+    weight: defaultWeight,
+    repsPerSet: resizeArray(existingReps, sets, defaultReps),
+    weightPerSet: resizeArray(existingWeight, sets, defaultWeight),
+  };
+}
+
+// A short text summary for an exercise card, e.g. "3 × 10", "3 × 10,12,15",
+// or "3 × 10 · 20" / "3 × 10 · weights vary" when weights are set.
+function formatExerciseSummary(exercise) {
+  const reps = exercise.repsPerSet;
+  const repsUniform = reps.every((value) => value === reps[0]);
+  let summary = exercise.sets + " × " + (repsUniform ? reps[0] : reps.join(","));
+
+  const weights = exercise.weightPerSet;
+  const hasWeight = weights.some((value) => value !== null && value !== undefined);
+  if (hasWeight) {
+    const weightUniform =
+      weights.every((value) => value === weights[0]) &&
+      weights[0] !== null &&
+      weights[0] !== undefined;
+    summary += " · " + (weightUniform ? weights[0] : "weights vary");
+  }
+  return summary;
 }
 
 // What is today's day name? (e.g. "Monday")
@@ -144,7 +204,7 @@ function createExerciseCard(exercise) {
 
   const detail = document.createElement("div");
   detail.className = "exercise__detail";
-  detail.textContent = exercise.sets + " × " + exercise.reps;
+  detail.textContent = formatExerciseSummary(exercise);
 
   info.appendChild(name);
   info.appendChild(detail);
@@ -886,6 +946,103 @@ function selectEmoji(emoji) {
   });
 }
 
+/* ---- Per-set rows in the add/edit form (Phase 2) ---- */
+
+// Draw one row per set: "Set N  [reps]  [weight]", pre-filled from the arrays.
+function buildSetRows(sets, repsArray, weightArray) {
+  const container = document.getElementById("setRows");
+  container.innerHTML = "";
+
+  for (let i = 0; i < sets; i = i + 1) {
+    const row = document.createElement("div");
+    row.className = "set-row";
+
+    const label = document.createElement("span");
+    label.className = "set-row__label";
+    label.textContent = "Set " + (i + 1);
+
+    const repsInput = document.createElement("input");
+    repsInput.className = "input set-row__reps";
+    repsInput.type = "number";
+    repsInput.min = "1";
+    repsInput.max = "999";
+    repsInput.setAttribute("aria-label", "Set " + (i + 1) + " reps");
+    repsInput.value = repsArray[i];
+
+    const weightInput = document.createElement("input");
+    weightInput.className = "input set-row__weight";
+    weightInput.type = "number";
+    weightInput.min = "0";
+    weightInput.step = "any";
+    weightInput.placeholder = "weight";
+    weightInput.setAttribute("aria-label", "Set " + (i + 1) + " weight");
+    if (weightArray[i] !== null && weightArray[i] !== undefined) {
+      weightInput.value = weightArray[i];
+    }
+
+    row.appendChild(label);
+    row.appendChild(repsInput);
+    row.appendChild(weightInput);
+    container.appendChild(row);
+  }
+}
+
+// Read the current values out of the per-set rows on screen.
+function gatherSetRows() {
+  const repsInputs = document.querySelectorAll("#setRows .set-row__reps");
+  const weightInputs = document.querySelectorAll("#setRows .set-row__weight");
+
+  const reps = Array.from(repsInputs).map((input) => Number(input.value));
+  const weights = Array.from(weightInputs).map((input) => {
+    const text = input.value.trim();
+    return text === "" ? null : Number(text);
+  });
+  return { reps: reps, weights: weights };
+}
+
+// When the Sets number changes, grow/shrink the rows, keeping what's there and
+// seeding any new rows from the current default reps/weight.
+function handleSetsCountChange() {
+  const setsInput = document.getElementById("setsInput");
+  const sets = clampNumber(Number(setsInput.value), 1, 20);
+  // Keep the input in sync with what we actually built (e.g. if it was clamped).
+  setsInput.value = sets;
+  const defaultReps = Number(document.getElementById("repsInput").value) || 10;
+  const weightText = document.getElementById("weightInput").value.trim();
+  const defaultWeight = weightText === "" ? null : Number(weightText);
+
+  const current = gatherSetRows();
+  const newReps = resizeArray(current.reps, sets, defaultReps);
+  const newWeights = resizeArray(current.weights, sets, defaultWeight);
+  buildSetRows(sets, newReps, newWeights);
+}
+
+// Typing a default reps/weight fills every per-set row with that value.
+function applyDefaultRepsToRows() {
+  const value = document.getElementById("repsInput").value;
+  document
+    .querySelectorAll("#setRows .set-row__reps")
+    .forEach((input) => {
+      input.value = value;
+    });
+}
+function applyDefaultWeightToRows() {
+  const value = document.getElementById("weightInput").value;
+  document
+    .querySelectorAll("#setRows .set-row__weight")
+    .forEach((input) => {
+      input.value = value;
+    });
+}
+
+// Keep a number within a range (used for the sets count).
+function clampNumber(value, min, max) {
+  if (Number.isNaN(value)) {
+    return min;
+  }
+  return Math.min(Math.max(value, min), max);
+}
+
 // Show the modal.
 function openModal() {
   document.getElementById("formError").hidden = true;
@@ -913,29 +1070,38 @@ function openExerciseModalForAdd() {
   document.getElementById("nameInput").value = "";
   document.getElementById("setsInput").value = 3;
   document.getElementById("repsInput").value = 10;
+  document.getElementById("weightInput").value = ""; // no weight by default
   // Default to the day last used (today on a fresh load), so adding several
   // exercises to the same day doesn't make you re-pick it each time.
   document.getElementById("dayInput").value = lastChosenDay;
   selectEmoji(EMOJI_PRESETS[0]);
+
+  // Three sets of 10 reps, no weight, to start.
+  buildSetRows(3, [10, 10, 10], [null, null, null]);
 
   openModal();
 }
 
 // Open the modal ready to EDIT an existing exercise (form pre-filled).
 function openExerciseModalForEdit(id) {
-  const exercises = loadList(STORAGE_KEYS.exercises);
-  const exercise = exercises.find((item) => item.id === id);
-  if (!exercise) {
+  const stored = loadList(STORAGE_KEYS.exercises).find((item) => item.id === id);
+  if (!stored) {
     return;
   }
+  // Normalize so older exercises gain the per-set fields before we show them.
+  const exercise = normalizeExercise(stored);
 
   document.getElementById("modalTitle").textContent = "Edit exercise";
   document.getElementById("exerciseIdInput").value = exercise.id; // not empty = editing
   document.getElementById("nameInput").value = exercise.name;
   document.getElementById("setsInput").value = exercise.sets;
   document.getElementById("repsInput").value = exercise.reps;
+  document.getElementById("weightInput").value =
+    exercise.weight === null ? "" : exercise.weight;
   document.getElementById("dayInput").value = exercise.day;
   selectEmoji(exercise.icon);
+
+  buildSetRows(exercise.sets, exercise.repsPerSet, exercise.weightPerSet);
 
   openModal();
 }
@@ -947,9 +1113,12 @@ function handleExerciseFormSubmit(event) {
   // Read the values from the form.
   const id = document.getElementById("exerciseIdInput").value;
   const name = document.getElementById("nameInput").value.trim();
-  const sets = Number(document.getElementById("setsInput").value);
   const reps = Number(document.getElementById("repsInput").value);
   const day = document.getElementById("dayInput").value;
+  // The per-set reps and weights typed into the rows. The rows are the source
+  // of truth for how many sets there are.
+  const perSet = gatherSetRows();
+  const sets = perSet.reps.length;
 
   // Light validation (per CLAUDE.md): name required, sets/reps positive numbers.
   const errorEl = document.getElementById("formError");
@@ -962,10 +1131,30 @@ function handleExerciseFormSubmit(event) {
     return;
   }
   if (!Number.isInteger(reps) || reps < 1) {
-    showFormError("Reps must be a whole number of 1 or more.");
+    showFormError("Default reps must be a whole number of 1 or more.");
+    return;
+  }
+  // Each set's reps must be a whole number of 1+.
+  const repsValid = perSet.reps.every(
+    (value) => Number.isInteger(value) && value >= 1
+  );
+  if (!repsValid) {
+    showFormError("Each set's reps must be a whole number of 1 or more.");
+    return;
+  }
+  // Weights are optional, but any entered must be 0 or more.
+  const weightsValid = perSet.weights.every(
+    (value) => value === null || (!Number.isNaN(value) && value >= 0)
+  );
+  if (!weightsValid) {
+    showFormError("Weights must be 0 or more (or left blank).");
     return;
   }
   errorEl.hidden = true;
+
+  // The optional default weight (blank = none).
+  const weightText = document.getElementById("weightInput").value.trim();
+  const defaultWeight = weightText === "" ? null : Number(weightText);
 
   const exercises = loadList(STORAGE_KEYS.exercises);
 
@@ -976,7 +1165,10 @@ function handleExerciseFormSubmit(event) {
       profileId: loadActiveProfileId(),
       name: name,
       sets: sets,
-      reps: reps,
+      reps: reps, // default reps (used to seed new sets)
+      repsPerSet: perSet.reps,
+      weight: defaultWeight, // default weight
+      weightPerSet: perSet.weights,
       icon: selectedEmoji,
       day: day,
       notes: "", // reserved for a later phase
@@ -989,6 +1181,9 @@ function handleExerciseFormSubmit(event) {
       existing.name = name;
       existing.sets = sets;
       existing.reps = reps;
+      existing.repsPerSet = perSet.reps;
+      existing.weight = defaultWeight;
+      existing.weightPerSet = perSet.weights;
       existing.icon = selectedEmoji;
       existing.day = day;
     }
@@ -1637,6 +1832,17 @@ function init() {
   document
     .getElementById("exerciseForm")
     .addEventListener("submit", handleExerciseFormSubmit);
+
+  // Per-set rows react to the Sets count and the default reps/weight fields.
+  document
+    .getElementById("setsInput")
+    .addEventListener("input", handleSetsCountChange);
+  document
+    .getElementById("repsInput")
+    .addEventListener("input", applyDefaultRepsToRows);
+  document
+    .getElementById("weightInput")
+    .addEventListener("input", applyDefaultWeightToRows);
 
   // Workout detail pop-up: close button and backdrop both close it.
   document
