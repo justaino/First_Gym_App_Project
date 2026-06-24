@@ -856,6 +856,11 @@ function deleteExercise(id) {
 
 let selectedEmoji = EMOJI_PRESETS[0]; // remembers which emoji is chosen in the form
 
+// Remembers the day used when adding exercises, so adding several in a row keeps
+// the same day. It starts as today and only resets to today on a fresh page load
+// (it lives in memory, not localStorage).
+let lastChosenDay = getTodayName();
+
 // Build the row of emoji choices once, at startup.
 function buildEmojiPicker() {
   const picker = document.getElementById("emojiPicker");
@@ -908,7 +913,9 @@ function openExerciseModalForAdd() {
   document.getElementById("nameInput").value = "";
   document.getElementById("setsInput").value = 3;
   document.getElementById("repsInput").value = 10;
-  document.getElementById("dayInput").value = getTodayName();
+  // Default to the day last used (today on a fresh load), so adding several
+  // exercises to the same day doesn't make you re-pick it each time.
+  document.getElementById("dayInput").value = lastChosenDay;
   selectEmoji(EMOJI_PRESETS[0]);
 
   openModal();
@@ -986,6 +993,9 @@ function handleExerciseFormSubmit(event) {
       existing.day = day;
     }
   }
+
+  // Remember this day so the next "Add exercise" defaults to it.
+  lastChosenDay = day;
 
   saveList(STORAGE_KEYS.exercises, exercises);
   closeModal();
