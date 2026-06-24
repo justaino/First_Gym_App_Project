@@ -685,6 +685,19 @@ body {
   box-shadow: var(--shadow-card);
   padding: 16px;
   margin-bottom: 12px;
+  /* Text on the left, Edit/Delete on the right */
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.history-card__text {
+  flex: 1;
+  min-width: 0;
+}
+.history-card__actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
 }
 .history-card__title {
   font-weight: 800;

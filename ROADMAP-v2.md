@@ -103,12 +103,12 @@ Ups exercise still shows 3×10 for next time.
 
 ---
 
-### Phase 4 — Edit & delete completed workouts ☐
+### Phase 4 — Edit & delete completed workouts ✅
 **Covers:** feedback #5
 **Goal:** manage history after the fact.
-- ☐ Each history item gets **Edit** and **Delete**
-- ☐ Delete removes the session (with a confirm)
-- ☐ Edit reopens the saved workout in the Phase 3 editor and re-saves it
+- ✅ Each history item gets **Edit** and **Delete**
+- ✅ Delete removes the session (with a confirm)
+- ✅ Edit reopens the saved workout in the Phase 3 editor and re-saves it
       (old-format sessions are upgraded to the new shape on save)
 
 **Done when:** I can open a past workout, change a set or weight, save, and see

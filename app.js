@@ -479,8 +479,32 @@ function renderHistory() {
       session.entries.length +
       " exercises";
 
-    card.appendChild(title);
-    card.appendChild(meta);
+    // The title + meta sit on the left; Edit/Delete on the right.
+    const textWrap = document.createElement("div");
+    textWrap.className = "history-card__text";
+    textWrap.appendChild(title);
+    textWrap.appendChild(meta);
+
+    const actions = document.createElement("div");
+    actions.className = "history-card__actions";
+
+    const editBtn = document.createElement("button");
+    editBtn.className = "btn btn--ghost btn--small";
+    editBtn.type = "button";
+    editBtn.textContent = "Edit";
+    editBtn.addEventListener("click", () => editSession(session.id));
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "btn btn--ghost btn--small";
+    deleteBtn.type = "button";
+    deleteBtn.textContent = "Delete";
+    deleteBtn.addEventListener("click", () => deleteSession(session.id));
+
+    actions.appendChild(editBtn);
+    actions.appendChild(deleteBtn);
+
+    card.appendChild(textWrap);
+    card.appendChild(actions);
     container.appendChild(card);
   });
 }
@@ -1555,6 +1579,78 @@ function discardWorkout() {
 function closeWorkoutOverlay() {
   stopRest();
   document.getElementById("workoutOverlay").hidden = true;
+  // Redraw so the Today/Schedule buttons update (e.g. Start → Resume) now that
+  // an in-progress workout may exist.
+  renderAll();
+}
+
+/* ---- Edit & delete a completed workout (Roadmap v2 Phase 4) ---- */
+
+// Convert an entry to the per-set shape if it's still the old { setsDone, weight }
+// format. Reps are seeded from the exercise's current plan (or 10 if unknown).
+function ensureEntrySets(entry, exercise) {
+  if (Array.isArray(entry.sets)) {
+    return entry; // already the new shape
+  }
+  const doneCount = entry.setsDone || 0;
+  const rowCount = Math.max(doneCount, 1);
+  const plan = exercise ? normalizeExercise(exercise) : null;
+  const oldWeight =
+    entry.weight !== null && entry.weight !== undefined ? entry.weight : null;
+
+  const sets = [];
+  for (let i = 0; i < rowCount; i = i + 1) {
+    let reps = 10;
+    if (plan && plan.repsPerSet[i] !== undefined) {
+      reps = plan.repsPerSet[i];
+    } else if (plan) {
+      reps = plan.reps;
+    }
+    sets.push({ reps: reps, weight: oldWeight, done: i < doneCount });
+  }
+  return { exerciseId: entry.exerciseId, sets: sets };
+}
+
+// Reopen a saved workout in the editor (upgrading old sessions to the new shape).
+function editSession(sessionId) {
+  const session = loadList(STORAGE_KEYS.sessions).find(
+    (item) => item.id === sessionId
+  );
+  if (!session) {
+    return;
+  }
+
+  // Upgrade every entry to the per-set shape so the editor can show rows.
+  session.entries = session.entries.map((entry) =>
+    ensureEntrySets(entry, findExerciseById(entry.exerciseId))
+  );
+  if (!session.status) {
+    session.status = "completed";
+  }
+
+  activeSession = session;
+  persistActiveSession(); // save the upgraded shape straight away
+
+  document.getElementById("workoutTitle").textContent =
+    (session.day || "Workout") + " workout";
+  resetTimerDisplay();
+  renderWorkoutItems();
+  document.getElementById("workoutOverlay").hidden = false;
+}
+
+// Delete a saved workout from history (after a confirm).
+function deleteSession(sessionId) {
+  const ok = window.confirm(
+    "Delete this workout from history? This cannot be undone."
+  );
+  if (!ok) {
+    return;
+  }
+  const sessions = loadList(STORAGE_KEYS.sessions).filter(
+    (item) => item.id !== sessionId
+  );
+  saveList(STORAGE_KEYS.sessions, sessions);
+  renderAll();
 }
 
 /* ---- Rest timer ---- */
