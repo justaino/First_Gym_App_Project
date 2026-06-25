@@ -21,21 +21,3 @@ const supabaseClient = window.supabase.createClient(
   SUPABASE_URL,
   SUPABASE_PUBLISHABLE_KEY
 );
-
-// --- Quick connection check (Phase 7c) ---
-// Logs to the browser console so we can confirm the app can reach Supabase and
-// that Row-Level Security is on. Not logged in yet, so the count should be 0
-// (and importantly, NO error). We'll remove this once auth is wired up.
-supabaseClient
-  .from("profiles")
-  .select("*", { count: "exact", head: true })
-  .then((result) => {
-    if (result.error) {
-      console.error("❌ Supabase connection problem:", result.error.message);
-    } else {
-      console.log(
-        "✅ Supabase connected. Profiles visible to you right now:",
-        result.count
-      );
-    }
-  });

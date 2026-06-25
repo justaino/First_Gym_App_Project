@@ -46,6 +46,42 @@
 
   <body>
     <!--
+      Login gate (Phase 7d). Covers the whole app until you're signed in.
+      Visible by default; auth.js hides it once there's a logged-in session.
+    -->
+    <div class="auth" id="authGate">
+      <div class="auth__panel">
+        <div class="auth__brand">🦉 Justaino</div>
+        <p class="auth__sub">Log in to sync your workouts across devices.</p>
+        <form class="auth__form" id="authForm">
+          <input
+            class="input"
+            id="authEmailInput"
+            type="email"
+            placeholder="Email"
+            autocomplete="email"
+          />
+          <input
+            class="input"
+            id="authPasswordInput"
+            type="password"
+            placeholder="Password"
+            autocomplete="current-password"
+          />
+          <p class="auth__message" id="authMessage" hidden></p>
+          <div class="auth__actions">
+            <button class="btn btn--primary" id="loginBtn" type="submit">
+              Log in
+            </button>
+            <button class="btn btn--ghost" id="signupBtn" type="button">
+              Sign up
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!--
       Top header bar. It always shows the app name and which profile is active.
       The "Switch" button jumps to the Settings tab where profiles are managed.
     -->
@@ -205,6 +241,16 @@
       <section class="view" id="view-settings" data-view="settings">
         <h1 class="view__title">Profiles</h1>
         <p class="view__subtitle">Create a profile and pick which one is active.</p>
+
+        <!-- Account (Phase 7): who's signed in + log out. Hidden until logged in. -->
+        <div class="card" id="accountCard" hidden>
+          <p class="backup__text">
+            Signed in as <strong id="authEmail"></strong>
+          </p>
+          <button class="btn btn--ghost" id="logoutBtn" type="button">
+            Log out
+          </button>
+        </div>
 
         <!--
           Install-to-home-screen card (Phase 5 PWA). Hidden by default; app.js
@@ -530,5 +576,7 @@
 
     <!-- Our app logic -->
     <script src="app.js"></script>
+    <!-- Login / sign-up gate (Phase 7) -->
+    <script src="auth.js"></script>
   </body>
 </html>
