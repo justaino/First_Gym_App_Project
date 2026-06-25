@@ -521,6 +521,13 @@
       </p>
     </div>
 
+    <!--
+      Supabase (Phase 7): the client library from a CDN, then our own config that
+      creates the connection. Loaded before app.js so the app can use it.
+    -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase.js"></script>
+
     <!-- Our app logic -->
     <script src="app.js"></script>
   </body>

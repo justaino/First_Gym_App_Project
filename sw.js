@@ -16,7 +16,7 @@
 */
 
 // 🔼 Bump this whenever you change app files and want everyone to get the update.
-const CACHE_VERSION = "v11";
+const CACHE_VERSION = "v13";
 const CACHE_NAME = "justaino-cache-" + CACHE_VERSION;
 
 // The core files that make up the app ("the app shell"). Relative paths so this
@@ -26,6 +26,7 @@ const APP_SHELL = [
   "./index.html",
   "./styles.css",
   "./app.js",
+  "./supabase.js",
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
