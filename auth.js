@@ -99,12 +99,25 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("signupBtn").addEventListener("click", handleSignup);
   document.getElementById("logoutBtn").addEventListener("click", handleLogout);
 
+  // Sync the cloud data once per signed-in session (not on every token refresh).
+  let syncedForSession = false;
+
   // Keep the UI in sync with login/logout/token-refresh events.
   supabaseClient.auth.onAuthStateChange((event, session) => {
     updateAuthUI(session);
+    if (session && !syncedForSession) {
+      syncedForSession = true;
+      onUserLoggedIn(session); // (defined in app.js) pull/upload + redraw
+    } else if (!session) {
+      syncedForSession = false;
+    }
   });
 
-  // Set the initial state (are we already logged in from a previous visit?).
+  // onAuthStateChange also fires an INITIAL_SESSION event on load, which sets the
+  // initial gate state and triggers the first sync if already logged in.
+
+  // Belt-and-braces: also set the gate from getSession, so the login screen is
+  // never stuck on if the initial event is missed. (Doesn't trigger the sync.)
   supabaseClient.auth.getSession().then((result) => {
     updateAuthUI(result.data.session);
   });

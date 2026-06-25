@@ -29,6 +29,9 @@ const STORAGE_KEYS = {
   celebratedMilestones: "gym:celebratedMilestones",
   // Insights: each profile's weekly workout goal, as { profileId: number }.
   weeklyGoal: "gym:weeklyGoal",
+  // Phase 7: which logged-in user the local cache currently belongs to, so we
+  // never upload one person's local data into a different person's account.
+  syncedUserId: "gym:syncedUserId",
 };
 
 // Easter egg: a workout milestone shows a one-time trophy celebration when your
@@ -1550,14 +1553,27 @@ function renderAll() {
    5. PROFILE ACTIONS — create, switch, delete
    ========================================================================= */
 
-function createProfile(name) {
-  const profiles = loadList(STORAGE_KEYS.profiles);
-
+// Create a profile: write it to the cloud first (the source of truth), then
+// mirror it into the local cache. (Phase 7e)
+async function createProfile(name) {
   const newProfile = {
     id: makeId(),
     name: name,
     createdAt: new Date().toISOString(),
   };
+
+  // user_id is filled in automatically by the database (default auth.uid()).
+  const { error } = await supabaseClient.from("profiles").insert({
+    id: newProfile.id,
+    name: newProfile.name,
+    created_at: newProfile.createdAt,
+  });
+  if (error) {
+    window.alert("Couldn't save the profile to the cloud:\n" + error.message);
+    return;
+  }
+
+  const profiles = loadList(STORAGE_KEYS.profiles);
   profiles.push(newProfile);
   saveList(STORAGE_KEYS.profiles, profiles);
 
@@ -1569,12 +1585,15 @@ function createProfile(name) {
   renderAll();
 }
 
+// Which profile is "active" is a per-device choice, so it stays local-only.
 function setActiveProfile(id) {
   saveActiveProfileId(id);
   renderAll();
 }
 
-function deleteProfile(id) {
+// Delete a profile: remove it from the cloud first (the database cascades to its
+// exercises/sessions), then clear it from the local cache. (Phase 7e)
+async function deleteProfile(id) {
   const ok = window.confirm(
     "Delete this profile and all of its exercises? This cannot be undone."
   );
@@ -1582,7 +1601,13 @@ function deleteProfile(id) {
     return;
   }
 
-  // Remove the profile.
+  const { error } = await supabaseClient.from("profiles").delete().eq("id", id);
+  if (error) {
+    window.alert("Couldn't delete the profile from the cloud:\n" + error.message);
+    return;
+  }
+
+  // Remove the profile from the local cache.
   let profiles = loadList(STORAGE_KEYS.profiles);
   profiles = profiles.filter((profile) => profile.id !== id);
   saveList(STORAGE_KEYS.profiles, profiles);
@@ -1602,6 +1627,92 @@ function deleteProfile(id) {
     saveActiveProfileId(profiles.length > 0 ? profiles[0].id : null);
   }
 
+  renderAll();
+}
+
+/* =========================================================================
+   5b. CLOUD SYNC — profiles (Phase 7e)
+   The database is the source of truth; localStorage is a write-through cache.
+   On login we reconcile the two (and, on a first login with existing local
+   data, upload it). Profiles only for now — exercises/sessions come next.
+   ========================================================================= */
+
+// Convert a database row to the app's profile shape.
+function mapProfileFromCloud(row) {
+  return { id: row.id, name: row.name, createdAt: row.created_at };
+}
+
+// Fetch this user's profiles from the cloud (or null if the request failed).
+async function pullProfilesFromCloud() {
+  const { data, error } = await supabaseClient.from("profiles").select("*");
+  if (error) {
+    console.error("Could not load profiles from cloud:", error.message);
+    return null;
+  }
+  return data;
+}
+
+// Upload local profiles to the cloud (used for the first-login migration).
+async function uploadProfilesToCloud(localProfiles) {
+  const rows = localProfiles.map((profile) => ({
+    id: profile.id,
+    name: profile.name,
+    created_at: profile.createdAt || new Date().toISOString(),
+  }));
+  const { error } = await supabaseClient.from("profiles").insert(rows);
+  if (error) {
+    console.error("Could not upload profiles:", error.message);
+  }
+}
+
+// Wipe the local cache (used when a DIFFERENT user logs in on this device).
+function clearLocalData() {
+  saveList(STORAGE_KEYS.profiles, []);
+  saveList(STORAGE_KEYS.exercises, []);
+  saveList(STORAGE_KEYS.sessions, []);
+  saveActiveProfileId(null);
+}
+
+// Make sure the active profile id still points at a profile that exists.
+function ensureValidActiveProfile() {
+  const profiles = loadList(STORAGE_KEYS.profiles);
+  const activeId = loadActiveProfileId();
+  if (!profiles.some((profile) => profile.id === activeId)) {
+    saveActiveProfileId(profiles.length > 0 ? profiles[0].id : null);
+  }
+}
+
+// Reconcile cloud vs local for profiles when a user logs in.
+async function syncProfilesOnLogin(userId) {
+  const cloud = await pullProfilesFromCloud();
+  if (cloud === null) {
+    return; // offline / error → keep showing the local cache as-is
+  }
+
+  const localProfiles = loadList(STORAGE_KEYS.profiles);
+  const syncedUserId = localStorage.getItem(STORAGE_KEYS.syncedUserId);
+  // Local data "belongs" to this user if it has no owner yet (pre-accounts data)
+  // or was already synced as theirs.
+  const localBelongsToUser = !syncedUserId || syncedUserId === userId;
+
+  if (cloud.length > 0) {
+    // The cloud has data → it wins; mirror it into the local cache.
+    saveList(STORAGE_KEYS.profiles, cloud.map(mapProfileFromCloud));
+  } else if (localProfiles.length > 0 && localBelongsToUser) {
+    // First login with existing local data → upload it (migration).
+    await uploadProfilesToCloud(localProfiles);
+  } else if (!localBelongsToUser) {
+    // Someone else's data is cached on this device → start fresh for this user.
+    clearLocalData();
+  }
+
+  localStorage.setItem(STORAGE_KEYS.syncedUserId, userId);
+}
+
+// Called by auth.js when a user is signed in: sync, then redraw.
+async function onUserLoggedIn(session) {
+  await syncProfilesOnLogin(session.user.id);
+  ensureValidActiveProfile();
   renderAll();
 }
 
@@ -3325,7 +3436,7 @@ function init() {
   });
 
   // Create-profile form submit.
-  document.getElementById("profileForm").addEventListener("submit", (event) => {
+  document.getElementById("profileForm").addEventListener("submit", async (event) => {
     event.preventDefault();
     const input = document.getElementById("profileNameInput");
     const name = input.value.trim();
@@ -3333,7 +3444,7 @@ function init() {
       window.alert("Please enter a profile name.");
       return;
     }
-    createProfile(name);
+    await createProfile(name);
     input.value = ""; // clear the box for next time
   });
 
