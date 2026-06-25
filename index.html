@@ -28,6 +28,20 @@
 
     <!-- Our own styles -->
     <link rel="stylesheet" href="styles.css" />
+
+    <!--
+      PWA (Phase 5): the manifest lets the app be "installed" to a phone's home
+      screen and opened full-screen like a real app. Paths are relative so it
+      works both locally (Live Server) and on GitHub Pages' /repo-name/ subpath.
+    -->
+    <link rel="manifest" href="manifest.webmanifest" />
+    <!-- Colour the phone's status bar / browser UI to match the app. -->
+    <meta name="theme-color" content="#faf6ee" />
+    <!-- Home-screen icon for iPhones/iPads (they use this rather than the manifest). -->
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <!-- Let iOS open it full-screen and label it nicely when added to home screen. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Athena" />
   </head>
 
   <body>
