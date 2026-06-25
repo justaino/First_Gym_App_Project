@@ -35,6 +35,9 @@ frameworks). Build accordingly: explain things simply and comment the code.
 - **When the owner's request isn't possible, or your idea differs from theirs, say so —
   give your opinion/suggestion and ask them to confirm before you proceed.** Don't
   quietly substitute your own solution for what they asked.
+- **When the owner asks a question to be answered before you act, answer it and STOP.**
+  Do not make edits, run commands, or build anything in the same turn — wait for their
+  go-ahead. Answering while simultaneously actioning is not acceptable.
 
 ## Branches & releasing
 - **`main`** is the published branch — GitHub Pages serves it as the live site that the
