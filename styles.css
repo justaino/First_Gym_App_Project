@@ -833,6 +833,20 @@ body {
   display: none;
 }
 
+/* Speech-bubble variant (used by the heatmap tap tooltip): a long downward
+   tail pointing at the square. The tail colour matches the bubble background,
+   so it flips correctly in dark mode too. */
+.chart-tooltip--bubble::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 14px solid var(--text); /* long tail */
+}
+
 /* The little meta line under a progress card's title */
 .progress-card__meta {
   color: var(--muted);
@@ -1025,6 +1039,41 @@ body {
   margin-top: 14px;
 }
 
+/* Weekly goal ring (this week's progress toward the goal) */
+.goal {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 14px;
+}
+.goal__ring {
+  width: 96px;
+  height: 96px;
+  flex-shrink: 0;
+}
+.goal__track {
+  stroke: rgba(95, 196, 188, 0.18);
+}
+.goal__arc {
+  stroke: var(--coral);
+  transition: stroke-dashoffset 0.4s ease;
+}
+.goal__text {
+  font-size: 22px;
+  font-weight: 800;
+  fill: var(--text);
+}
+.goal__title {
+  font-weight: 800;
+  font-size: 16px;
+}
+.goal__sub {
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 14px;
+  margin-top: 2px;
+}
+
 /* Calendar heatmap (consistency grid) */
 .heatmap-heading {
   font-weight: 800;
@@ -1043,6 +1092,7 @@ body {
 .hm-cell {
   border-radius: 3px;
   background-color: rgba(95, 196, 188, 0.12); /* level 0 (no workout) */
+  cursor: pointer; /* hint that squares are tappable */
 }
 .hm-cell--l1 {
   background-color: rgba(95, 196, 188, 0.4);

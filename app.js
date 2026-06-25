@@ -27,11 +27,16 @@ const STORAGE_KEYS = {
   // Easter eggs: remembers which workout-count milestones we've already
   // celebrated, per profile, so the trophy only ever plays once each.
   celebratedMilestones: "gym:celebratedMilestones",
+  // Insights: each profile's weekly workout goal, as { profileId: number }.
+  weeklyGoal: "gym:weeklyGoal",
 };
 
 // Easter egg: a workout milestone shows a one-time trophy celebration when your
 // total completed-workout count first reaches one of these numbers.
 const WORKOUT_MILESTONES = [7, 30, 50, 100];
+
+// Insights: the default weekly workout goal until the owner sets their own.
+const DEFAULT_WEEKLY_GOAL = 3;
 
 // The fixed list of emoji icons the user can pick from.
 const EMOJI_PRESETS = ["💪", "🏋️", "🚴", "🏃", "🧘", "🤸", "🏊"];
@@ -650,6 +655,8 @@ function showChartTooltip(text, x, y) {
   tooltip.textContent = text;
   tooltip.style.left = x + "px";
   tooltip.style.top = y + "px";
+  // Default: no tail (the heatmap re-adds it). Keeps chart hovers as plain chips.
+  tooltip.classList.remove("chart-tooltip--bubble");
   tooltip.hidden = false;
 }
 
@@ -956,6 +963,11 @@ function renderInsights(sessions) {
   heading.textContent = "Insights";
   card.appendChild(heading);
 
+  // --- "This week" goal ring ---
+  card.appendChild(
+    buildGoalRing(sessions, loadWeeklyGoal(loadActiveProfileId()))
+  );
+
   // A wrapping grid of stat tiles (reuses the tinted tile look).
   const stats = document.createElement("div");
   stats.className = "insights-stats";
@@ -1020,6 +1032,140 @@ function renderInsights(sessions) {
   container.appendChild(card);
 }
 
+/* ---- Weekly goal (Phase 6) ----
+   Each profile has a "workouts per week" goal, shown as a progress ring in the
+   Insights card and editable in Settings. Stored as { profileId: number }. */
+
+function loadWeeklyGoalMap() {
+  const text = localStorage.getItem(STORAGE_KEYS.weeklyGoal);
+  if (!text) {
+    return {};
+  }
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    return {};
+  }
+}
+
+// The active-or-given profile's goal (falls back to the default if unset).
+function loadWeeklyGoal(profileId) {
+  const goal = loadWeeklyGoalMap()[profileId];
+  return goal > 0 ? goal : DEFAULT_WEEKLY_GOAL;
+}
+
+function saveWeeklyGoal(profileId, goal) {
+  const map = loadWeeklyGoalMap();
+  map[profileId] = goal;
+  localStorage.setItem(STORAGE_KEYS.weeklyGoal, JSON.stringify(map));
+}
+
+// Set the Settings goal input to the active profile's current goal.
+function renderWeeklyGoalInput() {
+  const input = document.getElementById("weeklyGoalInput");
+  if (!input) {
+    return;
+  }
+  const activeId = loadActiveProfileId();
+  input.disabled = !activeId; // nothing to set without a profile
+  input.value = activeId ? loadWeeklyGoal(activeId) : DEFAULT_WEEKLY_GOAL;
+}
+
+// Build the "this week" goal ring: an SVG circle that fills toward the goal.
+function buildGoalRing(sessions, goal) {
+  // How many workouts so far this week.
+  const startOfWeek = getStartOfWeek();
+  const count = sessions.filter(
+    (session) => new Date(session.date) >= startOfWeek
+  ).length;
+  const progress = goal > 0 ? Math.min(count / goal, 1) : 0;
+
+  const wrap = document.createElement("div");
+  wrap.className = "goal";
+
+  // Draw the ring as SVG: a faint full-circle track + a coral arc on top.
+  const ns = "http://www.w3.org/2000/svg";
+  const size = 96;
+  const stroke = 10;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("class", "goal__ring");
+  svg.setAttribute("viewBox", "0 0 " + size + " " + size);
+
+  // Group the two circles so we can rotate them to start at the top (12 o'clock).
+  const g = document.createElementNS(ns, "g");
+  g.setAttribute("transform", "rotate(-90 " + size / 2 + " " + size / 2 + ")");
+
+  const track = document.createElementNS(ns, "circle");
+  track.setAttribute("class", "goal__track");
+  track.setAttribute("cx", size / 2);
+  track.setAttribute("cy", size / 2);
+  track.setAttribute("r", radius);
+  track.setAttribute("fill", "none");
+  track.setAttribute("stroke-width", stroke);
+
+  const arc = document.createElementNS(ns, "circle");
+  arc.setAttribute("class", "goal__arc");
+  arc.setAttribute("cx", size / 2);
+  arc.setAttribute("cy", size / 2);
+  arc.setAttribute("r", radius);
+  arc.setAttribute("fill", "none");
+  arc.setAttribute("stroke-width", stroke);
+  arc.setAttribute("stroke-linecap", "round");
+  arc.setAttribute("stroke-dasharray", circumference);
+  arc.setAttribute("stroke-dashoffset", circumference * (1 - progress));
+
+  g.appendChild(track);
+  g.appendChild(arc);
+  svg.appendChild(g);
+
+  // The count in the middle (not rotated).
+  const text = document.createElementNS(ns, "text");
+  text.setAttribute("class", "goal__text");
+  text.setAttribute("x", size / 2);
+  text.setAttribute("y", size / 2);
+  text.setAttribute("text-anchor", "middle");
+  text.setAttribute("dominant-baseline", "central");
+  text.textContent = count + "/" + goal;
+  svg.appendChild(text);
+
+  wrap.appendChild(svg);
+
+  // The label beside the ring.
+  const info = document.createElement("div");
+  info.className = "goal__info";
+  const title = document.createElement("div");
+  title.className = "goal__title";
+  title.textContent = "This week";
+  const sub = document.createElement("div");
+  sub.className = "goal__sub";
+  sub.textContent =
+    count >= goal
+      ? "Goal smashed! 🎉"
+      : count + " of " + goal + " workouts done";
+  info.appendChild(title);
+  info.appendChild(sub);
+  wrap.appendChild(info);
+
+  return wrap;
+}
+
+// Tapping a heatmap square shows a little rounded bubble (reusing the chart
+// tooltip) with that day's info, then hides it after a moment. This is the
+// mobile-friendly version of the hover tooltip (phones can't hover).
+let heatmapTooltipTimer = null;
+function showHeatmapTooltip(label, event) {
+  showChartTooltip(label, event.clientX, event.clientY);
+  // Add the speech-bubble tail (only the heatmap uses this variant).
+  getChartTooltip().classList.add("chart-tooltip--bubble");
+  if (heatmapTooltipTimer) {
+    clearTimeout(heatmapTooltipTimer);
+  }
+  heatmapTooltipTimer = setTimeout(hideChartTooltip, 1700);
+}
+
 // Build a GitHub-style heatmap of the last 12 weeks: one little square per day,
 // tinted by how many sets were done that day (darker = more). Helps you see your
 // consistency at a glance ("don't break the chain").
@@ -1069,15 +1215,19 @@ function buildHeatmap(sessions) {
         level = 1;
       }
 
+      const label =
+        formatDate(cellDate.toISOString()) +
+        (sets > 0 ? " · " + sets + " sets" : " · rest");
+
       const cell = document.createElement("div");
       cell.className = "hm-cell hm-cell--l" + level;
       // Days after today aren't "missed" — just not here yet; dim them.
       if (cellDate > today) {
         cell.classList.add("hm-cell--future");
       }
-      cell.title =
-        formatDate(cellDate.toISOString()) +
-        (sets > 0 ? " · " + sets + " sets" : " · rest");
+      cell.title = label; // desktop hover
+      // Tap/click shows the same info in a bubble (works on touch screens).
+      cell.addEventListener("click", (event) => showHeatmapTooltip(label, event));
       grid.appendChild(cell);
     }
   }
@@ -1173,7 +1323,9 @@ function renderProgress() {
       const entry = session.entries.find(
         (item) => item.exerciseId === exercise.id
       );
-      if (entry) {
+      // Only include sessions where this exercise was actually trained
+      // (at least one set ticked done) — skip ones left untouched.
+      if (entry && entrySetsDone(entry) > 0) {
         const setsDone = entrySetsDone(entry);
         const entryWeight = entryLastWeight(entry);
         points.push({
@@ -1213,6 +1365,7 @@ function renderAll() {
   renderProfiles();
   renderHistory();
   renderProgress();
+  renderWeeklyGoalInput();
 }
 
 /* =========================================================================
@@ -1639,13 +1792,17 @@ function entryLastWeight(entry) {
   if (Array.isArray(entry.sets)) {
     let weight = null;
     entry.sets.forEach((set) => {
-      if (set.weight !== null && set.weight !== undefined) {
+      // Only sets the user actually ticked done count as "performed".
+      if (set.done && set.weight !== null && set.weight !== undefined) {
         weight = set.weight;
       }
     });
     return weight;
   }
-  return entry.weight !== null && entry.weight !== undefined
+  // Old shape: a weight only counts if at least one set was done.
+  return (entry.setsDone || 0) > 0 &&
+    entry.weight !== null &&
+    entry.weight !== undefined
     ? entry.weight
     : null;
 }
@@ -1666,13 +1823,17 @@ function entryMaxWeight(entry) {
   if (Array.isArray(entry.sets)) {
     let max = null;
     entry.sets.forEach((set) => {
-      if (set.weight !== null && set.weight !== undefined) {
+      // Only count done sets, so an untouched/unticked set is never recorded.
+      if (set.done && set.weight !== null && set.weight !== undefined) {
         max = max === null ? set.weight : Math.max(max, set.weight);
       }
     });
     return max;
   }
-  return entry.weight !== null && entry.weight !== undefined
+  // Old shape: a weight only counts if at least one set was done.
+  return (entry.setsDone || 0) > 0 &&
+    entry.weight !== null &&
+    entry.weight !== undefined
     ? entry.weight
     : null;
 }
@@ -1909,13 +2070,24 @@ function finishWorkout() {
   if (!activeSession) {
     return;
   }
-  activeSession.status = "completed";
-  persistActiveSession();
 
+  // Count only the sets the user actually ticked done.
   const totalSets = activeSession.entries.reduce(
     (sum, entry) => sum + entry.sets.filter((set) => set.done).length,
     0
   );
+
+  // A workout must have at least one completed set to be recorded — otherwise
+  // nothing was actually done, so don't save it as a workout.
+  if (totalSets === 0) {
+    window.alert(
+      "Tick at least one set as done before finishing — or tap Discard if you didn't train."
+    );
+    return;
+  }
+
+  activeSession.status = "completed";
+  persistActiveSession();
 
   // Easter eggs: work out any celebrations BEFORE we clear activeSession.
   // (detectWorkoutMilestone also records the milestone so it only plays once.)
@@ -2962,6 +3134,18 @@ function init() {
     } else if (!document.getElementById("workoutOverlay").hidden) {
       closeWorkoutOverlay(); // keeps the in-progress workout to resume later
     }
+  });
+
+  // Weekly goal (Insights): saving the number updates the goal ring on Progress.
+  document.getElementById("weeklyGoalInput").addEventListener("change", (event) => {
+    const activeId = loadActiveProfileId();
+    if (!activeId) {
+      return;
+    }
+    const goal = clampNumber(Number(event.target.value), 1, 14);
+    event.target.value = goal; // reflect any clamping
+    saveWeeklyGoal(activeId, goal);
+    renderProgress(); // redraw the ring with the new goal
   });
 
   // Wire up the just-for-fun easter eggs (typing "athena", title taps, etc.).
