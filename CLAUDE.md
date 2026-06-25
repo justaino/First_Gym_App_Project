@@ -22,6 +22,10 @@ frameworks). Build accordingly: explain things simply and comment the code.
 - **Comment the code** so a beginner can follow what each part does.
 - Before making a large or structural change, briefly explain the plan and ask first.
 - After a working change, suggest a short git commit message.
+- **Always ask before committing or pushing — don't do it automatically.** The owner
+  decides when to commit/push. (Pushing matters because the live GitHub Pages site only
+  updates on a push, so confirm before publishing.)
+- **Do not add a `Co-Authored-By` trailer (or similar attribution) to commit messages.**
 
 ## Important behaviour rule
 - **Never claim to have run, opened, tested, or inspected the app in the owner's browser
