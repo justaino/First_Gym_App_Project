@@ -179,8 +179,8 @@ above.
 **Goal:** the app lives at a public URL and can be installed on a phone's home screen.
 Data is still **localStorage**, so it stays per-device (no sync yet) and privacy is
 unchanged — this phase is purely "make it a real, installable app."
-- ☐ Confirm/finish hosting on a static host (Netlify / GitHub Pages / Cloudflare Pages)
-      so there's a public URL (a push from this repo may already deploy to Netlify)
+- ✅ Hosting on a static host — **GitHub Pages** (repo is public), live at
+      `https://justaino.github.io/First_Gym_App_Project/` (replaced the old Netlify site)
 - ☐ Add a web app **manifest** (app name, theme colour, `display: standalone`)
 - ☐ Add app **icons** (reuse the owl / mascot art)
 - ☐ Add a **service worker** that caches the app shell so it works offline

@@ -24,12 +24,23 @@ no frameworks, no build step, no backend. All data is stored in the browser with
 
 ## 2. How to run it
 
+**Live (hosted) version:** https://justaino.github.io/First_Gym_App_Project/
+Hosted on **GitHub Pages** from the `main` branch of the public repo
+`justaino/First_Gym_App_Project`. Every push to `main` auto-publishes within a
+minute or two. (This replaced an earlier Netlify site.)
+
+**Locally (for development):**
+
 1. Open the project folder in VS Code.
 2. Install the **Live Server** extension (one time).
 3. Right-click `index.html` → **Open with Live Server**.
 4. It opens at something like `http://127.0.0.1:5500/index.html`.
 
 To stop: click "Port: 5500" in the VS Code status bar, or close the tab.
+
+> Note: the hosted site and your local site are **different origins**, so each
+> keeps its own separate localStorage data. Use the backup export/import to move
+> data between them.
 
 ---
 
@@ -142,6 +153,9 @@ its first weighted workout won't fire a PR (there's nothing to beat yet).
 
 Newest first. Add a line here whenever behaviour changes.
 
+- **2026-06-25** — Went live on **GitHub Pages**
+  (`https://justaino.github.io/First_Gym_App_Project/`); repo made public and
+  renamed to `First_Gym_App_Project`. (Phase 5 hosting step done.)
 - **2026-06-24** — Easter egg #1 now also works on touchscreens: long-press the
   Today-header mascot (~1.5s) to summon the owl. The "type athena" shortcut still
   works on desktop.
