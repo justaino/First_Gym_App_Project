@@ -850,6 +850,173 @@ function buildChartLegend() {
   return legend;
 }
 
+/* ---- Insights card (Phase 6) ----
+   Motivating stats computed from the saved sessions: a weekly "showing up"
+   streak, days trained this month, lifetime totals, and a personal-records
+   board. All client-side — no new data is stored. */
+
+// The Monday (local midnight) of the week a date falls in.
+function weekMondayMidnight(date) {
+  const d = new Date(date);
+  const jsDay = d.getDay(); // 0 = Sunday ... 6 = Saturday
+  const back = jsDay === 0 ? 6 : jsDay - 1; // days since Monday
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - back);
+  return d;
+}
+
+// A short text key identifying a week (used to group/compare weeks).
+function weekKeyOf(date) {
+  return weekMondayMidnight(date).toISOString().slice(0, 10);
+}
+
+// A key identifying a single calendar day (local), for counting distinct days.
+function dayKeyOf(date) {
+  const d = new Date(date);
+  return d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate();
+}
+
+// Current "showing up" streak: how many weeks in a row (up to now) had at least
+// one workout. The current week is allowed to be empty (it may be early in the
+// week) — we anchor on this week if it has a workout, otherwise last week.
+function computeWeekStreak(sessions) {
+  const weeks = new Set(sessions.map((session) => weekKeyOf(session.date)));
+  const cursor = weekMondayMidnight(new Date());
+  if (!weeks.has(cursor.toISOString().slice(0, 10))) {
+    cursor.setDate(cursor.getDate() - 7); // this week empty → try last week
+  }
+  let streak = 0;
+  while (weeks.has(cursor.toISOString().slice(0, 10))) {
+    streak = streak + 1;
+    cursor.setDate(cursor.getDate() - 7);
+  }
+  return streak;
+}
+
+// Build the Insights card from a profile's completed sessions.
+function renderInsights(sessions) {
+  const container = document.getElementById("insights");
+  container.innerHTML = "";
+  if (!sessions || sessions.length === 0) {
+    return; // nothing to show yet — the empty states below cover this
+  }
+
+  // --- Crunch the numbers ---
+  const streak = computeWeekStreak(sessions);
+
+  const now = new Date();
+  const daysThisMonth = new Set(
+    sessions
+      .filter((session) => {
+        const d = new Date(session.date);
+        return (
+          d.getFullYear() === now.getFullYear() &&
+          d.getMonth() === now.getMonth()
+        );
+      })
+      .map((session) => dayKeyOf(session.date))
+  ).size;
+
+  let totalSets = 0;
+  let totalReps = 0;
+  let weightMoved = 0; // sum of reps × weight across completed sets
+  const bestByExercise = {}; // exerciseId -> { weight, date }
+
+  sessions.forEach((session) => {
+    session.entries.forEach((entry) => {
+      totalSets += entrySetsDone(entry);
+      totalReps += entryRepsDone(entry);
+
+      // Weight moved only makes sense for the per-set shape (it has reps+weight).
+      if (Array.isArray(entry.sets)) {
+        entry.sets.forEach((set) => {
+          if (set.done && set.weight !== null && set.weight !== undefined) {
+            weightMoved += (Number(set.reps) || 0) * Number(set.weight);
+          }
+        });
+      }
+
+      // Track the heaviest weight ever used for each exercise (a PR).
+      const max = entryMaxWeight(entry);
+      if (max !== null) {
+        const current = bestByExercise[entry.exerciseId];
+        if (!current || max > current.weight) {
+          bestByExercise[entry.exerciseId] = { weight: max, date: session.date };
+        }
+      }
+    });
+  });
+
+  // --- Build the card ---
+  const card = document.createElement("div");
+  card.className = "card";
+
+  const heading = document.createElement("div");
+  heading.className = "history-card__title";
+  heading.textContent = "Insights";
+  card.appendChild(heading);
+
+  // A wrapping grid of stat tiles (reuses the tinted tile look).
+  const stats = document.createElement("div");
+  stats.className = "insights-stats";
+  stats.appendChild(buildStatTile(streak, "week streak 🔥"));
+  stats.appendChild(buildStatTile(daysThisMonth, "days this month"));
+  stats.appendChild(buildStatTile(sessions.length, "workouts"));
+  stats.appendChild(buildStatTile(totalSets, "sets"));
+  stats.appendChild(buildStatTile(totalReps, "reps"));
+  // Only show "weight moved" if any weights were actually recorded.
+  if (weightMoved > 0) {
+    stats.appendChild(
+      buildStatTile(weightMoved.toLocaleString(), "weight moved")
+    );
+  }
+  card.appendChild(stats);
+
+  // --- Personal-records board (only exercises that still exist) ---
+  const prList = Object.keys(bestByExercise)
+    .map((id) => ({ exercise: findExerciseById(id), best: bestByExercise[id] }))
+    .filter((item) => item.exercise)
+    .sort((a, b) => b.best.weight - a.best.weight);
+
+  if (prList.length > 0) {
+    const prHeading = document.createElement("div");
+    prHeading.className = "pr-board__heading";
+    prHeading.textContent = "Personal records 🏅";
+    card.appendChild(prHeading);
+
+    prList.forEach((item) => {
+      const row = document.createElement("div");
+      row.className = "pr-row";
+
+      const icon = document.createElement("div");
+      icon.className = "exercise__icon";
+      icon.textContent = item.exercise.icon;
+
+      const info = document.createElement("div");
+      info.className = "exercise__info";
+      const name = document.createElement("div");
+      name.className = "exercise__name";
+      name.textContent = item.exercise.name;
+      const date = document.createElement("div");
+      date.className = "pr-row__date";
+      date.textContent = formatDate(item.best.date);
+      info.appendChild(name);
+      info.appendChild(date);
+
+      const best = document.createElement("div");
+      best.className = "pr-row__best";
+      best.textContent = item.best.weight;
+
+      row.appendChild(icon);
+      row.appendChild(info);
+      row.appendChild(best);
+      card.appendChild(row);
+    });
+  }
+
+  container.appendChild(card);
+}
+
 // Draw the whole Progress view.
 function renderProgress() {
   const subtitle = document.getElementById("progressSubtitle");
@@ -858,6 +1025,7 @@ function renderProgress() {
   const list = document.getElementById("exerciseProgressList");
   summary.innerHTML = "";
   list.innerHTML = "";
+  document.getElementById("insights").innerHTML = ""; // cleared; filled below
 
   const activeProfile = getActiveProfile();
   if (!activeProfile) {
@@ -876,6 +1044,9 @@ function renderProgress() {
     (session) =>
       session.profileId === activeId && isCompletedSession(session)
   );
+
+  // --- Insights card (streak, days, lifetime totals, personal records) ---
+  renderInsights(sessions);
 
   // --- "This week" summary ---
   const startOfWeek = getStartOfWeek();

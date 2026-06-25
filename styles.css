@@ -1016,6 +1016,40 @@ body {
   transition: background-color 0.25s ease, color 0.25s ease;
 }
 
+/* ---- Insights card (Phase 6): stat tiles grid + personal-records board ---- */
+.insights-stats {
+  display: grid;
+  /* Tiles wrap responsively: as many ~90px columns as fit. */
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.pr-board__heading {
+  font-weight: 800;
+  font-size: 15px;
+  margin-top: 18px;
+  margin-bottom: 4px;
+}
+.pr-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+.pr-row__date {
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 12px;
+  margin-top: 2px;
+}
+.pr-row__best {
+  margin-left: auto;
+  font-weight: 800;
+  font-size: 18px;
+}
+
 /* ---- iOS "Add to home screen" instructions (in the install modal) ---- */
 .install-steps p {
   font-weight: 700;
