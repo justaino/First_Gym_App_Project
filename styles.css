@@ -1025,6 +1025,51 @@ body {
   margin-top: 14px;
 }
 
+/* Calendar heatmap (consistency grid) */
+.heatmap-heading {
+  font-weight: 800;
+  font-size: 15px;
+  margin-top: 18px;
+  margin-bottom: 8px;
+}
+.heatmap {
+  display: grid;
+  grid-template-rows: repeat(7, 14px); /* Mon→Sun */
+  grid-auto-flow: column; /* fill each week (column) top-to-bottom */
+  grid-auto-columns: 14px;
+  gap: 3px;
+  overflow-x: auto; /* safety on very narrow screens */
+}
+.hm-cell {
+  border-radius: 3px;
+  background-color: rgba(95, 196, 188, 0.12); /* level 0 (no workout) */
+}
+.hm-cell--l1 {
+  background-color: rgba(95, 196, 188, 0.4);
+}
+.hm-cell--l2 {
+  background-color: rgba(95, 196, 188, 0.7);
+}
+.hm-cell--l3 {
+  background-color: rgba(95, 196, 188, 1);
+}
+.hm-cell--future {
+  opacity: 0.3;
+}
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 10px;
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 12px;
+}
+.heatmap-legend .hm-cell {
+  width: 13px;
+  height: 13px;
+}
+
 .pr-board__heading {
   font-weight: 800;
   font-size: 15px;

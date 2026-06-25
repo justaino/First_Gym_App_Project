@@ -972,6 +972,9 @@ function renderInsights(sessions) {
   }
   card.appendChild(stats);
 
+  // --- Calendar heatmap of the last 12 weeks ---
+  card.appendChild(buildHeatmap(sessions));
+
   // --- Personal-records board (only exercises that still exist) ---
   const prList = Object.keys(bestByExercise)
     .map((id) => ({ exercise: findExerciseById(id), best: bestByExercise[id] }))
@@ -1015,6 +1018,88 @@ function renderInsights(sessions) {
   }
 
   container.appendChild(card);
+}
+
+// Build a GitHub-style heatmap of the last 12 weeks: one little square per day,
+// tinted by how many sets were done that day (darker = more). Helps you see your
+// consistency at a glance ("don't break the chain").
+function buildHeatmap(sessions) {
+  const WEEKS = 12;
+
+  // Total sets done on each calendar day.
+  const setsByDay = {};
+  sessions.forEach((session) => {
+    const key = dayKeyOf(session.date);
+    const sets = session.entries.reduce(
+      (sum, entry) => sum + entrySetsDone(entry),
+      0
+    );
+    setsByDay[key] = (setsByDay[key] || 0) + sets;
+  });
+
+  const wrap = document.createElement("div");
+
+  const heading = document.createElement("div");
+  heading.className = "heatmap-heading";
+  heading.textContent = "Last 12 weeks";
+  wrap.appendChild(heading);
+
+  const grid = document.createElement("div");
+  grid.className = "heatmap";
+
+  // Start from the Monday 11 weeks before this week (12 columns total).
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const startMonday = weekMondayMidnight(today);
+  startMonday.setDate(startMonday.getDate() - (WEEKS - 1) * 7);
+
+  // Fill column-by-column (each column is a week; rows are Mon→Sun).
+  for (let col = 0; col < WEEKS; col = col + 1) {
+    for (let row = 0; row < 7; row = row + 1) {
+      const cellDate = new Date(startMonday);
+      cellDate.setDate(startMonday.getDate() + col * 7 + row);
+
+      const sets = setsByDay[dayKeyOf(cellDate)] || 0;
+      let level = 0;
+      if (sets >= 6) {
+        level = 3;
+      } else if (sets >= 3) {
+        level = 2;
+      } else if (sets >= 1) {
+        level = 1;
+      }
+
+      const cell = document.createElement("div");
+      cell.className = "hm-cell hm-cell--l" + level;
+      // Days after today aren't "missed" — just not here yet; dim them.
+      if (cellDate > today) {
+        cell.classList.add("hm-cell--future");
+      }
+      cell.title =
+        formatDate(cellDate.toISOString()) +
+        (sets > 0 ? " · " + sets + " sets" : " · rest");
+      grid.appendChild(cell);
+    }
+  }
+  wrap.appendChild(grid);
+
+  // A small "Less → More" legend.
+  const legend = document.createElement("div");
+  legend.className = "heatmap-legend";
+  const less = document.createElement("span");
+  less.textContent = "Less";
+  legend.appendChild(less);
+  [0, 1, 2, 3].forEach((lvl) => {
+    const swatch = document.createElement("span");
+    swatch.className = "hm-cell hm-cell--l" + lvl;
+    legend.appendChild(swatch);
+  });
+  const more = document.createElement("span");
+  more.textContent = "More";
+  legend.appendChild(more);
+  wrap.appendChild(legend);
+
+  return wrap;
 }
 
 // Draw the whole Progress view.
