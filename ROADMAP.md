@@ -164,16 +164,17 @@ above.
 
 ---
 
-## 8. Beyond v1 — going cross-device (this RELAXES the rules in section 2)
+## 8. Beyond v1 — further phases
 
-> ⚠️ The phases below intentionally step outside the original "localStorage only, no
-> backend, no accounts" constraints. That's a deliberate evolution of the app, not a
-> mistake — do these only when you've decided you want sync, with eyes open about the
-> trade-offs (privacy: data now lives on a server; cost: small but no longer free-by-
-> default forever; maintenance: it becomes a system to keep running, not one HTML file).
+> Two different directions live here:
+> - **Phase 6 (Insights) stays fully within the original rules** in section 2 (vanilla
+>   JS, localStorage, no backend) — it just makes more of the data you already have.
+> - **Phase 7 (accounts + cross-device sync) deliberately steps outside them** — data on
+>   a server, accounts to maintain, a small ongoing cost. Do that one only when you've
+>   decided you want sync, with eyes open about the trade-offs.
 >
-> **Recommended order: do Phase 5 first** (high value, low risk, keeps your data on-device),
-> then decide on Phase 6 when you actually want accounts and sync.
+> **Recommended order:** Phase 5 (done) → **Phase 6 Insights** (high value, low risk, no
+> new infrastructure) → **Phase 7 sync** when you actually want cross-device data.
 
 ### Phase 5 — Real hosting + installable app (PWA) ☐
 **Goal:** the app lives at a public URL and can be installed on a phone's home screen.
@@ -191,7 +192,36 @@ unchanged — this phase is purely "make it a real, installable app."
 **Done when:** I can open the public URL on my phone, install it to the home screen, and
 use it offline — each device still keeps its own separate data.
 
-### Phase 6 — Accounts + cross-device sync (needs a backend) ☐
+### Phase 6 — Insights (stays within the original constraints) ☐
+**Goal:** turn the saved workout data into motivating insights, shown on the Progress
+tab. Pure client-side — plain JS computed over `gym:sessions`/`gym:exercises`, no backend,
+data stays per-device. Build **one insight/card at a time**. The specific insights are the
+owner's to choose; candidates below (✅ = picked for the first build).
+
+*Consistency / "showing up":*
+- ☐ Current streak (consecutive weeks or days trained) + longest-ever streak
+- ☐ Days shown up (this week / this month / all-time)
+- ☐ Calendar heatmap of recent training days
+- ☐ Favourite training day ("you train most on Wednesdays")
+
+*Strength & progress:*
+- ☐ Personal-records board (heaviest weight per exercise + the date) — reuses the PR
+      logic already written for the easter egg
+- ☐ Total volume (sets × reps × weight) trended over time
+- ☐ Trend callouts (e.g. "Squat +10kg since you started")
+- ☐ Estimated 1-rep-max per lift (optional / more advanced)
+
+*Totals & goals:*
+- ☐ Lifetime totals (workouts / sets / reps / total weight moved)
+- ☐ Weekly goal (e.g. 3 workouts) with a progress ring
+
+**Suggested first build (Phase 6a):** a single "Insights" card on Progress with **current
+streak + days shown up + lifetime totals + PR board** — all from data/logic we already have.
+
+**Done when:** the Progress tab shows accurate, motivating insights from real saved
+workouts, with friendly empty states when there's no data yet.
+
+### Phase 7 — Accounts + cross-device sync (needs a backend) ☐
 **Goal:** log in and see the same workouts on any device.
 **This is the point where "no backend / no accounts / fully on-device" no longer holds.**
 Use a backend-as-a-service so we don't run our own server.
