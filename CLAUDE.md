@@ -28,6 +28,16 @@ frameworks). Build accordingly: explain things simply and comment the code.
   or on their machine.** You cannot see their local environment. Instead, give clear,
   copy-pasteable steps for them to run and test it themselves, and describe what they
   should expect to see.
+- **When the owner's request isn't possible, or your idea differs from theirs, say so —
+  give your opinion/suggestion and ask them to confirm before you proceed.** Don't
+  quietly substitute your own solution for what they asked.
+
+## PWA / deployment rule (don't forget this)
+- The app is a PWA with a service worker (`sw.js`) that caches the app shell. **Whenever
+  you change any app file (`index.html`, `styles.css`, `app.js`, icons, etc.), you MUST
+  bump `CACHE_VERSION` in `sw.js`** (e.g. `"v1"` → `"v2"`) in the same change. If you
+  don't, returning visitors stay stuck on the old cached version. See RUNBOOK.md for the
+  full update flow.
 
 ## Coding conventions
 - Plain, readable functions with descriptive names. Avoid clever one-liners.
