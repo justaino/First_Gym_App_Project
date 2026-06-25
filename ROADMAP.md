@@ -221,20 +221,56 @@ streak + days shown up + lifetime totals + PR board** — all from data/logic we
 **Done when:** the Progress tab shows accurate, motivating insights from real saved
 workouts, with friendly empty states when there's no data yet.
 
-### Phase 7 — Accounts + cross-device sync (needs a backend) ☐
-**Goal:** log in and see the same workouts on any device.
-**This is the point where "no backend / no accounts / fully on-device" no longer holds.**
-Use a backend-as-a-service so we don't run our own server.
-- ☐ **Choose a backend:** Supabase (Postgres + built-in auth) — *recommended*; Firebase
-      or a Power Platform option (Dataverse / Power Automate, leaning on existing skills)
-      as alternatives
-- ☐ Add **sign up / log in** (email)
-- ☐ Move the data model (profiles / exercises / sessions) into the cloud database
-- ☐ Read/write through the backend, keeping **localStorage as an offline cache**
-- ☐ **Sync strategy:** load on login, save on change, handle being offline gracefully
-- ☐ **Migrate** existing on-device data up to the account on first login (reuse the
-      export/import logic we already have)
-- ☐ Write a short **privacy note** (what's stored, where, and how to delete it)
+### Phase 7 — Accounts + cross-device sync (Supabase) ☐
+**Goal:** log in and see/edit the same workouts on any device, and have data survive
+clearing the browser or switching phones.
+
+**Decisions made:**
+- **Backend = Supabase** (free tier). Chosen because it's SQL/Postgres (maps cleanly to
+  the current `profiles`/`exercises`/`sessions` shapes), has built-in **Auth** + **Row-
+  Level Security**, and its client loads from a **CDN `<script>`** so it fits the no-build
+  setup. Firebase was the runner-up; **Power Platform was set aside (cost).**
+- **This deliberately relaxes two hard rules** from section 2: it adds a **backend** and
+  an **external JS library** (the Supabase client). Accepted for this phase only.
+- **Built on a `feature/auth` branch** off `dev`, so `dev`/`main` stay releasable while
+  this big change is in progress.
+- **Security:** the app uses ONLY Supabase's **anon public key** (safe to ship, protected
+  by Row-Level Security). The **`service_role` key must NEVER be committed** (repo is
+  public).
+
+**Data model in Supabase** (mirrors today's shapes + `user_id`):
+- `profiles(id, user_id, name, created_at)`
+- `exercises(id, user_id, profile_id, name, sets, reps, reps_per_set, weight,
+  weight_per_set, icon, day, notes)`
+- `sessions(id, user_id, profile_id, date, day, status, entries jsonb, updated_at)`
+  — `entries` stays as JSON to match the nested per-set shape with minimal restructuring.
+- **Row-Level Security** on every table: a user can only read/write rows where
+  `user_id = auth.uid()`.
+
+**Steps (incremental — one at a time, test each, commit on `feature/auth`):**
+- ☐ **7a — Project setup (owner does this):** create a free Supabase project; note the
+      **Project URL** + **anon key**. (Owner: "I will create the Supabase project.")
+- ☐ **7b — Schema + security:** create the three tables and enable the Row-Level Security
+      policies in Supabase.
+- ☐ **7c — Connect the client:** load `supabase-js` via CDN, initialise it with the URL +
+      anon key, confirm it connects.
+- ☐ **7d — Auth UI:** a login / sign-up screen (email + password), sign out, show the
+      logged-in state; gate the app behind login.
+- ☐ **7e — Swap the data layer, one entity at a time:** profiles → exercises → sessions
+      read/write through Supabase, keeping `localStorage` as a cache; add loading/error
+      states.
+- ☐ **7f — First-login migration:** detect existing local data and offer to upload it to
+      the account (reuse the export logic), so nothing is lost.
+- ☐ **7g — Offline handling:** app shell still works offline (service worker); show cached
+      data offline and sync writes when back online (start simple; minimal conflict
+      handling).
+- ☐ **7h — Privacy note + release:** short note on what's stored / where / how to delete;
+      test on two devices; then merge `feature/auth` → `dev` → `main`.
+
+**Watch-outs:** free Supabase projects **pause after ~1 week of inactivity** (resume with
+a click); configure email-confirmation settings for testing; never break the offline
+app-shell behaviour; only the anon key in client code.
 
 **Done when:** I can log in on my laptop and my phone and see/edit the same workouts on
-both, and a brand-new device shows my data after login.
+both; a brand-new device shows my data after login; and after clearing local data and
+logging back in, everything is restored.
