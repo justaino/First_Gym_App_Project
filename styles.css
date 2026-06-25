@@ -1192,6 +1192,19 @@ body {
   font-size: 18px;
 }
 
+/* "Since you started" trend callouts (reuse the .pr-row layout) */
+.trend-change {
+  margin-left: auto;
+  font-weight: 800;
+  font-size: 16px;
+}
+.trend-change.is-up {
+  color: var(--mint);
+}
+.trend-change.is-down {
+  color: var(--coral);
+}
+
 /* ---- iOS "Add to home screen" instructions (in the install modal) ---- */
 .install-steps p {
   font-weight: 700;

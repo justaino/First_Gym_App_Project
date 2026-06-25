@@ -1047,7 +1047,86 @@ function renderInsights(sessions) {
     });
   }
 
+  // --- "Since you started" trend callouts (weight gains/drops per exercise) ---
+  const trend = buildTrendCallouts(sessions);
+  if (trend) {
+    card.appendChild(trend);
+  }
+
   container.appendChild(card);
+}
+
+// Build the "Since you started" callouts: for each exercise trained with weights
+// at least twice, compare the first weighted session's heaviest weight to the
+// latest one. Shows the biggest movements (up or down), capped at 3 lines.
+function buildTrendCallouts(sessions) {
+  const sorted = sessions
+    .slice()
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+  const exercises = getExercisesForActiveProfile();
+  const callouts = [];
+
+  exercises.forEach((exercise) => {
+    const weights = [];
+    sorted.forEach((session) => {
+      const entry = session.entries.find(
+        (item) => item.exerciseId === exercise.id
+      );
+      if (entry) {
+        const max = entryMaxWeight(entry);
+        if (max !== null) {
+          weights.push(max);
+        }
+      }
+    });
+    // Need a starting point and a current point to show a trend.
+    if (weights.length >= 2) {
+      const change = weights[weights.length - 1] - weights[0];
+      if (change !== 0) {
+        callouts.push({ exercise: exercise, change: change });
+      }
+    }
+  });
+
+  if (callouts.length === 0) {
+    return null;
+  }
+
+  // Biggest movements first (up or down), keep the top few.
+  callouts.sort((a, b) => Math.abs(b.change) - Math.abs(a.change));
+  const top = callouts.slice(0, 3);
+
+  const wrap = document.createElement("div");
+
+  const heading = document.createElement("div");
+  heading.className = "pr-board__heading";
+  heading.textContent = "Since you started 📈";
+  wrap.appendChild(heading);
+
+  top.forEach((item) => {
+    const row = document.createElement("div");
+    row.className = "pr-row"; // reuse the personal-records row styling
+
+    const icon = document.createElement("div");
+    icon.className = "exercise__icon";
+    icon.textContent = item.exercise.icon;
+
+    const name = document.createElement("div");
+    name.className = "exercise__name";
+    name.textContent = item.exercise.name;
+
+    const change = document.createElement("div");
+    const up = item.change > 0;
+    change.className = "trend-change " + (up ? "is-up" : "is-down");
+    change.textContent = (up ? "↑ " : "↓ ") + Math.abs(item.change);
+
+    row.appendChild(icon);
+    row.appendChild(name);
+    row.appendChild(change);
+    wrap.appendChild(row);
+  });
+
+  return wrap;
 }
 
 /* ---- Weekly goal (Phase 6) ----
