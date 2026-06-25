@@ -123,6 +123,30 @@ Unregister** (and **Clear storage**), then reload.
 
 ---
 
+## 5c. Insights (Progress tab)
+
+The **Insights** card at the top of Progress is computed live from
+`gym:sessions` (no new data is stored except the weekly goal). It shows: a weekly
+**goal ring**, **week streak**, **days this month**, **lifetime totals**, a
+**personal-records board**, a **12-week heatmap** (tap a square for a bubble with
+that day's info), a **volume this-month-vs-last** line, and **"since you started"**
+per-exercise weight trends (up/down). All per-device, like the rest of the data.
+
+- **Weekly goal:** stored per profile under `gym:weeklyGoal` (`{ profileId: n }`),
+  default 3; edited in **Settings → Weekly goal**.
+
+### What counts as "done" (important)
+Only sets the user **ticks done** are recorded. A workout **can't be finished**
+with zero done sets, and weights/reps/PRs/insights ignore unticked sets. (This
+fixed an earlier bug where seeded-but-unticked sets triggered false PRs.)
+
+### Editing a workout's date
+The workout editor has a **Date** field. Changing it updates `session.date` **and**
+re-labels `session.day` to match (e.g. a Friday date → "Friday workout"), so the
+date and the history wording stay in sync.
+
+---
+
 ## 6. Backup & restore (import / export)
 
 Found in **Settings → Backup**.
@@ -183,6 +207,11 @@ its first weighted workout won't fire a PR (there's nothing to beat yet).
 
 Newest first. Add a line here whenever behaviour changes.
 
+- **2026-06-25** — **Insights phase (6):** added the Insights card (goal ring,
+  streak, days, lifetime totals, PR board, 12-week heatmap with tap bubbles,
+  month-vs-last volume, "since you started" trends) and an editable workout date.
+  **Bug fix:** only ticked sets are recorded — finishing now requires ≥1 done set,
+  and unticked sets no longer count toward weights/PRs/insights. Cache at `v11`.
 - **2026-06-25** — **PWA complete:** added `sw.js` (offline app-shell cache) and an
   in-app "Install app" button (real prompt on Android/desktop; how-to on iOS).
   Renamed the installed app to "Justaino" and switched to the uploaded owl icon.
