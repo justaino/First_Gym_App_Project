@@ -36,6 +36,16 @@ frameworks). Build accordingly: explain things simply and comment the code.
   give your opinion/suggestion and ask them to confirm before you proceed.** Don't
   quietly substitute your own solution for what they asked.
 
+## Branches & releasing
+- **`main`** is the published branch — GitHub Pages serves it as the live site that the
+  owner's friends test (`https://justaino.github.io/First_Gym_App_Project/`). Keep it in
+  a working state.
+- **`dev`** is the working branch — do day-to-day work here. Pushing to `dev` does **not**
+  affect the live site (Pages only redeploys when `main` changes).
+- **Releasing = merging `dev` → `main` and pushing.** Only do this when asked. When you do,
+  remember to bump `CACHE_VERSION` (see below). The owner tests `dev` locally with Live
+  Server; there is no separate preview URL for `dev`.
+
 ## PWA / deployment rule (don't forget this)
 - The app is a PWA with a service worker (`sw.js`) that caches the app shell. **Whenever
   you change any app file (`index.html`, `styles.css`, `app.js`, icons, etc.), you MUST
