@@ -2472,6 +2472,86 @@ function setupEasterEggs() {
 }
 
 /* =========================================================================
+   7f. INSTALL TO HOME SCREEN (PWA)
+   Android/desktop browsers fire a "beforeinstallprompt" event when the app can
+   be installed — we catch it and trigger it from our own button. iOS gives no
+   such event (you must use Safari's Share → Add to Home Screen), so on iOS the
+   button opens a short how-to instead. The button hides itself once installed.
+   ========================================================================= */
+
+// The saved install event (Android/desktop), or null if we don't have one.
+let deferredInstallPrompt = null;
+
+// Is the app already running as an installed app (full-screen, no browser bar)?
+function isAppInstalled() {
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    window.navigator.standalone === true // iOS-specific flag
+  );
+}
+
+// Is this an iPhone/iPad? (iOS can only add to the home screen manually.)
+function isIosDevice() {
+  return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+}
+
+function showInstallCard() {
+  document.getElementById("installCard").hidden = false;
+}
+function hideInstallCard() {
+  document.getElementById("installCard").hidden = true;
+}
+
+function setupInstall() {
+  const installBtn = document.getElementById("installBtn");
+
+  // Decide whether to show the button on first load.
+  if (isAppInstalled()) {
+    hideInstallCard(); // already installed — nothing to do
+  } else if (isIosDevice()) {
+    showInstallCard(); // iOS: show it so it opens the how-to (no auto-prompt)
+  }
+
+  // Android/desktop: the browser tells us the app is installable.
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault(); // stop the default mini-bar; we use our own button
+    deferredInstallPrompt = event;
+    showInstallCard();
+  });
+
+  // Clicking our button: fire the real prompt, or show the iOS instructions.
+  installBtn.addEventListener("click", () => {
+    if (deferredInstallPrompt) {
+      deferredInstallPrompt.prompt(); // the real native install dialog
+      deferredInstallPrompt.userChoice.finally(() => {
+        deferredInstallPrompt = null;
+        hideInstallCard();
+      });
+    } else if (isIosDevice()) {
+      document.getElementById("installModal").hidden = false;
+    }
+  });
+
+  // Once installed, hide the button.
+  window.addEventListener("appinstalled", () => {
+    deferredInstallPrompt = null;
+    hideInstallCard();
+  });
+
+  // The iOS instructions modal closes via its button or its backdrop.
+  document
+    .getElementById("closeInstallBtn")
+    .addEventListener("click", closeInstallModal);
+  document
+    .getElementById("installBackdrop")
+    .addEventListener("click", closeInstallModal);
+}
+
+function closeInstallModal() {
+  document.getElementById("installModal").hidden = true;
+}
+
+/* =========================================================================
    8. TAB / VIEW SWITCHING
    ========================================================================= */
 
@@ -2621,6 +2701,8 @@ function init() {
       closeModal();
     } else if (!document.getElementById("sessionModal").hidden) {
       closeSessionModal();
+    } else if (!document.getElementById("installModal").hidden) {
+      closeInstallModal();
     } else if (!document.getElementById("workoutOverlay").hidden) {
       closeWorkoutOverlay(); // keeps the in-progress workout to resume later
     }
@@ -2628,6 +2710,17 @@ function init() {
 
   // Wire up the just-for-fun easter eggs (typing "athena", title taps, etc.).
   setupEasterEggs();
+
+  // PWA (Phase 5): register the service worker for offline + installability,
+  // and wire up the "Install app" button.
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker
+        .register("sw.js")
+        .catch((error) => console.log("Service worker failed to register:", error));
+    });
+  }
+  setupInstall();
 
   // Draw the initial screens from whatever is saved.
   // The app always opens on the Today tab (set as the active view in index.html).

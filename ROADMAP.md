@@ -181,10 +181,12 @@ Data is still **localStorage**, so it stays per-device (no sync yet) and privacy
 unchanged — this phase is purely "make it a real, installable app."
 - ✅ Hosting on a static host — **GitHub Pages** (repo is public), live at
       `https://justaino.github.io/First_Gym_App_Project/` (replaced the old Netlify site)
-- ☐ Add a web app **manifest** (app name, theme colour, `display: standalone`)
-- ☐ Add app **icons** (reuse the owl / mascot art)
-- ☐ Add a **service worker** that caches the app shell so it works offline
-- ☐ Test **"Add to Home Screen"** on a real phone
+- ✅ Add a web app **manifest** (app name "Justaino", theme colour, `display: standalone`)
+- ✅ Add app **icons** (the uploaded owl on a lavender background, 192/512 + Apple)
+- ✅ Add a **service worker** (`sw.js`) that caches the app shell so it works offline
+- ✅ Add an in-app **"Install app" button** (real prompt on Android/desktop; how-to
+      steps on iOS, which has no install API)
+- ☐ Test **"Add to Home Screen"** + offline on a real phone
 
 **Done when:** I can open the public URL on my phone, install it to the home screen, and
 use it offline — each device still keeps its own separate data.

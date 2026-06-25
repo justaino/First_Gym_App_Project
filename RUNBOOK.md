@@ -93,6 +93,36 @@ localStorage.clear()
 
 ---
 
+## 5b. PWA: install & offline (service worker)
+
+The app is a **Progressive Web App** — installable to a home screen and works
+offline.
+
+- **Manifest:** `manifest.webmanifest` (app name "Justaino", icons, standalone).
+- **Icons:** in `icons/` — the owl (`Owl.png` is the source) composited onto a
+  lavender background at 192/512/180. Regenerate by re-compositing `Owl.png`
+  (ask Claude — the generator is a short pure-Python script run with `sips`).
+- **Service worker:** `sw.js` caches the app shell for offline use.
+- **Install button:** Settings → "Install app". Fires the real prompt on
+  Android/desktop; on iPhone/iPad it shows Add-to-Home-Screen steps (iOS has no
+  install API — manual Share → Add to Home Screen is the only way).
+
+### ⚠️ Deploying updates (IMPORTANT)
+Because the service worker caches files, returning visitors can get **stuck on an
+old version** after you push changes. To avoid that:
+
+1. After changing app files, open `sw.js` and **bump `CACHE_VERSION`**
+   (e.g. `"v1"` → `"v2"`).
+2. Commit & push as usual.
+3. On the next visit the browser fetches the new `sw.js`, re-caches the fresh
+   files, and deletes the old cache. It can take **one or two reloads** to fully
+   switch over.
+
+To force a refresh while testing: DevTools → **Application → Service Workers →
+Unregister** (and **Clear storage**), then reload.
+
+---
+
 ## 6. Backup & restore (import / export)
 
 Found in **Settings → Backup**.
@@ -153,6 +183,10 @@ its first weighted workout won't fire a PR (there's nothing to beat yet).
 
 Newest first. Add a line here whenever behaviour changes.
 
+- **2026-06-25** — **PWA complete:** added `sw.js` (offline app-shell cache) and an
+  in-app "Install app" button (real prompt on Android/desktop; how-to on iOS).
+  Renamed the installed app to "Justaino" and switched to the uploaded owl icon.
+  **Remember to bump `CACHE_VERSION` in `sw.js` when deploying app changes.**
 - **2026-06-25** — Went live on **GitHub Pages**
   (`https://justaino.github.io/First_Gym_App_Project/`); repo made public and
   renamed to `First_Gym_App_Project`. (Phase 5 hosting step done.)

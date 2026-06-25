@@ -1016,6 +1016,22 @@ body {
   transition: background-color 0.25s ease, color 0.25s ease;
 }
 
+/* ---- iOS "Add to home screen" instructions (in the install modal) ---- */
+.install-steps p {
+  font-weight: 700;
+  color: var(--text);
+}
+.install-steps ol {
+  margin: 10px 0 0;
+  padding-left: 22px;
+}
+.install-steps li {
+  margin-bottom: 10px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.4;
+}
+
 /* =========================================================================
    EASTER EGGS (just for fun) — confetti, toast, celebration card, owl,
    and the hidden credits card. None of this affects layout of the app;
