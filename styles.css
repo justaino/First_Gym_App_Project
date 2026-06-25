@@ -1039,6 +1039,23 @@ body {
   margin-top: 14px;
 }
 
+/* Workout date field (in the workout sheet) */
+.workout-date {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.workout-date__label {
+  font-weight: 700;
+  color: var(--muted);
+  font-size: 14px;
+}
+.workout-date .input {
+  flex: 1;
+  max-width: 220px;
+}
+
 /* Weekly goal ring (this week's progress toward the goal) */
 .goal {
   display: flex;
@@ -1072,6 +1089,36 @@ body {
   font-weight: 700;
   font-size: 14px;
   margin-top: 2px;
+}
+
+/* Volume trend line (this month vs last month) */
+.volume-trend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin-top: 16px;
+}
+.volume-trend__label {
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 14px;
+}
+.volume-trend__value {
+  font-weight: 800;
+  font-size: 18px;
+  color: var(--text);
+}
+.volume-trend__change {
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--muted);
+}
+.volume-trend__change.is-up {
+  color: var(--mint);
+}
+.volume-trend__change.is-down {
+  color: var(--coral);
 }
 
 /* Calendar heatmap (consistency grid) */

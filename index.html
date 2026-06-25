@@ -441,6 +441,13 @@
         <!-- Saved-as-you-go note -->
         <p class="sheet__note">Progress saves automatically as you go.</p>
 
+        <!-- Workout date. Changing it also updates the day label (e.g. moving a
+             workout to a Friday makes it a "Friday workout"). -->
+        <label class="workout-date">
+          <span class="workout-date__label">Date</span>
+          <input class="input" type="date" id="workoutDateInput" />
+        </label>
+
         <!-- app.js fills this with the day's exercises and their per-set rows -->
         <div id="workoutList"></div>
 

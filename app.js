@@ -174,10 +174,8 @@ function formatExerciseSummary(exercise) {
   return summary;
 }
 
-// What is today's day name? (e.g. "Monday")
-function getTodayName() {
-  // getDay(): 0 = Sunday, 1 = Monday ... 6 = Saturday
-  const jsDayNumber = new Date().getDay();
+// The day name for any date (e.g. "Friday"). getDay(): 0 = Sunday ... 6 = Saturday.
+function dayNameOf(date) {
   const namesSundayFirst = [
     "Sunday",
     "Monday",
@@ -187,7 +185,21 @@ function getTodayName() {
     "Friday",
     "Saturday",
   ];
-  return namesSundayFirst[jsDayNumber];
+  return namesSundayFirst[date.getDay()];
+}
+
+// What is today's day name? (e.g. "Monday")
+function getTodayName() {
+  return dayNameOf(new Date());
+}
+
+// Turn a stored ISO date into the value an <input type="date"> expects
+// ("YYYY-MM-DD"), using local date parts.
+function toDateInputValue(isoString) {
+  const d = new Date(isoString);
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return d.getFullYear() + "-" + month + "-" + day;
 }
 
 /* =========================================================================
@@ -984,6 +996,12 @@ function renderInsights(sessions) {
   }
   card.appendChild(stats);
 
+  // --- Volume trend (this month vs last) — only when there's weighted volume ---
+  const volumeTrend = buildVolumeTrend(sessions);
+  if (volumeTrend) {
+    card.appendChild(volumeTrend);
+  }
+
   // --- Calendar heatmap of the last 12 weeks ---
   card.appendChild(buildHeatmap(sessions));
 
@@ -1148,6 +1166,87 @@ function buildGoalRing(sessions, goal) {
   info.appendChild(title);
   info.appendChild(sub);
   wrap.appendChild(info);
+
+  return wrap;
+}
+
+// Build the "volume this month vs last month" line. Volume = reps × weight
+// summed over completed sets (a measure of total work done). Returns null when
+// there's no weighted volume to show (e.g. bodyweight-only history).
+function buildVolumeTrend(sessions) {
+  const now = new Date();
+  const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+  // Total volume in one session (per-set shape only — old sessions can't pair
+  // reps with weights reliably, so they contribute 0 here).
+  function sessionVolume(session) {
+    let vol = 0;
+    session.entries.forEach((entry) => {
+      if (Array.isArray(entry.sets)) {
+        entry.sets.forEach((set) => {
+          if (set.done && set.weight !== null && set.weight !== undefined) {
+            vol += (Number(set.reps) || 0) * Number(set.weight);
+          }
+        });
+      }
+    });
+    return vol;
+  }
+
+  let thisMonth = 0;
+  let lastMonth = 0;
+  sessions.forEach((session) => {
+    const d = new Date(session.date);
+    if (
+      d.getFullYear() === now.getFullYear() &&
+      d.getMonth() === now.getMonth()
+    ) {
+      thisMonth += sessionVolume(session);
+    } else if (
+      d.getFullYear() === prevMonth.getFullYear() &&
+      d.getMonth() === prevMonth.getMonth()
+    ) {
+      lastMonth += sessionVolume(session);
+    }
+  });
+
+  // Nothing weighted in either month → don't show the line at all.
+  if (thisMonth === 0 && lastMonth === 0) {
+    return null;
+  }
+
+  const wrap = document.createElement("div");
+  wrap.className = "volume-trend";
+
+  const label = document.createElement("span");
+  label.className = "volume-trend__label";
+  label.textContent = "Volume this month";
+
+  const value = document.createElement("span");
+  value.className = "volume-trend__value";
+  value.textContent = thisMonth.toLocaleString();
+
+  wrap.appendChild(label);
+  wrap.appendChild(value);
+
+  const change = document.createElement("span");
+  change.className = "volume-trend__change";
+  if (lastMonth > 0) {
+    const pct = Math.round(((thisMonth - lastMonth) / lastMonth) * 100);
+    if (pct > 0) {
+      change.classList.add("is-up");
+      change.textContent = "↑ " + pct + "% vs last month";
+    } else if (pct < 0) {
+      change.classList.add("is-down");
+      change.textContent = "↓ " + Math.abs(pct) + "% vs last month";
+    } else {
+      change.textContent = "same as last month";
+    }
+  } else {
+    // No weighted volume last month to compare against.
+    change.textContent = "first month with weights 💪";
+  }
+  wrap.appendChild(change);
 
   return wrap;
 }
@@ -1910,7 +2009,40 @@ function startWorkout(day) {
   document.getElementById("workoutTitle").textContent = day + " workout";
   resetTimerDisplay();
   renderWorkoutItems();
+  populateWorkoutDate();
   document.getElementById("workoutOverlay").hidden = false;
+}
+
+// Fill the date field from the open session.
+function populateWorkoutDate() {
+  if (activeSession) {
+    document.getElementById("workoutDateInput").value = toDateInputValue(
+      activeSession.date
+    );
+  }
+}
+
+// Changing the date also re-labels the day (e.g. a Friday date → "Friday
+// workout"), so the date and the wording in history always match.
+function handleWorkoutDateChange() {
+  if (!activeSession) {
+    return;
+  }
+  const value = document.getElementById("workoutDateInput").value; // YYYY-MM-DD
+  if (!value) {
+    return; // ignore an empty/cleared field
+  }
+  const parts = value.split("-").map(Number);
+  // Noon local, so the day never slips across a timezone boundary.
+  const newDate = new Date(parts[0], parts[1] - 1, parts[2], 12, 0, 0);
+
+  activeSession.date = newDate.toISOString();
+  activeSession.day = dayNameOf(newDate);
+  persistActiveSession();
+
+  // Keep the sheet title in sync with the (possibly new) day.
+  document.getElementById("workoutTitle").textContent =
+    activeSession.day + " workout";
 }
 
 // Draw the workout: each exercise with editable per-set rows.
@@ -2184,6 +2316,7 @@ function editSession(sessionId) {
     (session.day || "Workout") + " workout";
   resetTimerDisplay();
   renderWorkoutItems();
+  populateWorkoutDate();
   document.getElementById("workoutOverlay").hidden = false;
 }
 
@@ -3047,6 +3180,11 @@ function init() {
   document
     .getElementById("closeWorkoutBtn")
     .addEventListener("click", closeWorkoutOverlay);
+
+  // Editing the workout's date (also re-labels the day).
+  document
+    .getElementById("workoutDateInput")
+    .addEventListener("change", handleWorkoutDateChange);
 
   // Rest timer: the 60/90/120 buttons each have a data-seconds value.
   document.querySelectorAll(".timer-btn[data-seconds]").forEach((button) => {
