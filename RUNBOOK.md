@@ -99,9 +99,13 @@ The app is a **Progressive Web App** — installable to a home screen and works
 offline.
 
 - **Manifest:** `manifest.webmanifest` (app name "Justaino", icons, standalone).
-- **Icons:** in `icons/` — the owl (`Owl.png` is the source) composited onto a
-  lavender background at 192/512/180. Regenerate by re-compositing `Owl.png`
-  (ask Claude — the generator is a short pure-Python script run with `sips`).
+- **Icons:** in `icons/` — the owl (`Owl.png`, transparent, is the source)
+  composited onto a lavender (`#B9A7E0`) background at 192/512/180. The icons are
+  **maskable**, so the owl is scaled to ~74% (a 380px box on the 512 canvas) to
+  keep a **safe zone** of padding — otherwise Android crops the ears/wings/feet.
+  Regenerate by re-compositing `Owl.png` (a short Python/Pillow script that trims
+  the owl to its bounding box, scales it into the safe zone, and centres it on the
+  lavender canvas). Don't make the owl bigger or it'll get clipped when installed.
 - **Service worker:** `sw.js` caches the app shell for offline use.
 - **Install button:** Settings → "Install app". Fires the real prompt on
   Android/desktop; on iPhone/iPad it shows Add-to-Home-Screen steps (iOS has no
