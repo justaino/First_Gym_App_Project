@@ -49,13 +49,6 @@ frameworks). Build accordingly: explain things simply and comment the code.
   remember to bump `CACHE_VERSION` (see below). The owner tests `dev` locally with Live
   Server; there is no separate preview URL for `dev`.
 
-## Current work-in-progress (read before starting Phase 7 work)
-- **Phase 7 (accounts + Supabase cloud sync) is in progress on the `feature/auth` branch**
-  (not yet merged to `dev`/`main`). Steps 7a–7f are done and tested; **7g (offline) and 7h
-  (privacy note + release) remain.** Before continuing, read **ROADMAP.md §8** (has a
-  "HANDOFF / CURRENT STATUS" block + detailed 7g/7h) and **RUNBOOK.md §5d** (cloud-sync
-  architecture). Remove this note when Phase 7 ships.
-
 ## PWA / deployment rule (don't forget this)
 - The app is a PWA with a service worker (`sw.js`) that caches the app shell. **Whenever
   you change any app file (`index.html`, `styles.css`, `app.js`, icons, etc.), you MUST

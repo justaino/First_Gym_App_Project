@@ -221,20 +221,13 @@ streak + days shown up + lifetime totals + PR board** — all from data/logic we
 **Done when:** the Progress tab shows accurate, motivating insights from real saved
 workouts, with friendly empty states when there's no data yet.
 
-### Phase 7 — Accounts + cross-device sync (Supabase) ☐
+### Phase 7 — Accounts + cross-device sync (Supabase) ✅
 **Goal:** log in and see/edit the same workouts on any device, and have data survive
 clearing the browser or switching phones.
 
-> 📍 **HANDOFF / CURRENT STATUS (for a fresh session):**
-> - **Branch:** all Phase 7 work is on **`feature/auth`** (NOT yet merged to `dev`/`main`).
->   `git checkout feature/auth` and work there. Test locally with Live Server.
-> - **Done & tested:** 7a–7f. Login + full data sync (profiles, exercises, sessions) work
->   across devices, with safe first-login migration.
-> - **Code-complete, awaiting owner test:** **7g (offline)** — Supabase library vendored
->   locally (`vendor/supabase.js`) so the app shell works offline again, and plan edits
->   (profiles/exercises) now show a friendly "you're offline" notice + block instead of a
->   scary cloud error. Cache bumped to **`v19`**.
-> - **Remaining:** **7h (privacy note + release)** — details below.
+> ✅ **SHIPPED (2026-06-26):** all of Phase 7 (7a–7h) is done, tested, and **merged to
+> `main`** — accounts + cloud sync are live for everyone. Cache shipped at **`v24`**.
+> Future work goes back on `dev`. The notes below are kept as a reference for how it works.
 > - **Where the code lives:** `supabase.js` (client + URL/publishable key), `auth.js` (login
 >   gate, calls `onUserLoggedIn` in app.js on sign-in), and app.js section **“5b. CLOUD
 >   SYNC”** (the `reconcile*`/`*FromCloud`/`*ToRow` helpers + write-through in
@@ -301,16 +294,21 @@ clearing the browser or switching phones.
          use a newest-wins **merge**, so an in-progress workout done offline survives and
          uploads on reconnect. A full offline write-queue for plan edits remains a future
          enhancement.
-- ☐ **7h — Privacy note + release.**
-      1. **Privacy note:** a short, friendly note covering *what's stored* (your email +
-         your workout data), *where* (Supabase, a third-party cloud service), and *how to
-         delete it* (e.g. delete your data/account). Put it somewhere discoverable — a line
-         on the login screen and/or an entry in Settings — and/or a `Documentation/` note.
-      2. **Update the tester docs** (a new `Documentation/WhatsNew_*.md`): friends will now
-         need to **sign up**, and their existing local data migrates on first login.
-      3. **Release:** bump `CACHE_VERSION`, remove the "WIP" pointer from CLAUDE.md, then
-         merge `feature/auth` → `dev`, test, then `dev` → `main` (this publishes accounts to
-         everyone — a big change, so double-check first).
+- ✅ **7h — Privacy note + release.** (Decisions: deletion = self-serve "Delete my data"
+      button [Option A]; password reset deferred to a later phase; email confirmation is OFF.)
+      1. ✅ **Privacy note + data controls** (built, awaiting owner test): a short privacy line
+         on the **login screen**; a **Settings → "Privacy & data"** card explaining what's
+         stored (email + workout data) / where (Supabase, third-party) / how to delete it; a
+         **"Delete my data"** button (`deleteAllMyData()` in app.js) that wipes all the user's
+         cloud rows + local cache then logs out (does NOT delete the auth login itself — that
+         needs admin access, so it's a "email the owner" step); and a `Documentation/Privacy.md`.
+         Cache bumped to `v22`.
+      2. ✅ **Tester docs** (built, awaiting owner review): `Documentation/WhatsNew_Accounts_2026-06-26.md`
+         covers signing up, cross-device sync, the first-login migration, offline behaviour,
+         and the privacy/delete controls (+ a note that password reset isn't built yet).
+      3. ✅ **Release (2026-06-26):** owner tested everything, then we bumped `CACHE_VERSION`
+         to `v24`, removed the "WIP" pointer from CLAUDE.md, and merged `feature/auth` → `dev`
+         → `main` — accounts + cloud sync are now live for everyone.
 
 **Watch-outs:** free Supabase projects **pause after ~1 week of inactivity** (resume with
 a click); configure email-confirmation settings for testing; never break the offline

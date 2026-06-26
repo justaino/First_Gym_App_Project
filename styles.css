@@ -169,6 +169,13 @@ body {
   color: var(--muted);
 }
 
+/* Destructive action (e.g. "Delete my data") — a clear but still soft red so it
+   reads as "serious" without clashing with the cute pastel look. */
+.btn--danger {
+  background-color: #e5575c;
+  color: #fff;
+}
+
 /* A button that fills the row width (used for "Add exercise") */
 .btn--block {
   display: block;
@@ -1088,6 +1095,22 @@ body {
 }
 .auth__message--error {
   color: var(--coral);
+}
+/* Short privacy note under the login form (Phase 7h). */
+.auth__privacy {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 18px 0 0;
+}
+/* Inline text link (e.g. "Read the full privacy note"). */
+.text-link {
+  color: var(--coral);
+  font-weight: 700;
+  text-decoration: none;
+}
+.text-link:hover {
+  text-decoration: underline;
 }
 
 /* Workout date field (in the workout sheet) */

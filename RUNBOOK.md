@@ -147,10 +147,10 @@ date and the history wording stay in sync.
 
 ---
 
-## 5d. Cloud sync & accounts (Phase 7 — IN PROGRESS on `feature/auth`)
+## 5d. Cloud sync & accounts (Phase 7 — SHIPPED 2026-06-26)
 
-> ⚠️ This is **not on `main` yet**. All of it lives on the **`feature/auth`** branch.
-> The live site is still the local-only PWA until Phase 7 is merged.
+> ✅ Phase 7 (accounts + cloud sync) is **live on `main`** — the hosted site now requires
+> logging in and syncs data across devices. Future work happens on `dev` as usual.
 
 **Backend:** [Supabase](https://supabase.com) (free tier). Project URL + **publishable
 key** live in `supabase.js` (both are safe to ship — protected by Row-Level Security).
@@ -199,7 +199,10 @@ into `vendor/supabase.js`, **delete the trailing `//# sourceMappingURL=…` line
 appends it; left in, it makes the browser 404-request a source map that isn't in the repo —
 harmless console noise), and bump `CACHE_VERSION`.
 
-**Still TODO:** 7h (privacy note + release). See ROADMAP.md §8.
+**Privacy & deletion (7h):** Settings → "Privacy & data" explains what's stored / where, links
+the privacy note (`Documentation/Privacy.pdf`), and offers **"Delete my data"** (`deleteAllMyData()`
+— wipes the user's cloud rows + local cache, then logs out; does not delete the auth login
+itself). See ROADMAP.md §8 for the full Phase 7 record.
 
 ---
 
@@ -263,6 +266,22 @@ its first weighted workout won't fire a PR (there's nothing to beat yet).
 
 Newest first. Add a line here whenever behaviour changes.
 
+- **2026-06-26** — **Phase 7 SHIPPED 🚀:** accounts + cross-device cloud sync (Supabase) are
+  now **live on `main`** — the hosted site requires logging in and syncs data across devices.
+  Merged `feature/auth` → `dev` → `main` after owner testing; removed the Phase-7 WIP note from
+  CLAUDE.md. Cache shipped at **`v24`**. Future work goes back on `dev`.
+
+- **2026-06-26** — **Phase 7h (part 1) — privacy + data controls (`feature/auth`):** added a
+  short privacy note on the login screen, a **Settings → "Privacy & data"** card (what's
+  stored / where / how to delete), a **"Delete my data"** button (`deleteAllMyData()` —
+  deletes all the user's cloud rows + local cache, then logs out; does NOT delete the auth
+  login itself, which needs admin access → "email the owner"). The Settings card links to
+  **`Documentation/Privacy.pdf`** ("Read the full privacy note" — opens the styled PDF in a
+  new tab); `Documentation/Privacy.md` is kept as the editable source. Cache `v24`.
+- **2026-06-26** — **Phase 7h (part 2) — tester doc:** added
+  `Documentation/WhatsNew_Accounts_2026-06-26.md` (sign-up, cross-device sync, first-login
+  migration, offline behaviour, privacy/delete controls, password-reset-not-yet note). Docs
+  only — no app-file change, so no cache bump. Remaining in 7h: release (gated on owner test).
 - **2026-06-26** — **Phase 7g follow-up fixes (`feature/auth`):** (1) **orphan sessions** —
   `reconcileSessions` now drops sessions whose `profileId` no longer exists (they fail the
   `sessions_profile_id_fkey` constraint and can never upload); this clears the repeating

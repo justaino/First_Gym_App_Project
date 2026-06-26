@@ -1745,6 +1745,65 @@ function clearLocalData() {
   saveActiveProfileId(null);
 }
 
+// Self-serve "Delete my data" (Phase 7h, privacy). Permanently removes ALL of
+// this user's rows from the cloud AND wipes the local cache, then logs out.
+// NOTE: it does NOT delete the Supabase login/account itself — removing an auth
+// account needs admin access we deliberately don't ship in the browser — so the
+// user emails the owner if they also want the login removed.
+async function deleteAllMyData() {
+  // Strong, explicit confirmation — this is destructive and can't be undone.
+  const ok = window.confirm(
+    "Delete ALL your data?\n\n" +
+      "This permanently removes every profile, exercise, and workout from the " +
+      "cloud and from this device — on all your devices. It cannot be undone.\n\n" +
+      "Tip: export a backup first (Settings → Backup) if you want to keep a copy."
+  );
+  if (!ok) {
+    return;
+  }
+
+  // Deleting happens in the cloud, so it needs a connection.
+  if (blockedByOffline()) {
+    return;
+  }
+
+  // We need the signed-in user's id to scope the delete. Row-Level Security also
+  // limits it to their own rows, but the database requires a filter on a delete.
+  const { data, error: userError } = await supabaseClient.auth.getUser();
+  if (userError || !data || !data.user) {
+    window.alert("Couldn't confirm who's signed in. Please try again.");
+    return;
+  }
+  const userId = data.user.id;
+
+  // Delete children before parents so no foreign-key constraint complains.
+  const tables = ["sessions", "exercises", "profiles"];
+  for (const table of tables) {
+    const { error } = await supabaseClient
+      .from(table)
+      .delete()
+      .eq("user_id", userId);
+    if (error) {
+      // Stop on the first failure — nothing local has been cleared yet, so the
+      // user's data is still intact and they can retry.
+      reportCloudWriteError("delete your data from the cloud", error);
+      return;
+    }
+  }
+
+  // Cloud is clear — now wipe the local cache so nothing re-uploads on next login.
+  clearLocalData();
+  localStorage.removeItem(STORAGE_KEYS.weeklyGoal);
+  localStorage.removeItem(STORAGE_KEYS.celebratedMilestones);
+  localStorage.removeItem(STORAGE_KEYS.syncedUserId);
+  renderAll(); // empty the screen behind the alert
+
+  window.alert("Your data has been deleted. You'll be logged out now.");
+
+  // Log out → back to the login screen, now with an empty account.
+  await supabaseClient.auth.signOut();
+}
+
 // Make sure the active profile id still points at a profile that exists.
 function ensureValidActiveProfile() {
   const profiles = loadList(STORAGE_KEYS.profiles);
@@ -3775,6 +3834,11 @@ function init() {
     }
     event.target.value = ""; // reset so picking the same file again still works
   });
+
+  // ---- Privacy: delete all my data (Phase 7h) ----
+  document
+    .getElementById("deleteDataBtn")
+    .addEventListener("click", deleteAllMyData);
 
   // Create-profile form submit.
   document.getElementById("profileForm").addEventListener("submit", async (event) => {
