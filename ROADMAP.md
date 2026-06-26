@@ -248,22 +248,23 @@ clearing the browser or switching phones.
   `user_id = auth.uid()`.
 
 **Steps (incremental — one at a time, test each, commit on `feature/auth`):**
-- ☐ **7a — Project setup (owner does this):** create a free Supabase project; note the
-      **Project URL** + **anon key**. (Owner: "I will create the Supabase project.")
-- ☐ **7b — Schema + security:** create the three tables and enable the Row-Level Security
-      policies in Supabase.
-- ☐ **7c — Connect the client:** load `supabase-js` via CDN, initialise it with the URL +
-      anon key, confirm it connects.
-- ☐ **7d — Auth UI:** a login / sign-up screen (email + password), sign out, show the
-      logged-in state; gate the app behind login.
-- ☐ **7e — Swap the data layer, one entity at a time:** profiles → exercises → sessions
-      read/write through Supabase, keeping `localStorage` as a cache; add loading/error
-      states.
-- ☐ **7f — First-login migration:** detect existing local data and offer to upload it to
-      the account (reuse the export logic), so nothing is lost.
-- ☐ **7g — Offline handling:** app shell still works offline (service worker); show cached
-      data offline and sync writes when back online (start simple; minimal conflict
-      handling).
+- ✅ **7a — Project setup:** free Supabase project created; URL + publishable key noted.
+      (Project uses the new key system — the legacy anon JWT was disabled.)
+- ✅ **7b — Schema + security:** `profiles`/`exercises`/`sessions` tables + Row-Level
+      Security created. Note: tables made via SQL needed explicit `GRANT`s to
+      `anon`/`authenticated` (dashboard-made tables get these automatically).
+- ✅ **7c — Connect the client:** `supabase.js` loads `supabase-js` from a CDN and creates
+      the client with the URL + **publishable key**.
+- ✅ **7d — Auth UI:** `auth.js` adds a login / sign-up gate (email + password) + a logout
+      card in Settings; the app is hidden until signed in.
+- ✅ **7e — Swap the data layer:** profiles, exercises, and sessions all read/write through
+      Supabase, with `localStorage` as a write-through cache. Login reconciles per entity
+      (cloud-wins for profiles/exercises; a newest-wins **merge** for sessions).
+- ✅ **7f — First-login migration:** folded into the login reconcile — existing local data
+      is uploaded when the cloud is empty, with a one-time "your data is saved" notice.
+- ☐ **7g — Offline handling:** app shell still works offline (service worker); the Supabase
+      library is loaded from a CDN so it must be **vendored locally** to work offline; show
+      cached data offline and handle writes failing when offline.
 - ☐ **7h — Privacy note + release:** short note on what's stored / where / how to delete;
       test on two devices; then merge `feature/auth` → `dev` → `main`.
 

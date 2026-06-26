@@ -1688,50 +1688,67 @@ function ensureValidActiveProfile() {
 //   - cloud is empty but we have local rows → upload them (migration)
 // (By the time this runs, local data is either this user's or has been cleared,
 // so uploading is always safe.)
+// Returns true if it UPLOADED local data (i.e. a migration happened).
 async function reconcileEntity(storageKey, pullFn, uploadFn, mapFromCloud) {
   const cloud = await pullFn();
   if (cloud === null) {
-    return; // offline / error → keep the local cache as-is
+    return false; // offline / error → keep the local cache as-is
   }
   const local = loadList(storageKey);
   if (cloud.length > 0) {
     saveList(storageKey, cloud.map(mapFromCloud));
-  } else if (local.length > 0) {
-    await uploadFn(local);
+    return false;
   }
+  if (local.length > 0) {
+    await uploadFn(local);
+    return true;
+  }
+  return false;
 }
 
 // Reconcile everything when a user logs in. Order matters: profiles before
 // exercises (exercises reference a profile). Sessions come in a later sub-step.
+// Returns true if this was a first login that MIGRATED existing local data up.
 async function syncOnLogin(userId) {
   const syncedUserId = localStorage.getItem(STORAGE_KEYS.syncedUserId);
+  const firstLogin = !syncedUserId; // never synced on this device before
   // If a DIFFERENT user's data is cached on this device, start fresh first so we
   // never upload their data into this account.
   if (syncedUserId && syncedUserId !== userId) {
     clearLocalData();
   }
 
-  await reconcileEntity(
-    STORAGE_KEYS.profiles,
-    pullProfilesFromCloud,
-    uploadProfilesToCloud,
-    mapProfileFromCloud
-  );
-  await reconcileEntity(
-    STORAGE_KEYS.exercises,
-    pullExercisesFromCloud,
-    uploadExercisesToCloud,
-    mapExerciseFromCloud
-  );
+  // `|| uploaded` keeps the flag true if any entity migrated local data up.
+  let uploaded = false;
+  uploaded =
+    (await reconcileEntity(
+      STORAGE_KEYS.profiles,
+      pullProfilesFromCloud,
+      uploadProfilesToCloud,
+      mapProfileFromCloud
+    )) || uploaded;
+  uploaded =
+    (await reconcileEntity(
+      STORAGE_KEYS.exercises,
+      pullExercisesFromCloud,
+      uploadExercisesToCloud,
+      mapExerciseFromCloud
+    )) || uploaded;
+  uploaded = (await reconcileSessions()) || uploaded; // sessions use a merge
 
   localStorage.setItem(STORAGE_KEYS.syncedUserId, userId);
+  return firstLogin && uploaded;
 }
 
 // Called by auth.js when a user is signed in: sync, then redraw.
 async function onUserLoggedIn(session) {
-  await syncOnLogin(session.user.id);
+  const migrated = await syncOnLogin(session.user.id);
   ensureValidActiveProfile();
   renderAll();
+  if (migrated) {
+    // Reassure the user their pre-account data is now safely in their account.
+    showToast("Welcome! Your existing workouts are now saved to your account ☁️");
+  }
 }
 
 /* ---- Exercise cloud helpers (Phase 7e) ---- */
@@ -1788,6 +1805,114 @@ async function uploadExercisesToCloud(localExercises) {
   }
 }
 
+/* ---- Session cloud helpers (Phase 7e) ---- */
+
+function mapSessionFromCloud(row) {
+  return {
+    id: row.id,
+    profileId: row.profile_id,
+    date: row.date,
+    day: row.day,
+    status: row.status,
+    entries: row.entries,
+    updatedAt: row.updated_at,
+  };
+}
+function sessionToRow(session) {
+  return {
+    id: session.id,
+    profile_id: session.profileId,
+    date: session.date,
+    day: session.day,
+    status: session.status,
+    entries: session.entries,
+    updated_at: session.updatedAt || new Date().toISOString(),
+  };
+}
+
+// When was a session last touched (used to decide which copy "wins" in a merge).
+function sessionTime(session) {
+  return new Date(session.updatedAt || session.date || 0).getTime();
+}
+
+async function pullSessionsFromCloud() {
+  const { data, error } = await supabaseClient.from("sessions").select("*");
+  if (error) {
+    console.error("Could not load sessions from cloud:", error.message);
+    return null;
+  }
+  return data;
+}
+
+// Upsert sessions (insert new ones, update existing by id).
+async function uploadSessionsToCloud(sessions) {
+  const rows = sessions.map(sessionToRow);
+  const { error } = await supabaseClient.from("sessions").upsert(rows);
+  if (error) {
+    console.error("Could not upload sessions:", error.message);
+  }
+}
+
+// Save one session to the cloud (used when finishing/closing a workout).
+async function pushSessionToCloud(session) {
+  const { error } = await supabaseClient
+    .from("sessions")
+    .upsert(sessionToRow(session));
+  if (error) {
+    console.error("Could not save session to cloud:", error.message);
+  }
+}
+
+async function deleteSessionFromCloud(id) {
+  const { error } = await supabaseClient.from("sessions").delete().eq("id", id);
+  if (error) {
+    console.error("Could not delete session from cloud:", error.message);
+  }
+}
+
+// Sessions get a MERGE rather than a plain "cloud wins", because the local copy
+// may be ahead of the cloud (a workout is saved locally on every change, but only
+// pushed to the cloud when you finish/close it). We keep, per id, whichever copy
+// was updated most recently — so an un-pushed in-progress workout is never lost —
+// then push anything the cloud is missing or behind on.
+// Returns true if it uploaded any local-only sessions.
+async function reconcileSessions() {
+  const cloud = await pullSessionsFromCloud();
+  if (cloud === null) {
+    return false; // offline / error → keep local as-is
+  }
+  const cloudMapped = cloud.map(mapSessionFromCloud);
+  const local = loadList(STORAGE_KEYS.sessions);
+
+  const byId = {};
+  cloudMapped.forEach((session) => {
+    byId[session.id] = session;
+  });
+  local.forEach((session) => {
+    const existing = byId[session.id];
+    if (!existing || sessionTime(session) > sessionTime(existing)) {
+      byId[session.id] = session;
+    }
+  });
+  const merged = Object.values(byId);
+  saveList(STORAGE_KEYS.sessions, merged);
+
+  // Push up anything the cloud doesn't have, or where local is newer.
+  const cloudById = {};
+  cloudMapped.forEach((session) => {
+    cloudById[session.id] = session;
+  });
+  const toUpload = merged.filter((session) => {
+    const inCloud = cloudById[session.id];
+    return !inCloud || sessionTime(session) > sessionTime(inCloud);
+  });
+  if (toUpload.length > 0) {
+    await uploadSessionsToCloud(toUpload);
+    return true;
+  }
+  return false;
+}
+
 /* =========================================================================
    6. EXERCISE ACTIONS — add, edit, delete
    ========================================================================= */
@@ -1819,13 +1944,28 @@ async function deleteExercise(id) {
   // Clean up after it: remove this exercise from every saved workout, then
   // drop any workout that's left with no exercises at all. This keeps history
   // and personal-record data honest (no orphaned leftovers in storage).
-  const sessions = loadList(STORAGE_KEYS.sessions)
+  const before = loadList(STORAGE_KEYS.sessions);
+  const affectedIds = before
+    .filter((session) => session.entries.some((entry) => entry.exerciseId === id))
+    .map((session) => session.id);
+  const sessions = before
     .map((session) => ({
       ...session,
       entries: session.entries.filter((entry) => entry.exerciseId !== id),
     }))
     .filter((session) => session.entries.length > 0);
   saveList(STORAGE_KEYS.sessions, sessions);
+
+  // Mirror those session changes to the cloud: re-save the trimmed ones, and
+  // delete any workout that became empty.
+  for (const sessionId of affectedIds) {
+    const updated = sessions.find((session) => session.id === sessionId);
+    if (updated) {
+      await pushSessionToCloud(updated);
+    } else {
+      await deleteSessionFromCloud(sessionId);
+    }
+  }
 
   // Removing workouts may lower a profile's count below a celebrated milestone,
   // so reconcile the trophy tracker too.
@@ -2534,20 +2674,29 @@ function discardWorkout() {
   if (!ok) {
     return;
   }
+  const discardedId = activeSession.id;
   const sessions = loadList(STORAGE_KEYS.sessions).filter(
-    (session) => session.id !== activeSession.id
+    (session) => session.id !== discardedId
   );
   saveList(STORAGE_KEYS.sessions, sessions);
 
-  closeWorkoutOverlay();
+  // Null it BEFORE closing so closeWorkoutOverlay doesn't re-save it, then remove
+  // it from the cloud too (in case it had already been backed up).
   activeSession = null;
-  renderAll();
+  deleteSessionFromCloud(discardedId);
+  closeWorkoutOverlay();
 }
 
 // Close the sheet but KEEP the in-progress session, so it can be resumed later.
 function closeWorkoutOverlay() {
   stopRest();
   document.getElementById("workoutOverlay").hidden = true;
+  // Back the open workout up to the cloud as we leave the sheet (covers both
+  // finishing and just closing an in-progress or edited workout). Discard sets
+  // activeSession to null first, so a discarded workout is never re-saved here.
+  if (activeSession) {
+    pushSessionToCloud(activeSession);
+  }
   // Redraw so the Today/Schedule buttons update (e.g. Start → Resume) now that
   // an in-progress workout may exist.
   renderAll();
@@ -2609,13 +2758,14 @@ function editSession(sessionId) {
 }
 
 // Delete a saved workout from history (after a confirm).
-function deleteSession(sessionId) {
+async function deleteSession(sessionId) {
   const ok = window.confirm(
     "Delete this workout from history? This cannot be undone."
   );
   if (!ok) {
     return;
   }
+  await deleteSessionFromCloud(sessionId);
   const sessions = loadList(STORAGE_KEYS.sessions).filter(
     (item) => item.id !== sessionId
   );
