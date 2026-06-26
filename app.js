@@ -1683,44 +1683,116 @@ function ensureValidActiveProfile() {
 }
 
 // Reconcile cloud vs local for profiles when a user logs in.
-async function syncProfilesOnLogin(userId) {
-  const cloud = await pullProfilesFromCloud();
+// Reconcile one entity (a localStorage list) with the cloud:
+//   - cloud has rows  → the cloud wins; mirror it into the local cache
+//   - cloud is empty but we have local rows → upload them (migration)
+// (By the time this runs, local data is either this user's or has been cleared,
+// so uploading is always safe.)
+async function reconcileEntity(storageKey, pullFn, uploadFn, mapFromCloud) {
+  const cloud = await pullFn();
   if (cloud === null) {
-    return; // offline / error → keep showing the local cache as-is
+    return; // offline / error → keep the local cache as-is
   }
-
-  const localProfiles = loadList(STORAGE_KEYS.profiles);
-  const syncedUserId = localStorage.getItem(STORAGE_KEYS.syncedUserId);
-  // Local data "belongs" to this user if it has no owner yet (pre-accounts data)
-  // or was already synced as theirs.
-  const localBelongsToUser = !syncedUserId || syncedUserId === userId;
-
+  const local = loadList(storageKey);
   if (cloud.length > 0) {
-    // The cloud has data → it wins; mirror it into the local cache.
-    saveList(STORAGE_KEYS.profiles, cloud.map(mapProfileFromCloud));
-  } else if (localProfiles.length > 0 && localBelongsToUser) {
-    // First login with existing local data → upload it (migration).
-    await uploadProfilesToCloud(localProfiles);
-  } else if (!localBelongsToUser) {
-    // Someone else's data is cached on this device → start fresh for this user.
+    saveList(storageKey, cloud.map(mapFromCloud));
+  } else if (local.length > 0) {
+    await uploadFn(local);
+  }
+}
+
+// Reconcile everything when a user logs in. Order matters: profiles before
+// exercises (exercises reference a profile). Sessions come in a later sub-step.
+async function syncOnLogin(userId) {
+  const syncedUserId = localStorage.getItem(STORAGE_KEYS.syncedUserId);
+  // If a DIFFERENT user's data is cached on this device, start fresh first so we
+  // never upload their data into this account.
+  if (syncedUserId && syncedUserId !== userId) {
     clearLocalData();
   }
+
+  await reconcileEntity(
+    STORAGE_KEYS.profiles,
+    pullProfilesFromCloud,
+    uploadProfilesToCloud,
+    mapProfileFromCloud
+  );
+  await reconcileEntity(
+    STORAGE_KEYS.exercises,
+    pullExercisesFromCloud,
+    uploadExercisesToCloud,
+    mapExerciseFromCloud
+  );
 
   localStorage.setItem(STORAGE_KEYS.syncedUserId, userId);
 }
 
 // Called by auth.js when a user is signed in: sync, then redraw.
 async function onUserLoggedIn(session) {
-  await syncProfilesOnLogin(session.user.id);
+  await syncOnLogin(session.user.id);
   ensureValidActiveProfile();
   renderAll();
+}
+
+/* ---- Exercise cloud helpers (Phase 7e) ---- */
+
+// Convert a database row to the app's exercise shape (and back).
+function mapExerciseFromCloud(row) {
+  return {
+    id: row.id,
+    profileId: row.profile_id,
+    name: row.name,
+    sets: row.sets,
+    reps: row.reps,
+    repsPerSet: row.reps_per_set,
+    weight: row.weight,
+    weightPerSet: row.weight_per_set,
+    icon: row.icon,
+    day: row.day,
+    notes: row.notes,
+  };
+}
+function exerciseToRow(exercise) {
+  return {
+    id: exercise.id,
+    profile_id: exercise.profileId,
+    name: exercise.name,
+    sets: exercise.sets,
+    reps: exercise.reps,
+    reps_per_set: exercise.repsPerSet,
+    weight: exercise.weight,
+    weight_per_set: exercise.weightPerSet,
+    icon: exercise.icon,
+    day: exercise.day,
+    notes: exercise.notes,
+  };
+}
+
+async function pullExercisesFromCloud() {
+  const { data, error } = await supabaseClient.from("exercises").select("*");
+  if (error) {
+    console.error("Could not load exercises from cloud:", error.message);
+    return null;
+  }
+  return data;
+}
+
+// Upload local exercises (normalized so older ones get their per-set fields).
+async function uploadExercisesToCloud(localExercises) {
+  const rows = localExercises.map((exercise) =>
+    exerciseToRow(normalizeExercise(exercise))
+  );
+  const { error } = await supabaseClient.from("exercises").insert(rows);
+  if (error) {
+    console.error("Could not upload exercises:", error.message);
+  }
 }
 
 /* =========================================================================
    6. EXERCISE ACTIONS — add, edit, delete
    ========================================================================= */
 
-function deleteExercise(id) {
+async function deleteExercise(id) {
   const ok = window.confirm(
     "Delete this exercise? Its past workout history will be removed too. " +
       "This cannot be undone (but a backup you exported earlier can restore it)."
@@ -1729,7 +1801,17 @@ function deleteExercise(id) {
     return;
   }
 
-  // Remove the exercise itself.
+  // Remove it from the cloud first (the source of truth).
+  const { error } = await supabaseClient
+    .from("exercises")
+    .delete()
+    .eq("id", id);
+  if (error) {
+    window.alert("Couldn't delete the exercise from the cloud:\n" + error.message);
+    return;
+  }
+
+  // Remove the exercise itself from the local cache.
   let exercises = loadList(STORAGE_KEYS.exercises);
   exercises = exercises.filter((exercise) => exercise.id !== id);
   saveList(STORAGE_KEYS.exercises, exercises);
@@ -1951,7 +2033,7 @@ function openExerciseModalForEdit(id) {
 }
 
 // Handle the form being submitted (covers both add and edit).
-function handleExerciseFormSubmit(event) {
+async function handleExerciseFormSubmit(event) {
   event.preventDefault(); // stop the browser from reloading the page
 
   // Read the values from the form.
@@ -2003,7 +2085,7 @@ function handleExerciseFormSubmit(event) {
   const exercises = loadList(STORAGE_KEYS.exercises);
 
   if (id === "") {
-    // ADDING: build a new exercise and add it to the list.
+    // ADDING: build a new exercise, save it to the cloud, then cache it locally.
     const newExercise = {
       id: makeId(),
       profileId: loadActiveProfileId(),
@@ -2017,9 +2099,16 @@ function handleExerciseFormSubmit(event) {
       day: day,
       notes: "", // reserved for a later phase
     };
+    const { error } = await supabaseClient
+      .from("exercises")
+      .insert(exerciseToRow(newExercise));
+    if (error) {
+      window.alert("Couldn't save the exercise to the cloud:\n" + error.message);
+      return;
+    }
     exercises.push(newExercise);
   } else {
-    // EDITING: find the existing exercise and update its fields.
+    // EDITING: update the fields, push the change to the cloud, then cache it.
     const existing = exercises.find((item) => item.id === id);
     if (existing) {
       existing.name = name;
@@ -2030,6 +2119,15 @@ function handleExerciseFormSubmit(event) {
       existing.weightPerSet = perSet.weights;
       existing.icon = selectedEmoji;
       existing.day = day;
+
+      const { error } = await supabaseClient
+        .from("exercises")
+        .update(exerciseToRow(existing))
+        .eq("id", id);
+      if (error) {
+        window.alert("Couldn't update the exercise in the cloud:\n" + error.message);
+        return;
+      }
     }
   }
 
