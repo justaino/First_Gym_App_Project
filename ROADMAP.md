@@ -225,6 +225,25 @@ workouts, with friendly empty states when there's no data yet.
 **Goal:** log in and see/edit the same workouts on any device, and have data survive
 clearing the browser or switching phones.
 
+> 📍 **HANDOFF / CURRENT STATUS (for a fresh session):**
+> - **Branch:** all Phase 7 work is on **`feature/auth`** (NOT yet merged to `dev`/`main`).
+>   `git checkout feature/auth` and work there. Test locally with Live Server.
+> - **Done & tested:** 7a–7f. Login + full data sync (profiles, exercises, sessions) work
+>   across devices, with safe first-login migration. Cache is at **`v18`**.
+> - **Remaining:** **7g (offline)** and **7h (privacy note + release)** — details below.
+> - **Where the code lives:** `supabase.js` (client + URL/publishable key), `auth.js` (login
+>   gate, calls `onUserLoggedIn` in app.js on sign-in), and app.js section **“5b. CLOUD
+>   SYNC”** (the `reconcile*`/`*FromCloud`/`*ToRow` helpers + write-through in
+>   create/edit/delete for profiles, exercises, sessions).
+> - **Sync model:** cloud = source of truth; `localStorage` = write-through cache. Login
+>   reconciles per entity — cloud-wins for profiles/exercises, newest-wins **merge** for
+>   sessions (so an un-pushed in-progress workout is never wiped).
+> - **Gotchas already hit:** the project uses Supabase’s **new key system** (legacy anon JWT
+>   is disabled → use the **publishable key**, already in `supabase.js`); SQL-created tables
+>   needed explicit **`GRANT`s** to `anon`/`authenticated`. See RUNBOOK §“Cloud sync”.
+> - **Rule reminder:** bump `CACHE_VERSION` in `sw.js` on any app-file change; ask before
+>   committing/pushing.
+
 **Decisions made:**
 - **Backend = Supabase** (free tier). Chosen because it's SQL/Postgres (maps cleanly to
   the current `profiles`/`exercises`/`sessions` shapes), has built-in **Auth** + **Row-
@@ -262,11 +281,32 @@ clearing the browser or switching phones.
       (cloud-wins for profiles/exercises; a newest-wins **merge** for sessions).
 - ✅ **7f — First-login migration:** folded into the login reconcile — existing local data
       is uploaded when the cloud is empty, with a one-time "your data is saved" notice.
-- ☐ **7g — Offline handling:** app shell still works offline (service worker); the Supabase
-      library is loaded from a CDN so it must be **vendored locally** to work offline; show
-      cached data offline and handle writes failing when offline.
-- ☐ **7h — Privacy note + release:** short note on what's stored / where / how to delete;
-      test on two devices; then merge `feature/auth` → `dev` → `main`.
+- ☐ **7g — Offline handling.** Two parts:
+      1. **Vendor the Supabase library locally** so the app works offline again. Right now
+         `index.html` loads `supabase-js` from a CDN (`https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2`),
+         which the service worker can't cache (cross-origin) — so offline is currently
+         broken. Fix: download that file into the repo (e.g. `vendor/supabase.js`), change
+         `index.html` to load the local copy, add it to `APP_SHELL` in `sw.js`, and bump
+         the cache. Verify the app loads with DevTools set to **Offline**.
+      2. **Handle writes while offline.** Reads already work (they come from the
+         `localStorage` cache). Writes currently `await` Supabase and `alert` on failure.
+         *Recommended minimal approach:* detect offline (`navigator.onLine` / the cloud
+         call failing) and show a friendly "You're offline — reconnect to save changes"
+         message instead of a scary error, while keeping the app usable for viewing.
+         ⚠️ Note: profiles/exercises use **cloud-wins** reconcile, so silently allowing
+         offline edits could be overwritten on next sync — a full offline write-queue is a
+         bigger task; keep 7g minimal (inform + block, or queue only if you do it
+         carefully) and leave a proper queue as a future enhancement.
+- ☐ **7h — Privacy note + release.**
+      1. **Privacy note:** a short, friendly note covering *what's stored* (your email +
+         your workout data), *where* (Supabase, a third-party cloud service), and *how to
+         delete it* (e.g. delete your data/account). Put it somewhere discoverable — a line
+         on the login screen and/or an entry in Settings — and/or a `Documentation/` note.
+      2. **Update the tester docs** (a new `Documentation/WhatsNew_*.md`): friends will now
+         need to **sign up**, and their existing local data migrates on first login.
+      3. **Release:** bump `CACHE_VERSION`, remove the "WIP" pointer from CLAUDE.md, then
+         merge `feature/auth` → `dev`, test, then `dev` → `main` (this publishes accounts to
+         everyone — a big change, so double-check first).
 
 **Watch-outs:** free Supabase projects **pause after ~1 week of inactivity** (resume with
 a click); configure email-confirmation settings for testing; never break the offline

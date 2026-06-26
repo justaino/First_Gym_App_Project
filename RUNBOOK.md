@@ -147,6 +147,48 @@ date and the history wording stay in sync.
 
 ---
 
+## 5d. Cloud sync & accounts (Phase 7 — IN PROGRESS on `feature/auth`)
+
+> ⚠️ This is **not on `main` yet**. All of it lives on the **`feature/auth`** branch.
+> The live site is still the local-only PWA until Phase 7 is merged.
+
+**Backend:** [Supabase](https://supabase.com) (free tier). Project URL + **publishable
+key** live in `supabase.js` (both are safe to ship — protected by Row-Level Security).
+The **secret key is never committed**.
+
+- **New key system:** this project uses Supabase's new keys; the **legacy `anon` JWT is
+  disabled**, so the app uses the **publishable key** (`sb_publishable_…`). The legacy
+  JWT returned 401.
+- **Tables:** `profiles`, `exercises`, `sessions` (mirror the local shapes + a `user_id`;
+  `sessions.entries` is JSON). **Row-Level Security** restricts each user to their own rows.
+- **Grants gotcha:** tables created via the **SQL Editor** needed explicit
+  `GRANT select/insert/update/delete … TO authenticated;` (+ `select` to `anon`). Tables
+  made via the **Table Editor** get these automatically. Symptom if missing: `42501
+  permission denied for table …`.
+
+**Code map:**
+- `supabase.js` — creates `supabaseClient` from the URL + publishable key.
+- `auth.js` — the login/sign-up gate; calls `onUserLoggedIn(session)` (in app.js) once per
+  sign-in; logout lives in Settings.
+- `app.js` section **“5b. CLOUD SYNC”** — `*FromCloud` / `*ToRow` mappers,
+  `reconcileEntity` (profiles/exercises) + `reconcileSessions` (merge), `syncOnLogin`, and
+  write-through inside `createProfile`/`deleteProfile`/`handleExerciseFormSubmit`/
+  `deleteExercise`/`finishWorkout`/`closeWorkoutOverlay`/`discardWorkout`/`deleteSession`.
+
+**Sync model:** the **cloud is the source of truth**; `localStorage` is a **write-through
+cache**. On login, `syncOnLogin` reconciles per entity — **cloud-wins** for profiles/
+exercises, **newest-wins merge** for sessions (so an un-pushed in-progress workout isn't
+wiped). `gym:syncedUserId` records which user the cache belongs to, so one person's local
+data is never uploaded into another's account.
+
+**Quick test:** log in → create a profile/exercise/workout → check **Supabase → Table
+Editor**. Cross-device: log in with the same account in another browser → data appears.
+
+**Still TODO:** 7g (offline — the Supabase lib is CDN-loaded so must be vendored locally to
+work offline) and 7h (privacy note + release). See ROADMAP.md §8.
+
+---
+
 ## 6. Backup & restore (import / export)
 
 Found in **Settings → Backup**.
@@ -207,6 +249,10 @@ its first weighted workout won't fire a PR (there's nothing to beat yet).
 
 Newest first. Add a line here whenever behaviour changes.
 
+- **2026-06-26** — **Phase 7 (accounts + cloud sync) in progress on `feature/auth`:**
+  Supabase login + full data sync (profiles/exercises/sessions) with first-login
+  migration (7a–7f done). NOT on `main` yet. Remaining: 7g (offline) + 7h (privacy +
+  release). See §5d and ROADMAP.md §8. Cache at `v18`.
 - **2026-06-25** — **Insights phase (6):** added the Insights card (goal ring,
   streak, days, lifetime totals, PR board, 12-week heatmap with tap bubbles,
   month-vs-last volume, "since you started" trends) and an editable workout date.
