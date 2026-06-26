@@ -169,6 +169,13 @@ body {
   color: var(--muted);
 }
 
+/* Destructive action (e.g. "Delete my data") — a clear but still soft red so it
+   reads as "serious" without clashing with the cute pastel look. */
+.btn--danger {
+  background-color: #e5575c;
+  color: #fff;
+}
+
 /* A button that fills the row width (used for "Add exercise") */
 .btn--block {
   display: block;
@@ -1037,6 +1044,73 @@ body {
   grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
   gap: 10px;
   margin-top: 14px;
+}
+
+/* Login gate (Phase 7): a full-screen screen over the app until signed in */
+.auth {
+  position: fixed;
+  inset: 0;
+  z-index: 600; /* above everything, including overlays */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background-color: var(--bg);
+}
+.auth[hidden] {
+  display: none;
+}
+.auth__panel {
+  width: min(360px, 92vw);
+  background-color: var(--card);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-soft);
+  padding: 28px 24px;
+  text-align: center;
+}
+.auth__brand {
+  font-size: 24px;
+  font-weight: 800;
+}
+.auth__sub {
+  color: var(--muted);
+  font-weight: 600;
+  margin: 6px 0 18px;
+}
+.auth__form {
+  display: grid;
+  gap: 12px;
+  text-align: left;
+}
+.auth__actions {
+  display: grid;
+  gap: 8px;
+  margin-top: 4px;
+}
+.auth__message {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--mint);
+  margin: 0;
+}
+.auth__message--error {
+  color: var(--coral);
+}
+/* Short privacy note under the login form (Phase 7h). */
+.auth__privacy {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 18px 0 0;
+}
+/* Inline text link (e.g. "Read the full privacy note"). */
+.text-link {
+  color: var(--coral);
+  font-weight: 700;
+  text-decoration: none;
+}
+.text-link:hover {
+  text-decoration: underline;
 }
 
 /* Workout date field (in the workout sheet) */

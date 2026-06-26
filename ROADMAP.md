@@ -221,20 +221,99 @@ streak + days shown up + lifetime totals + PR board** — all from data/logic we
 **Done when:** the Progress tab shows accurate, motivating insights from real saved
 workouts, with friendly empty states when there's no data yet.
 
-### Phase 7 — Accounts + cross-device sync (needs a backend) ☐
-**Goal:** log in and see the same workouts on any device.
-**This is the point where "no backend / no accounts / fully on-device" no longer holds.**
-Use a backend-as-a-service so we don't run our own server.
-- ☐ **Choose a backend:** Supabase (Postgres + built-in auth) — *recommended*; Firebase
-      or a Power Platform option (Dataverse / Power Automate, leaning on existing skills)
-      as alternatives
-- ☐ Add **sign up / log in** (email)
-- ☐ Move the data model (profiles / exercises / sessions) into the cloud database
-- ☐ Read/write through the backend, keeping **localStorage as an offline cache**
-- ☐ **Sync strategy:** load on login, save on change, handle being offline gracefully
-- ☐ **Migrate** existing on-device data up to the account on first login (reuse the
-      export/import logic we already have)
-- ☐ Write a short **privacy note** (what's stored, where, and how to delete it)
+### Phase 7 — Accounts + cross-device sync (Supabase) ✅
+**Goal:** log in and see/edit the same workouts on any device, and have data survive
+clearing the browser or switching phones.
+
+> ✅ **SHIPPED (2026-06-26):** all of Phase 7 (7a–7h) is done, tested, and **merged to
+> `main`** — accounts + cloud sync are live for everyone. Cache shipped at **`v24`**.
+> Future work goes back on `dev`. The notes below are kept as a reference for how it works.
+> - **Where the code lives:** `supabase.js` (client + URL/publishable key), `auth.js` (login
+>   gate, calls `onUserLoggedIn` in app.js on sign-in), and app.js section **“5b. CLOUD
+>   SYNC”** (the `reconcile*`/`*FromCloud`/`*ToRow` helpers + write-through in
+>   create/edit/delete for profiles, exercises, sessions).
+> - **Sync model:** cloud = source of truth; `localStorage` = write-through cache. Login
+>   reconciles per entity — cloud-wins for profiles/exercises, newest-wins **merge** for
+>   sessions (so an un-pushed in-progress workout is never wiped).
+> - **Gotchas already hit:** the project uses Supabase’s **new key system** (legacy anon JWT
+>   is disabled → use the **publishable key**, already in `supabase.js`); SQL-created tables
+>   needed explicit **`GRANT`s** to `anon`/`authenticated`. See RUNBOOK §“Cloud sync”.
+> - **Rule reminder:** bump `CACHE_VERSION` in `sw.js` on any app-file change; ask before
+>   committing/pushing.
+
+**Decisions made:**
+- **Backend = Supabase** (free tier). Chosen because it's SQL/Postgres (maps cleanly to
+  the current `profiles`/`exercises`/`sessions` shapes), has built-in **Auth** + **Row-
+  Level Security**, and its client loads from a **CDN `<script>`** so it fits the no-build
+  setup. Firebase was the runner-up; **Power Platform was set aside (cost).**
+- **This deliberately relaxes two hard rules** from section 2: it adds a **backend** and
+  an **external JS library** (the Supabase client). Accepted for this phase only.
+- **Built on a `feature/auth` branch** off `dev`, so `dev`/`main` stay releasable while
+  this big change is in progress.
+- **Security:** the app uses ONLY Supabase's **anon public key** (safe to ship, protected
+  by Row-Level Security). The **`service_role` key must NEVER be committed** (repo is
+  public).
+
+**Data model in Supabase** (mirrors today's shapes + `user_id`):
+- `profiles(id, user_id, name, created_at)`
+- `exercises(id, user_id, profile_id, name, sets, reps, reps_per_set, weight,
+  weight_per_set, icon, day, notes)`
+- `sessions(id, user_id, profile_id, date, day, status, entries jsonb, updated_at)`
+  — `entries` stays as JSON to match the nested per-set shape with minimal restructuring.
+- **Row-Level Security** on every table: a user can only read/write rows where
+  `user_id = auth.uid()`.
+
+**Steps (incremental — one at a time, test each, commit on `feature/auth`):**
+- ✅ **7a — Project setup:** free Supabase project created; URL + publishable key noted.
+      (Project uses the new key system — the legacy anon JWT was disabled.)
+- ✅ **7b — Schema + security:** `profiles`/`exercises`/`sessions` tables + Row-Level
+      Security created. Note: tables made via SQL needed explicit `GRANT`s to
+      `anon`/`authenticated` (dashboard-made tables get these automatically).
+- ✅ **7c — Connect the client:** `supabase.js` loads `supabase-js` from a CDN and creates
+      the client with the URL + **publishable key**.
+- ✅ **7d — Auth UI:** `auth.js` adds a login / sign-up gate (email + password) + a logout
+      card in Settings; the app is hidden until signed in.
+- ✅ **7e — Swap the data layer:** profiles, exercises, and sessions all read/write through
+      Supabase, with `localStorage` as a write-through cache. Login reconciles per entity
+      (cloud-wins for profiles/exercises; a newest-wins **merge** for sessions).
+- ✅ **7f — First-login migration:** folded into the login reconcile — existing local data
+      is uploaded when the cloud is empty, with a one-time "your data is saved" notice.
+- ✅ **7g — Offline handling.** Two parts, both done (code-complete, awaiting owner test):
+      1. ✅ **Vendored the Supabase library locally.** Downloaded `supabase-js@2` (UMD,
+         v2.108.2) into `vendor/supabase.js`; `index.html` now loads that local copy instead
+         of the CDN; added `./vendor/supabase.js` to `APP_SHELL` in `sw.js`; bumped the cache
+         to `v19`. The app shell can now be cached, so it loads with DevTools set to Offline.
+      2. ✅ **Friendly offline handling for writes.** Took the minimal "inform + block"
+         approach for the **cloud-wins** entities (profiles/exercises): new helpers
+         `isOffline()` / `blockedByOffline()` / `reportCloudWriteError()` (in app.js, just
+         above the PROFILE ACTIONS section). `createProfile`, `deleteProfile`,
+         `deleteExercise`, and `handleExerciseFormSubmit` bail out early with a friendly
+         "You're offline 📡 — reconnect to make changes" alert (instead of a scary error),
+         and a mid-request drop also shows the friendly message. Reads still work (from the
+         localStorage cache). **Workouts are deliberately left usable offline** — sessions
+         use a newest-wins **merge**, so an in-progress workout done offline survives and
+         uploads on reconnect. A full offline write-queue for plan edits remains a future
+         enhancement.
+- ✅ **7h — Privacy note + release.** (Decisions: deletion = self-serve "Delete my data"
+      button [Option A]; password reset deferred to a later phase; email confirmation is OFF.)
+      1. ✅ **Privacy note + data controls** (built, awaiting owner test): a short privacy line
+         on the **login screen**; a **Settings → "Privacy & data"** card explaining what's
+         stored (email + workout data) / where (Supabase, third-party) / how to delete it; a
+         **"Delete my data"** button (`deleteAllMyData()` in app.js) that wipes all the user's
+         cloud rows + local cache then logs out (does NOT delete the auth login itself — that
+         needs admin access, so it's a "email the owner" step); and a `Documentation/Privacy.md`.
+         Cache bumped to `v22`.
+      2. ✅ **Tester docs** (built, awaiting owner review): `Documentation/WhatsNew_Accounts_2026-06-26.md`
+         covers signing up, cross-device sync, the first-login migration, offline behaviour,
+         and the privacy/delete controls (+ a note that password reset isn't built yet).
+      3. ✅ **Release (2026-06-26):** owner tested everything, then we bumped `CACHE_VERSION`
+         to `v24`, removed the "WIP" pointer from CLAUDE.md, and merged `feature/auth` → `dev`
+         → `main` — accounts + cloud sync are now live for everyone.
+
+**Watch-outs:** free Supabase projects **pause after ~1 week of inactivity** (resume with
+a click); configure email-confirmation settings for testing; never break the offline
+app-shell behaviour; only the anon key in client code.
 
 **Done when:** I can log in on my laptop and my phone and see/edit the same workouts on
-both, and a brand-new device shows my data after login.
+both; a brand-new device shows my data after login; and after clearing local data and
+logging back in, everything is restored.

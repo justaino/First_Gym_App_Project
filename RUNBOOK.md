@@ -147,6 +147,65 @@ date and the history wording stay in sync.
 
 ---
 
+## 5d. Cloud sync & accounts (Phase 7 — SHIPPED 2026-06-26)
+
+> ✅ Phase 7 (accounts + cloud sync) is **live on `main`** — the hosted site now requires
+> logging in and syncs data across devices. Future work happens on `dev` as usual.
+
+**Backend:** [Supabase](https://supabase.com) (free tier). Project URL + **publishable
+key** live in `supabase.js` (both are safe to ship — protected by Row-Level Security).
+The **secret key is never committed**.
+
+- **New key system:** this project uses Supabase's new keys; the **legacy `anon` JWT is
+  disabled**, so the app uses the **publishable key** (`sb_publishable_…`). The legacy
+  JWT returned 401.
+- **Tables:** `profiles`, `exercises`, `sessions` (mirror the local shapes + a `user_id`;
+  `sessions.entries` is JSON). **Row-Level Security** restricts each user to their own rows.
+- **Grants gotcha:** tables created via the **SQL Editor** needed explicit
+  `GRANT select/insert/update/delete … TO authenticated;` (+ `select` to `anon`). Tables
+  made via the **Table Editor** get these automatically. Symptom if missing: `42501
+  permission denied for table …`.
+
+**Code map:**
+- `supabase.js` — creates `supabaseClient` from the URL + publishable key.
+- `auth.js` — the login/sign-up gate; calls `onUserLoggedIn(session)` (in app.js) once per
+  sign-in; logout lives in Settings.
+- `app.js` section **“5b. CLOUD SYNC”** — `*FromCloud` / `*ToRow` mappers,
+  `reconcileEntity` (profiles/exercises) + `reconcileSessions` (merge), `syncOnLogin`, and
+  write-through inside `createProfile`/`deleteProfile`/`handleExerciseFormSubmit`/
+  `deleteExercise`/`finishWorkout`/`closeWorkoutOverlay`/`discardWorkout`/`deleteSession`.
+
+**Sync model:** the **cloud is the source of truth**; `localStorage` is a **write-through
+cache**. On login, `syncOnLogin` reconciles per entity — **cloud-wins** for profiles/
+exercises, **newest-wins merge** for sessions (so an un-pushed in-progress workout isn't
+wiped). `gym:syncedUserId` records which user the cache belongs to, so one person's local
+data is never uploaded into another's account.
+
+**Quick test:** log in → create a profile/exercise/workout → check **Supabase → Table
+Editor**. Cross-device: log in with the same account in another browser → data appears.
+
+**Offline (7g):** the Supabase library is now **vendored** at `vendor/supabase.js` (loaded
+by `index.html` and cached in `sw.js`'s `APP_SHELL`) instead of from a CDN, so the app shell
+works offline again. Plan edits (profiles/exercises) are **cloud-wins**, so editing them
+offline would be wiped on next sync — instead they show a friendly "you're offline" notice
+and block (helpers `isOffline()` / `blockedByOffline()` / `reportCloudWriteError()` in
+app.js). Because `navigator.onLine` isn't reliable (Chrome's DevTools "Offline" throttling
+doesn't flip it), a failed write is also caught after the fact via `isNetworkError()` and
+shown as the same friendly notice. Workouts stay usable offline (sessions **merge**, so they
+sync on reconnect). `reconcileSessions` also drops **orphaned** sessions (whose profile no
+longer exists) so they don't repeatedly fail the `sessions_profile_id_fkey` constraint.
+To update the vendored library: re-download `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2`
+into `vendor/supabase.js`, **delete the trailing `//# sourceMappingURL=…` line** (jsDelivr
+appends it; left in, it makes the browser 404-request a source map that isn't in the repo —
+harmless console noise), and bump `CACHE_VERSION`.
+
+**Privacy & deletion (7h):** Settings → "Privacy & data" explains what's stored / where, links
+the privacy note (`Documentation/Privacy.pdf`), and offers **"Delete my data"** (`deleteAllMyData()`
+— wipes the user's cloud rows + local cache, then logs out; does not delete the auth login
+itself). See ROADMAP.md §8 for the full Phase 7 record.
+
+---
+
 ## 6. Backup & restore (import / export)
 
 Found in **Settings → Backup**.
@@ -207,6 +266,38 @@ its first weighted workout won't fire a PR (there's nothing to beat yet).
 
 Newest first. Add a line here whenever behaviour changes.
 
+- **2026-06-26** — **Phase 7 SHIPPED 🚀:** accounts + cross-device cloud sync (Supabase) are
+  now **live on `main`** — the hosted site requires logging in and syncs data across devices.
+  Merged `feature/auth` → `dev` → `main` after owner testing; removed the Phase-7 WIP note from
+  CLAUDE.md. Cache shipped at **`v24`**. Future work goes back on `dev`.
+
+- **2026-06-26** — **Phase 7h (part 1) — privacy + data controls (`feature/auth`):** added a
+  short privacy note on the login screen, a **Settings → "Privacy & data"** card (what's
+  stored / where / how to delete), a **"Delete my data"** button (`deleteAllMyData()` —
+  deletes all the user's cloud rows + local cache, then logs out; does NOT delete the auth
+  login itself, which needs admin access → "email the owner"). The Settings card links to
+  **`Documentation/Privacy.pdf`** ("Read the full privacy note" — opens the styled PDF in a
+  new tab); `Documentation/Privacy.md` is kept as the editable source. Cache `v24`.
+- **2026-06-26** — **Phase 7h (part 2) — tester doc:** added
+  `Documentation/WhatsNew_Accounts_2026-06-26.md` (sign-up, cross-device sync, first-login
+  migration, offline behaviour, privacy/delete controls, password-reset-not-yet note). Docs
+  only — no app-file change, so no cache bump. Remaining in 7h: release (gated on owner test).
+- **2026-06-26** — **Phase 7g follow-up fixes (`feature/auth`):** (1) **orphan sessions** —
+  `reconcileSessions` now drops sessions whose `profileId` no longer exists (they fail the
+  `sessions_profile_id_fkey` constraint and can never upload); this clears the repeating
+  console error on login and removes the dead sessions from the local cache. (2) **offline
+  detection** — added `isNetworkError()`, used in `reportCloudWriteError`, so a failed cloud
+  write shows the friendly "you're offline" notice even when `navigator.onLine` wrongly
+  reports online (e.g. Chrome DevTools "Offline" throttling doesn't flip it). Cache `v20`.
+- **2026-06-26** — **Phase 7g (offline) — code-complete on `feature/auth`:** vendored the
+  Supabase library locally (`vendor/supabase.js`) so the app shell works offline again, and
+  added friendly "you're offline" handling that blocks **plan edits** (profiles/exercises)
+  when offline (they're cloud-wins, so offline edits would be lost); workouts stay usable
+  offline (sessions merge). Cache bumped to `v19`. Remaining: 7h (privacy + release).
+- **2026-06-26** — **Phase 7 (accounts + cloud sync) in progress on `feature/auth`:**
+  Supabase login + full data sync (profiles/exercises/sessions) with first-login
+  migration (7a–7f done). NOT on `main` yet. Remaining: 7g (offline) + 7h (privacy +
+  release). See §5d and ROADMAP.md §8. Cache at `v18`.
 - **2026-06-25** — **Insights phase (6):** added the Insights card (goal ring,
   streak, days, lifetime totals, PR board, 12-week heatmap with tap bubbles,
   month-vs-last volume, "since you started" trends) and an editable workout date.

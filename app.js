@@ -29,6 +29,9 @@ const STORAGE_KEYS = {
   celebratedMilestones: "gym:celebratedMilestones",
   // Insights: each profile's weekly workout goal, as { profileId: number }.
   weeklyGoal: "gym:weeklyGoal",
+  // Phase 7: which logged-in user the local cache currently belongs to, so we
+  // never upload one person's local data into a different person's account.
+  syncedUserId: "gym:syncedUserId",
 };
 
 // Easter egg: a workout milestone shows a one-time trophy celebration when your
@@ -1547,17 +1550,98 @@ function renderAll() {
 }
 
 /* =========================================================================
+   Offline handling for cloud writes (Phase 7g)
+
+   Your plan (profiles & exercises) is saved to the cloud, which is the source of
+   truth: on the next login the app trusts the CLOUD copy and overwrites the local
+   one ("cloud-wins"). So if we let you edit the plan while offline, those edits
+   would never reach the cloud and would be wiped on the next sync. To avoid that
+   nasty surprise we INFORM and BLOCK plan edits when there's no connection.
+
+   (Your actual workouts are different — they're merged, newest-wins, so an
+   in-progress workout done offline survives and uploads when you reconnect. That
+   flow is deliberately left usable offline.)
+   ========================================================================= */
+
+// Are we offline right now? `navigator.onLine` is the browser's best guess.
+function isOffline() {
+  return navigator.onLine === false;
+}
+
+// Friendly "you're offline" message (used instead of a scary cloud error).
+function showOfflineNotice() {
+  window.alert(
+    "You're offline 📡\n\n" +
+      "Changes to your plan are saved to the cloud, which needs a connection. " +
+      "You can still look around — reconnect to make changes."
+  );
+}
+
+// Call at the START of a plan edit: if offline, tell the user and return true so
+// the caller can bail out before touching anything.
+function blockedByOffline() {
+  if (isOffline()) {
+    showOfflineNotice();
+    return true;
+  }
+  return false;
+}
+
+// Does this error look like a failed network request (no connection / server
+// unreachable) rather than a real server reply? Each browser words it differently.
+// We need this because `navigator.onLine` isn't reliable — e.g. Chrome's DevTools
+// "Offline" throttling doesn't flip it — so a write can still fail at the network
+// level while the browser thinks it's online.
+function isNetworkError(error) {
+  const message = (error && error.message ? error.message : "").toLowerCase();
+  return (
+    message.includes("failed to fetch") || // Chrome / Edge
+    message.includes("load failed") || // Safari
+    message.includes("networkerror") || // Firefox
+    message.includes("network request failed")
+  );
+}
+
+// Report a cloud WRITE that failed. If it failed because we're offline (or the
+// request never reached the server), show the friendly offline notice; otherwise
+// show the real error (a genuine server-side problem worth seeing).
+function reportCloudWriteError(action, error) {
+  if (isOffline() || isNetworkError(error)) {
+    showOfflineNotice();
+  } else {
+    window.alert("Couldn't " + action + ":\n" + error.message);
+  }
+}
+
+/* =========================================================================
    5. PROFILE ACTIONS — create, switch, delete
    ========================================================================= */
 
-function createProfile(name) {
-  const profiles = loadList(STORAGE_KEYS.profiles);
+// Create a profile: write it to the cloud first (the source of truth), then
+// mirror it into the local cache. (Phase 7e)
+async function createProfile(name) {
+  if (blockedByOffline()) {
+    return;
+  }
 
   const newProfile = {
     id: makeId(),
     name: name,
     createdAt: new Date().toISOString(),
   };
+
+  // user_id is filled in automatically by the database (default auth.uid()).
+  const { error } = await supabaseClient.from("profiles").insert({
+    id: newProfile.id,
+    name: newProfile.name,
+    created_at: newProfile.createdAt,
+  });
+  if (error) {
+    reportCloudWriteError("save the profile to the cloud", error);
+    return;
+  }
+
+  const profiles = loadList(STORAGE_KEYS.profiles);
   profiles.push(newProfile);
   saveList(STORAGE_KEYS.profiles, profiles);
 
@@ -1569,12 +1653,19 @@ function createProfile(name) {
   renderAll();
 }
 
+// Which profile is "active" is a per-device choice, so it stays local-only.
 function setActiveProfile(id) {
   saveActiveProfileId(id);
   renderAll();
 }
 
-function deleteProfile(id) {
+// Delete a profile: remove it from the cloud first (the database cascades to its
+// exercises/sessions), then clear it from the local cache. (Phase 7e)
+async function deleteProfile(id) {
+  if (blockedByOffline()) {
+    return;
+  }
+
   const ok = window.confirm(
     "Delete this profile and all of its exercises? This cannot be undone."
   );
@@ -1582,7 +1673,13 @@ function deleteProfile(id) {
     return;
   }
 
-  // Remove the profile.
+  const { error } = await supabaseClient.from("profiles").delete().eq("id", id);
+  if (error) {
+    reportCloudWriteError("delete the profile from the cloud", error);
+    return;
+  }
+
+  // Remove the profile from the local cache.
   let profiles = loadList(STORAGE_KEYS.profiles);
   profiles = profiles.filter((profile) => profile.id !== id);
   saveList(STORAGE_KEYS.profiles, profiles);
@@ -1606,10 +1703,367 @@ function deleteProfile(id) {
 }
 
 /* =========================================================================
+   5b. CLOUD SYNC — profiles (Phase 7e)
+   The database is the source of truth; localStorage is a write-through cache.
+   On login we reconcile the two (and, on a first login with existing local
+   data, upload it). Profiles only for now — exercises/sessions come next.
+   ========================================================================= */
+
+// Convert a database row to the app's profile shape.
+function mapProfileFromCloud(row) {
+  return { id: row.id, name: row.name, createdAt: row.created_at };
+}
+
+// Fetch this user's profiles from the cloud (or null if the request failed).
+async function pullProfilesFromCloud() {
+  const { data, error } = await supabaseClient.from("profiles").select("*");
+  if (error) {
+    console.error("Could not load profiles from cloud:", error.message);
+    return null;
+  }
+  return data;
+}
+
+// Upload local profiles to the cloud (used for the first-login migration).
+async function uploadProfilesToCloud(localProfiles) {
+  const rows = localProfiles.map((profile) => ({
+    id: profile.id,
+    name: profile.name,
+    created_at: profile.createdAt || new Date().toISOString(),
+  }));
+  const { error } = await supabaseClient.from("profiles").insert(rows);
+  if (error) {
+    console.error("Could not upload profiles:", error.message);
+  }
+}
+
+// Wipe the local cache (used when a DIFFERENT user logs in on this device).
+function clearLocalData() {
+  saveList(STORAGE_KEYS.profiles, []);
+  saveList(STORAGE_KEYS.exercises, []);
+  saveList(STORAGE_KEYS.sessions, []);
+  saveActiveProfileId(null);
+}
+
+// Self-serve "Delete my data" (Phase 7h, privacy). Permanently removes ALL of
+// this user's rows from the cloud AND wipes the local cache, then logs out.
+// NOTE: it does NOT delete the Supabase login/account itself — removing an auth
+// account needs admin access we deliberately don't ship in the browser — so the
+// user emails the owner if they also want the login removed.
+async function deleteAllMyData() {
+  // Strong, explicit confirmation — this is destructive and can't be undone.
+  const ok = window.confirm(
+    "Delete ALL your data?\n\n" +
+      "This permanently removes every profile, exercise, and workout from the " +
+      "cloud and from this device — on all your devices. It cannot be undone.\n\n" +
+      "Tip: export a backup first (Settings → Backup) if you want to keep a copy."
+  );
+  if (!ok) {
+    return;
+  }
+
+  // Deleting happens in the cloud, so it needs a connection.
+  if (blockedByOffline()) {
+    return;
+  }
+
+  // We need the signed-in user's id to scope the delete. Row-Level Security also
+  // limits it to their own rows, but the database requires a filter on a delete.
+  const { data, error: userError } = await supabaseClient.auth.getUser();
+  if (userError || !data || !data.user) {
+    window.alert("Couldn't confirm who's signed in. Please try again.");
+    return;
+  }
+  const userId = data.user.id;
+
+  // Delete children before parents so no foreign-key constraint complains.
+  const tables = ["sessions", "exercises", "profiles"];
+  for (const table of tables) {
+    const { error } = await supabaseClient
+      .from(table)
+      .delete()
+      .eq("user_id", userId);
+    if (error) {
+      // Stop on the first failure — nothing local has been cleared yet, so the
+      // user's data is still intact and they can retry.
+      reportCloudWriteError("delete your data from the cloud", error);
+      return;
+    }
+  }
+
+  // Cloud is clear — now wipe the local cache so nothing re-uploads on next login.
+  clearLocalData();
+  localStorage.removeItem(STORAGE_KEYS.weeklyGoal);
+  localStorage.removeItem(STORAGE_KEYS.celebratedMilestones);
+  localStorage.removeItem(STORAGE_KEYS.syncedUserId);
+  renderAll(); // empty the screen behind the alert
+
+  window.alert("Your data has been deleted. You'll be logged out now.");
+
+  // Log out → back to the login screen, now with an empty account.
+  await supabaseClient.auth.signOut();
+}
+
+// Make sure the active profile id still points at a profile that exists.
+function ensureValidActiveProfile() {
+  const profiles = loadList(STORAGE_KEYS.profiles);
+  const activeId = loadActiveProfileId();
+  if (!profiles.some((profile) => profile.id === activeId)) {
+    saveActiveProfileId(profiles.length > 0 ? profiles[0].id : null);
+  }
+}
+
+// Reconcile cloud vs local for profiles when a user logs in.
+// Reconcile one entity (a localStorage list) with the cloud:
+//   - cloud has rows  → the cloud wins; mirror it into the local cache
+//   - cloud is empty but we have local rows → upload them (migration)
+// (By the time this runs, local data is either this user's or has been cleared,
+// so uploading is always safe.)
+// Returns true if it UPLOADED local data (i.e. a migration happened).
+async function reconcileEntity(storageKey, pullFn, uploadFn, mapFromCloud) {
+  const cloud = await pullFn();
+  if (cloud === null) {
+    return false; // offline / error → keep the local cache as-is
+  }
+  const local = loadList(storageKey);
+  if (cloud.length > 0) {
+    saveList(storageKey, cloud.map(mapFromCloud));
+    return false;
+  }
+  if (local.length > 0) {
+    await uploadFn(local);
+    return true;
+  }
+  return false;
+}
+
+// Reconcile everything when a user logs in. Order matters: profiles before
+// exercises (exercises reference a profile). Sessions come in a later sub-step.
+// Returns true if this was a first login that MIGRATED existing local data up.
+async function syncOnLogin(userId) {
+  const syncedUserId = localStorage.getItem(STORAGE_KEYS.syncedUserId);
+  const firstLogin = !syncedUserId; // never synced on this device before
+  // If a DIFFERENT user's data is cached on this device, start fresh first so we
+  // never upload their data into this account.
+  if (syncedUserId && syncedUserId !== userId) {
+    clearLocalData();
+  }
+
+  // `|| uploaded` keeps the flag true if any entity migrated local data up.
+  let uploaded = false;
+  uploaded =
+    (await reconcileEntity(
+      STORAGE_KEYS.profiles,
+      pullProfilesFromCloud,
+      uploadProfilesToCloud,
+      mapProfileFromCloud
+    )) || uploaded;
+  uploaded =
+    (await reconcileEntity(
+      STORAGE_KEYS.exercises,
+      pullExercisesFromCloud,
+      uploadExercisesToCloud,
+      mapExerciseFromCloud
+    )) || uploaded;
+  uploaded = (await reconcileSessions()) || uploaded; // sessions use a merge
+
+  localStorage.setItem(STORAGE_KEYS.syncedUserId, userId);
+  return firstLogin && uploaded;
+}
+
+// Called by auth.js when a user is signed in: sync, then redraw.
+async function onUserLoggedIn(session) {
+  const migrated = await syncOnLogin(session.user.id);
+  ensureValidActiveProfile();
+  renderAll();
+  if (migrated) {
+    // Reassure the user their pre-account data is now safely in their account.
+    showToast("Welcome! Your existing workouts are now saved to your account ☁️");
+  }
+}
+
+/* ---- Exercise cloud helpers (Phase 7e) ---- */
+
+// Convert a database row to the app's exercise shape (and back).
+function mapExerciseFromCloud(row) {
+  return {
+    id: row.id,
+    profileId: row.profile_id,
+    name: row.name,
+    sets: row.sets,
+    reps: row.reps,
+    repsPerSet: row.reps_per_set,
+    weight: row.weight,
+    weightPerSet: row.weight_per_set,
+    icon: row.icon,
+    day: row.day,
+    notes: row.notes,
+  };
+}
+function exerciseToRow(exercise) {
+  return {
+    id: exercise.id,
+    profile_id: exercise.profileId,
+    name: exercise.name,
+    sets: exercise.sets,
+    reps: exercise.reps,
+    reps_per_set: exercise.repsPerSet,
+    weight: exercise.weight,
+    weight_per_set: exercise.weightPerSet,
+    icon: exercise.icon,
+    day: exercise.day,
+    notes: exercise.notes,
+  };
+}
+
+async function pullExercisesFromCloud() {
+  const { data, error } = await supabaseClient.from("exercises").select("*");
+  if (error) {
+    console.error("Could not load exercises from cloud:", error.message);
+    return null;
+  }
+  return data;
+}
+
+// Upload local exercises (normalized so older ones get their per-set fields).
+async function uploadExercisesToCloud(localExercises) {
+  const rows = localExercises.map((exercise) =>
+    exerciseToRow(normalizeExercise(exercise))
+  );
+  const { error } = await supabaseClient.from("exercises").insert(rows);
+  if (error) {
+    console.error("Could not upload exercises:", error.message);
+  }
+}
+
+/* ---- Session cloud helpers (Phase 7e) ---- */
+
+function mapSessionFromCloud(row) {
+  return {
+    id: row.id,
+    profileId: row.profile_id,
+    date: row.date,
+    day: row.day,
+    status: row.status,
+    entries: row.entries,
+    updatedAt: row.updated_at,
+  };
+}
+function sessionToRow(session) {
+  return {
+    id: session.id,
+    profile_id: session.profileId,
+    date: session.date,
+    day: session.day,
+    status: session.status,
+    entries: session.entries,
+    updated_at: session.updatedAt || new Date().toISOString(),
+  };
+}
+
+// When was a session last touched (used to decide which copy "wins" in a merge).
+function sessionTime(session) {
+  return new Date(session.updatedAt || session.date || 0).getTime();
+}
+
+async function pullSessionsFromCloud() {
+  const { data, error } = await supabaseClient.from("sessions").select("*");
+  if (error) {
+    console.error("Could not load sessions from cloud:", error.message);
+    return null;
+  }
+  return data;
+}
+
+// Upsert sessions (insert new ones, update existing by id).
+async function uploadSessionsToCloud(sessions) {
+  const rows = sessions.map(sessionToRow);
+  const { error } = await supabaseClient.from("sessions").upsert(rows);
+  if (error) {
+    console.error("Could not upload sessions:", error.message);
+  }
+}
+
+// Save one session to the cloud (used when finishing/closing a workout).
+async function pushSessionToCloud(session) {
+  const { error } = await supabaseClient
+    .from("sessions")
+    .upsert(sessionToRow(session));
+  if (error) {
+    console.error("Could not save session to cloud:", error.message);
+  }
+}
+
+async function deleteSessionFromCloud(id) {
+  const { error } = await supabaseClient.from("sessions").delete().eq("id", id);
+  if (error) {
+    console.error("Could not delete session from cloud:", error.message);
+  }
+}
+
+// Sessions get a MERGE rather than a plain "cloud wins", because the local copy
+// may be ahead of the cloud (a workout is saved locally on every change, but only
+// pushed to the cloud when you finish/close it). We keep, per id, whichever copy
+// was updated most recently — so an un-pushed in-progress workout is never lost —
+// then push anything the cloud is missing or behind on.
+// Returns true if it uploaded any local-only sessions.
+async function reconcileSessions() {
+  const cloud = await pullSessionsFromCloud();
+  if (cloud === null) {
+    return false; // offline / error → keep local as-is
+  }
+  const cloudMapped = cloud.map(mapSessionFromCloud);
+  const local = loadList(STORAGE_KEYS.sessions);
+
+  const byId = {};
+  cloudMapped.forEach((session) => {
+    byId[session.id] = session;
+  });
+  local.forEach((session) => {
+    const existing = byId[session.id];
+    if (!existing || sessionTime(session) > sessionTime(existing)) {
+      byId[session.id] = session;
+    }
+  });
+
+  // Drop ORPHANED sessions — ones pointing at a profile that no longer exists.
+  // The database enforces this link (a session's profile_id must be a real
+  // profile), so an orphan can never upload — it just errors on every login and
+  // is dead weight locally. Profiles were reconciled just before this, so the
+  // local profile list is the source of truth for which ids are valid.
+  const validProfileIds = new Set(
+    loadList(STORAGE_KEYS.profiles).map((profile) => profile.id)
+  );
+  const merged = Object.values(byId).filter((session) =>
+    validProfileIds.has(session.profileId)
+  );
+  saveList(STORAGE_KEYS.sessions, merged);
+
+  // Push up anything the cloud doesn't have, or where local is newer.
+  const cloudById = {};
+  cloudMapped.forEach((session) => {
+    cloudById[session.id] = session;
+  });
+  const toUpload = merged.filter((session) => {
+    const inCloud = cloudById[session.id];
+    return !inCloud || sessionTime(session) > sessionTime(inCloud);
+  });
+  if (toUpload.length > 0) {
+    await uploadSessionsToCloud(toUpload);
+    return true;
+  }
+  return false;
+}
+
+/* =========================================================================
    6. EXERCISE ACTIONS — add, edit, delete
    ========================================================================= */
 
-function deleteExercise(id) {
+async function deleteExercise(id) {
+  if (blockedByOffline()) {
+    return;
+  }
+
   const ok = window.confirm(
     "Delete this exercise? Its past workout history will be removed too. " +
       "This cannot be undone (but a backup you exported earlier can restore it)."
@@ -1618,7 +2072,17 @@ function deleteExercise(id) {
     return;
   }
 
-  // Remove the exercise itself.
+  // Remove it from the cloud first (the source of truth).
+  const { error } = await supabaseClient
+    .from("exercises")
+    .delete()
+    .eq("id", id);
+  if (error) {
+    reportCloudWriteError("delete the exercise from the cloud", error);
+    return;
+  }
+
+  // Remove the exercise itself from the local cache.
   let exercises = loadList(STORAGE_KEYS.exercises);
   exercises = exercises.filter((exercise) => exercise.id !== id);
   saveList(STORAGE_KEYS.exercises, exercises);
@@ -1626,13 +2090,28 @@ function deleteExercise(id) {
   // Clean up after it: remove this exercise from every saved workout, then
   // drop any workout that's left with no exercises at all. This keeps history
   // and personal-record data honest (no orphaned leftovers in storage).
-  const sessions = loadList(STORAGE_KEYS.sessions)
+  const before = loadList(STORAGE_KEYS.sessions);
+  const affectedIds = before
+    .filter((session) => session.entries.some((entry) => entry.exerciseId === id))
+    .map((session) => session.id);
+  const sessions = before
     .map((session) => ({
       ...session,
       entries: session.entries.filter((entry) => entry.exerciseId !== id),
     }))
     .filter((session) => session.entries.length > 0);
   saveList(STORAGE_KEYS.sessions, sessions);
+
+  // Mirror those session changes to the cloud: re-save the trimmed ones, and
+  // delete any workout that became empty.
+  for (const sessionId of affectedIds) {
+    const updated = sessions.find((session) => session.id === sessionId);
+    if (updated) {
+      await pushSessionToCloud(updated);
+    } else {
+      await deleteSessionFromCloud(sessionId);
+    }
+  }
 
   // Removing workouts may lower a profile's count below a celebrated milestone,
   // so reconcile the trophy tracker too.
@@ -1840,8 +2319,14 @@ function openExerciseModalForEdit(id) {
 }
 
 // Handle the form being submitted (covers both add and edit).
-function handleExerciseFormSubmit(event) {
+async function handleExerciseFormSubmit(event) {
   event.preventDefault(); // stop the browser from reloading the page
+
+  // Saving an exercise writes to the cloud, so it needs a connection. Bail out
+  // early (before validating) with a friendly notice if we're offline.
+  if (blockedByOffline()) {
+    return;
+  }
 
   // Read the values from the form.
   const id = document.getElementById("exerciseIdInput").value;
@@ -1892,7 +2377,7 @@ function handleExerciseFormSubmit(event) {
   const exercises = loadList(STORAGE_KEYS.exercises);
 
   if (id === "") {
-    // ADDING: build a new exercise and add it to the list.
+    // ADDING: build a new exercise, save it to the cloud, then cache it locally.
     const newExercise = {
       id: makeId(),
       profileId: loadActiveProfileId(),
@@ -1906,9 +2391,16 @@ function handleExerciseFormSubmit(event) {
       day: day,
       notes: "", // reserved for a later phase
     };
+    const { error } = await supabaseClient
+      .from("exercises")
+      .insert(exerciseToRow(newExercise));
+    if (error) {
+      reportCloudWriteError("save the exercise to the cloud", error);
+      return;
+    }
     exercises.push(newExercise);
   } else {
-    // EDITING: find the existing exercise and update its fields.
+    // EDITING: update the fields, push the change to the cloud, then cache it.
     const existing = exercises.find((item) => item.id === id);
     if (existing) {
       existing.name = name;
@@ -1919,6 +2411,15 @@ function handleExerciseFormSubmit(event) {
       existing.weightPerSet = perSet.weights;
       existing.icon = selectedEmoji;
       existing.day = day;
+
+      const { error } = await supabaseClient
+        .from("exercises")
+        .update(exerciseToRow(existing))
+        .eq("id", id);
+      if (error) {
+        reportCloudWriteError("update the exercise in the cloud", error);
+        return;
+      }
     }
   }
 
@@ -2325,20 +2826,29 @@ function discardWorkout() {
   if (!ok) {
     return;
   }
+  const discardedId = activeSession.id;
   const sessions = loadList(STORAGE_KEYS.sessions).filter(
-    (session) => session.id !== activeSession.id
+    (session) => session.id !== discardedId
   );
   saveList(STORAGE_KEYS.sessions, sessions);
 
-  closeWorkoutOverlay();
+  // Null it BEFORE closing so closeWorkoutOverlay doesn't re-save it, then remove
+  // it from the cloud too (in case it had already been backed up).
   activeSession = null;
-  renderAll();
+  deleteSessionFromCloud(discardedId);
+  closeWorkoutOverlay();
 }
 
 // Close the sheet but KEEP the in-progress session, so it can be resumed later.
 function closeWorkoutOverlay() {
   stopRest();
   document.getElementById("workoutOverlay").hidden = true;
+  // Back the open workout up to the cloud as we leave the sheet (covers both
+  // finishing and just closing an in-progress or edited workout). Discard sets
+  // activeSession to null first, so a discarded workout is never re-saved here.
+  if (activeSession) {
+    pushSessionToCloud(activeSession);
+  }
   // Redraw so the Today/Schedule buttons update (e.g. Start → Resume) now that
   // an in-progress workout may exist.
   renderAll();
@@ -2400,13 +2910,14 @@ function editSession(sessionId) {
 }
 
 // Delete a saved workout from history (after a confirm).
-function deleteSession(sessionId) {
+async function deleteSession(sessionId) {
   const ok = window.confirm(
     "Delete this workout from history? This cannot be undone."
   );
   if (!ok) {
     return;
   }
+  await deleteSessionFromCloud(sessionId);
   const sessions = loadList(STORAGE_KEYS.sessions).filter(
     (item) => item.id !== sessionId
   );
@@ -3324,8 +3835,13 @@ function init() {
     event.target.value = ""; // reset so picking the same file again still works
   });
 
+  // ---- Privacy: delete all my data (Phase 7h) ----
+  document
+    .getElementById("deleteDataBtn")
+    .addEventListener("click", deleteAllMyData);
+
   // Create-profile form submit.
-  document.getElementById("profileForm").addEventListener("submit", (event) => {
+  document.getElementById("profileForm").addEventListener("submit", async (event) => {
     event.preventDefault();
     const input = document.getElementById("profileNameInput");
     const name = input.value.trim();
@@ -3333,7 +3849,7 @@ function init() {
       window.alert("Please enter a profile name.");
       return;
     }
-    createProfile(name);
+    await createProfile(name);
     input.value = ""; // clear the box for next time
   });
 
