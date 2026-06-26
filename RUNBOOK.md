@@ -204,6 +204,13 @@ the privacy note (`Documentation/Privacy.pdf`), and offers **"Delete my data"** 
 — wipes the user's cloud rows + local cache, then logs out; does not delete the auth login
 itself). See ROADMAP.md §8 for the full Phase 7 record.
 
+**⚠️ If the app shows a connection error after a quiet period:** free Supabase projects pause
+after a stretch of **no activity** (the long-standing rule is ~1 week — it's based on database
+activity, *not* on whether you log into the dashboard, so real app usage keeps it awake). If
+it has paused, the next visitor sees errors until it's resumed: open the **Supabase dashboard
+→ your project → Resume/Restore**. There may be a short cold-start delay on the first request
+after it wakes. (Exact thresholds are Supabase's policy and can change — check Project Settings.)
+
 ---
 
 ## 6. Backup & restore (import / export)
@@ -266,6 +273,13 @@ its first weighted workout won't fire a PR (there's nothing to beat yet).
 
 Newest first. Add a line here whenever behaviour changes.
 
+- **2026-06-26** — **Rest-timer fixes (on `dev`):** the countdown now runs off an absolute end
+  time (`restEndsAt`) and recalculates from the clock each tick + on `visibilitychange`, so it
+  stays correct when the phone freezes background code and finishes (with a beep) the moment you
+  return. Audio is unlocked more robustly on iPhone (a one-time silent buffer played inside the
+  tap), and `playBeep` waits for the async `resume()` before scheduling tones. Known limit: the
+  alarm still can't sound *while* the app is backgrounded/locked (a mobile-web limitation), and
+  the iPhone hardware mute switch silences Web Audio. Cache `v25`.
 - **2026-06-26** — **Phase 7 SHIPPED 🚀:** accounts + cross-device cloud sync (Supabase) are
   now **live on `main`** — the hosted site requires logging in and syncs data across devices.
   Merged `feature/auth` → `dev` → `main` after owner testing; removed the Phase-7 WIP note from

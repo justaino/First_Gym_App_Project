@@ -2932,11 +2932,16 @@ async function deleteSession(sessionId) {
 
 let restIntervalId = null; // the setInterval handle (null when not running)
 let restRemaining = 0; // seconds left on the clock
+// The wall-clock time (ms) the timer should hit zero. We count down from THIS,
+// not by subtracting 1 each tick, so the timer stays correct even if the phone
+// freezes our code while the app is in the background. (See tickRest.)
+let restEndsAt = 0;
 
 // One shared sound channel for the whole app. Browsers block audio until the
 // user interacts with the page, so we create/unlock this when a timer button is
 // tapped (a real tap) and then reuse it for the beep at zero.
 let audioContext = null;
+let audioUnlocked = false; // have we played the one-time "unlock" sound yet?
 
 // Make sure our sound channel exists and is "running" (not blocked/suspended).
 // Safe to call from a button tap.
@@ -2953,6 +2958,17 @@ function ensureAudioReady() {
     if (audioContext.state === "suspended") {
       audioContext.resume();
     }
+    // iPhones need the sound channel to actually PLAY something inside a real tap
+    // before they'll let it make noise later. So the first time, play a 1-sample
+    // silent buffer — inaudible, but it fully "unlocks" audio for the later beep.
+    if (!audioUnlocked) {
+      const buffer = audioContext.createBuffer(1, 1, 22050);
+      const source = audioContext.createBufferSource();
+      source.buffer = buffer;
+      source.connect(audioContext.destination);
+      source.start(0);
+      audioUnlocked = true;
+    }
   } catch (error) {
     console.log("Could not set up audio:", error);
   }
@@ -2966,21 +2982,30 @@ function startRest(seconds) {
   ensureAudioReady();
 
   restRemaining = seconds;
+  restEndsAt = Date.now() + seconds * 1000; // the moment it should hit zero
 
   const display = document.getElementById("timerDisplay");
   display.classList.remove("is-done");
   display.classList.add("is-running");
   updateTimerDisplay();
 
-  // Count down once per second.
-  restIntervalId = setInterval(() => {
-    restRemaining = restRemaining - 1;
-    if (restRemaining <= 0) {
-      finishRest();
-    } else {
-      updateTimerDisplay();
-    }
-  }, 1000);
+  // Tick a few times a second. Each tick recalculates the time left from the
+  // clock (restEndsAt), so the display is right even after the app was paused in
+  // the background — and finishes as soon as we're back if it ran out while away.
+  restIntervalId = setInterval(tickRest, 250);
+}
+
+// One tick of the running timer: work out how long is really left, then either
+// update the display or finish. Driven by the wall clock, not by counting ticks.
+function tickRest() {
+  const msLeft = restEndsAt - Date.now();
+  if (msLeft <= 0) {
+    restRemaining = 0;
+    finishRest();
+    return;
+  }
+  restRemaining = Math.ceil(msLeft / 1000);
+  updateTimerDisplay();
 }
 
 // Called when the countdown reaches zero: beep + show "Done".
@@ -3045,9 +3070,20 @@ function playBeep() {
   }
 
   // Two quick beeps so it's easy to notice.
-  const now = audioContext.currentTime;
-  playTone(now, 880); // first beep
-  playTone(now + 0.3, 1175); // second, slightly higher beep
+  function playBothBeeps() {
+    const now = audioContext.currentTime;
+    playTone(now, 880); // first beep
+    playTone(now + 0.3, 1175); // second, slightly higher beep
+  }
+
+  // resume() is asynchronous. If the channel was asleep (common right after the
+  // app comes back from the background), scheduling the tones immediately can
+  // drop them — so wait for it to wake up first, then play.
+  if (audioContext.state === "suspended") {
+    audioContext.resume().then(playBothBeeps).catch(() => {});
+  } else {
+    playBothBeeps();
+  }
 }
 
 /* =========================================================================
@@ -3786,6 +3822,15 @@ function init() {
   document
     .getElementById("stopTimerBtn")
     .addEventListener("click", resetTimerDisplay);
+
+  // When you come BACK to the app (switch back, unlock the screen), immediately
+  // re-check a running timer — phones freeze our code in the background, so this
+  // catches the clock up right away and beeps if the rest finished while away.
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && restIntervalId !== null) {
+      tickRest();
+    }
+  });
 
   // Modal: cancel button and backdrop both close it.
   document
