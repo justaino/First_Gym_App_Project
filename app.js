@@ -1550,12 +1550,80 @@ function renderAll() {
 }
 
 /* =========================================================================
+   Offline handling for cloud writes (Phase 7g)
+
+   Your plan (profiles & exercises) is saved to the cloud, which is the source of
+   truth: on the next login the app trusts the CLOUD copy and overwrites the local
+   one ("cloud-wins"). So if we let you edit the plan while offline, those edits
+   would never reach the cloud and would be wiped on the next sync. To avoid that
+   nasty surprise we INFORM and BLOCK plan edits when there's no connection.
+
+   (Your actual workouts are different — they're merged, newest-wins, so an
+   in-progress workout done offline survives and uploads when you reconnect. That
+   flow is deliberately left usable offline.)
+   ========================================================================= */
+
+// Are we offline right now? `navigator.onLine` is the browser's best guess.
+function isOffline() {
+  return navigator.onLine === false;
+}
+
+// Friendly "you're offline" message (used instead of a scary cloud error).
+function showOfflineNotice() {
+  window.alert(
+    "You're offline 📡\n\n" +
+      "Changes to your plan are saved to the cloud, which needs a connection. " +
+      "You can still look around — reconnect to make changes."
+  );
+}
+
+// Call at the START of a plan edit: if offline, tell the user and return true so
+// the caller can bail out before touching anything.
+function blockedByOffline() {
+  if (isOffline()) {
+    showOfflineNotice();
+    return true;
+  }
+  return false;
+}
+
+// Does this error look like a failed network request (no connection / server
+// unreachable) rather than a real server reply? Each browser words it differently.
+// We need this because `navigator.onLine` isn't reliable — e.g. Chrome's DevTools
+// "Offline" throttling doesn't flip it — so a write can still fail at the network
+// level while the browser thinks it's online.
+function isNetworkError(error) {
+  const message = (error && error.message ? error.message : "").toLowerCase();
+  return (
+    message.includes("failed to fetch") || // Chrome / Edge
+    message.includes("load failed") || // Safari
+    message.includes("networkerror") || // Firefox
+    message.includes("network request failed")
+  );
+}
+
+// Report a cloud WRITE that failed. If it failed because we're offline (or the
+// request never reached the server), show the friendly offline notice; otherwise
+// show the real error (a genuine server-side problem worth seeing).
+function reportCloudWriteError(action, error) {
+  if (isOffline() || isNetworkError(error)) {
+    showOfflineNotice();
+  } else {
+    window.alert("Couldn't " + action + ":\n" + error.message);
+  }
+}
+
+/* =========================================================================
    5. PROFILE ACTIONS — create, switch, delete
    ========================================================================= */
 
 // Create a profile: write it to the cloud first (the source of truth), then
 // mirror it into the local cache. (Phase 7e)
 async function createProfile(name) {
+  if (blockedByOffline()) {
+    return;
+  }
+
   const newProfile = {
     id: makeId(),
     name: name,
@@ -1569,7 +1637,7 @@ async function createProfile(name) {
     created_at: newProfile.createdAt,
   });
   if (error) {
-    window.alert("Couldn't save the profile to the cloud:\n" + error.message);
+    reportCloudWriteError("save the profile to the cloud", error);
     return;
   }
 
@@ -1594,6 +1662,10 @@ function setActiveProfile(id) {
 // Delete a profile: remove it from the cloud first (the database cascades to its
 // exercises/sessions), then clear it from the local cache. (Phase 7e)
 async function deleteProfile(id) {
+  if (blockedByOffline()) {
+    return;
+  }
+
   const ok = window.confirm(
     "Delete this profile and all of its exercises? This cannot be undone."
   );
@@ -1603,7 +1675,7 @@ async function deleteProfile(id) {
 
   const { error } = await supabaseClient.from("profiles").delete().eq("id", id);
   if (error) {
-    window.alert("Couldn't delete the profile from the cloud:\n" + error.message);
+    reportCloudWriteError("delete the profile from the cloud", error);
     return;
   }
 
@@ -1894,7 +1966,18 @@ async function reconcileSessions() {
       byId[session.id] = session;
     }
   });
-  const merged = Object.values(byId);
+
+  // Drop ORPHANED sessions — ones pointing at a profile that no longer exists.
+  // The database enforces this link (a session's profile_id must be a real
+  // profile), so an orphan can never upload — it just errors on every login and
+  // is dead weight locally. Profiles were reconciled just before this, so the
+  // local profile list is the source of truth for which ids are valid.
+  const validProfileIds = new Set(
+    loadList(STORAGE_KEYS.profiles).map((profile) => profile.id)
+  );
+  const merged = Object.values(byId).filter((session) =>
+    validProfileIds.has(session.profileId)
+  );
   saveList(STORAGE_KEYS.sessions, merged);
 
   // Push up anything the cloud doesn't have, or where local is newer.
@@ -1918,6 +2001,10 @@ async function reconcileSessions() {
    ========================================================================= */
 
 async function deleteExercise(id) {
+  if (blockedByOffline()) {
+    return;
+  }
+
   const ok = window.confirm(
     "Delete this exercise? Its past workout history will be removed too. " +
       "This cannot be undone (but a backup you exported earlier can restore it)."
@@ -1932,7 +2019,7 @@ async function deleteExercise(id) {
     .delete()
     .eq("id", id);
   if (error) {
-    window.alert("Couldn't delete the exercise from the cloud:\n" + error.message);
+    reportCloudWriteError("delete the exercise from the cloud", error);
     return;
   }
 
@@ -2176,6 +2263,12 @@ function openExerciseModalForEdit(id) {
 async function handleExerciseFormSubmit(event) {
   event.preventDefault(); // stop the browser from reloading the page
 
+  // Saving an exercise writes to the cloud, so it needs a connection. Bail out
+  // early (before validating) with a friendly notice if we're offline.
+  if (blockedByOffline()) {
+    return;
+  }
+
   // Read the values from the form.
   const id = document.getElementById("exerciseIdInput").value;
   const name = document.getElementById("nameInput").value.trim();
@@ -2243,7 +2336,7 @@ async function handleExerciseFormSubmit(event) {
       .from("exercises")
       .insert(exerciseToRow(newExercise));
     if (error) {
-      window.alert("Couldn't save the exercise to the cloud:\n" + error.message);
+      reportCloudWriteError("save the exercise to the cloud", error);
       return;
     }
     exercises.push(newExercise);
@@ -2265,7 +2358,7 @@ async function handleExerciseFormSubmit(event) {
         .update(exerciseToRow(existing))
         .eq("id", id);
       if (error) {
-        window.alert("Couldn't update the exercise in the cloud:\n" + error.message);
+        reportCloudWriteError("update the exercise in the cloud", error);
         return;
       }
     }

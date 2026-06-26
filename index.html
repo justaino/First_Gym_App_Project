@@ -568,10 +568,15 @@
     </div>
 
     <!--
-      Supabase (Phase 7): the client library from a CDN, then our own config that
-      creates the connection. Loaded before app.js so the app can use it.
+      Supabase (Phase 7): the client library, then our own config that creates the
+      connection. Loaded before app.js so the app can use it.
+
+      The library is VENDORED (kept in vendor/supabase.js inside this repo) rather
+      than loaded from a CDN. That's what lets the app work OFFLINE — the service
+      worker can only cache files from our own site, not a cross-origin CDN. To
+      update the library, re-download it (see RUNBOOK §5d) and bump CACHE_VERSION.
     -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="vendor/supabase.js"></script>
     <script src="supabase.js"></script>
 
     <!-- Our app logic -->

@@ -229,8 +229,12 @@ clearing the browser or switching phones.
 > - **Branch:** all Phase 7 work is on **`feature/auth`** (NOT yet merged to `dev`/`main`).
 >   `git checkout feature/auth` and work there. Test locally with Live Server.
 > - **Done & tested:** 7a–7f. Login + full data sync (profiles, exercises, sessions) work
->   across devices, with safe first-login migration. Cache is at **`v18`**.
-> - **Remaining:** **7g (offline)** and **7h (privacy note + release)** — details below.
+>   across devices, with safe first-login migration.
+> - **Code-complete, awaiting owner test:** **7g (offline)** — Supabase library vendored
+>   locally (`vendor/supabase.js`) so the app shell works offline again, and plan edits
+>   (profiles/exercises) now show a friendly "you're offline" notice + block instead of a
+>   scary cloud error. Cache bumped to **`v19`**.
+> - **Remaining:** **7h (privacy note + release)** — details below.
 > - **Where the code lives:** `supabase.js` (client + URL/publishable key), `auth.js` (login
 >   gate, calls `onUserLoggedIn` in app.js on sign-in), and app.js section **“5b. CLOUD
 >   SYNC”** (the `reconcile*`/`*FromCloud`/`*ToRow` helpers + write-through in
@@ -281,22 +285,22 @@ clearing the browser or switching phones.
       (cloud-wins for profiles/exercises; a newest-wins **merge** for sessions).
 - ✅ **7f — First-login migration:** folded into the login reconcile — existing local data
       is uploaded when the cloud is empty, with a one-time "your data is saved" notice.
-- ☐ **7g — Offline handling.** Two parts:
-      1. **Vendor the Supabase library locally** so the app works offline again. Right now
-         `index.html` loads `supabase-js` from a CDN (`https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2`),
-         which the service worker can't cache (cross-origin) — so offline is currently
-         broken. Fix: download that file into the repo (e.g. `vendor/supabase.js`), change
-         `index.html` to load the local copy, add it to `APP_SHELL` in `sw.js`, and bump
-         the cache. Verify the app loads with DevTools set to **Offline**.
-      2. **Handle writes while offline.** Reads already work (they come from the
-         `localStorage` cache). Writes currently `await` Supabase and `alert` on failure.
-         *Recommended minimal approach:* detect offline (`navigator.onLine` / the cloud
-         call failing) and show a friendly "You're offline — reconnect to save changes"
-         message instead of a scary error, while keeping the app usable for viewing.
-         ⚠️ Note: profiles/exercises use **cloud-wins** reconcile, so silently allowing
-         offline edits could be overwritten on next sync — a full offline write-queue is a
-         bigger task; keep 7g minimal (inform + block, or queue only if you do it
-         carefully) and leave a proper queue as a future enhancement.
+- ✅ **7g — Offline handling.** Two parts, both done (code-complete, awaiting owner test):
+      1. ✅ **Vendored the Supabase library locally.** Downloaded `supabase-js@2` (UMD,
+         v2.108.2) into `vendor/supabase.js`; `index.html` now loads that local copy instead
+         of the CDN; added `./vendor/supabase.js` to `APP_SHELL` in `sw.js`; bumped the cache
+         to `v19`. The app shell can now be cached, so it loads with DevTools set to Offline.
+      2. ✅ **Friendly offline handling for writes.** Took the minimal "inform + block"
+         approach for the **cloud-wins** entities (profiles/exercises): new helpers
+         `isOffline()` / `blockedByOffline()` / `reportCloudWriteError()` (in app.js, just
+         above the PROFILE ACTIONS section). `createProfile`, `deleteProfile`,
+         `deleteExercise`, and `handleExerciseFormSubmit` bail out early with a friendly
+         "You're offline 📡 — reconnect to make changes" alert (instead of a scary error),
+         and a mid-request drop also shows the friendly message. Reads still work (from the
+         localStorage cache). **Workouts are deliberately left usable offline** — sessions
+         use a newest-wins **merge**, so an in-progress workout done offline survives and
+         uploads on reconnect. A full offline write-queue for plan edits remains a future
+         enhancement.
 - ☐ **7h — Privacy note + release.**
       1. **Privacy note:** a short, friendly note covering *what's stored* (your email +
          your workout data), *where* (Supabase, a third-party cloud service), and *how to

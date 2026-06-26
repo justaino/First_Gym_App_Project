@@ -184,8 +184,22 @@ data is never uploaded into another's account.
 **Quick test:** log in → create a profile/exercise/workout → check **Supabase → Table
 Editor**. Cross-device: log in with the same account in another browser → data appears.
 
-**Still TODO:** 7g (offline — the Supabase lib is CDN-loaded so must be vendored locally to
-work offline) and 7h (privacy note + release). See ROADMAP.md §8.
+**Offline (7g):** the Supabase library is now **vendored** at `vendor/supabase.js` (loaded
+by `index.html` and cached in `sw.js`'s `APP_SHELL`) instead of from a CDN, so the app shell
+works offline again. Plan edits (profiles/exercises) are **cloud-wins**, so editing them
+offline would be wiped on next sync — instead they show a friendly "you're offline" notice
+and block (helpers `isOffline()` / `blockedByOffline()` / `reportCloudWriteError()` in
+app.js). Because `navigator.onLine` isn't reliable (Chrome's DevTools "Offline" throttling
+doesn't flip it), a failed write is also caught after the fact via `isNetworkError()` and
+shown as the same friendly notice. Workouts stay usable offline (sessions **merge**, so they
+sync on reconnect). `reconcileSessions` also drops **orphaned** sessions (whose profile no
+longer exists) so they don't repeatedly fail the `sessions_profile_id_fkey` constraint.
+To update the vendored library: re-download `https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2`
+into `vendor/supabase.js`, **delete the trailing `//# sourceMappingURL=…` line** (jsDelivr
+appends it; left in, it makes the browser 404-request a source map that isn't in the repo —
+harmless console noise), and bump `CACHE_VERSION`.
+
+**Still TODO:** 7h (privacy note + release). See ROADMAP.md §8.
 
 ---
 
@@ -249,6 +263,18 @@ its first weighted workout won't fire a PR (there's nothing to beat yet).
 
 Newest first. Add a line here whenever behaviour changes.
 
+- **2026-06-26** — **Phase 7g follow-up fixes (`feature/auth`):** (1) **orphan sessions** —
+  `reconcileSessions` now drops sessions whose `profileId` no longer exists (they fail the
+  `sessions_profile_id_fkey` constraint and can never upload); this clears the repeating
+  console error on login and removes the dead sessions from the local cache. (2) **offline
+  detection** — added `isNetworkError()`, used in `reportCloudWriteError`, so a failed cloud
+  write shows the friendly "you're offline" notice even when `navigator.onLine` wrongly
+  reports online (e.g. Chrome DevTools "Offline" throttling doesn't flip it). Cache `v20`.
+- **2026-06-26** — **Phase 7g (offline) — code-complete on `feature/auth`:** vendored the
+  Supabase library locally (`vendor/supabase.js`) so the app shell works offline again, and
+  added friendly "you're offline" handling that blocks **plan edits** (profiles/exercises)
+  when offline (they're cloud-wins, so offline edits would be lost); workouts stay usable
+  offline (sessions merge). Cache bumped to `v19`. Remaining: 7h (privacy + release).
 - **2026-06-26** — **Phase 7 (accounts + cloud sync) in progress on `feature/auth`:**
   Supabase login + full data sync (profiles/exercises/sessions) with first-login
   migration (7a–7f done). NOT on `main` yet. Remaining: 7g (offline) + 7h (privacy +
