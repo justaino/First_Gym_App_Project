@@ -160,6 +160,10 @@ date and the history wording stay in sync.
 key** live in `supabase.js` (both are safe to ship — protected by Row-Level Security).
 The **secret key is never committed**.
 
+> 📘 **Setting this up from scratch?** `Documentation/SUPABASE-SETUP.md` explains how the
+> connection works and gives a step-by-step recipe (create project → vendor the library →
+> create client → tables → grants → RLS → auth → test), plus a troubleshooting table.
+
 - **New key system:** this project uses Supabase's new keys; the **legacy `anon` JWT is
   disabled**, so the app uses the **publishable key** (`sb_publishable_…`). The legacy
   JWT returned 401.
