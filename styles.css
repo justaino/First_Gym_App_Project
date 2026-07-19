@@ -358,6 +358,68 @@ body {
   margin-top: 12px;
 }
 
+/* ---- Exercise-name suggestions dropdown (Phase 8) ----
+   The wrapper is "position: relative" so the list below can be positioned
+   against it. Everything uses the design-system variables, so dark mode works
+   automatically. */
+.suggest {
+  position: relative;
+}
+
+.suggest__list {
+  position: absolute;
+  top: calc(100% + 6px); /* just below the name box */
+  left: 0;
+  right: 0;
+  z-index: 10; /* float above the fields underneath */
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  background-color: var(--card);
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-soft);
+  max-height: 250px;
+  overflow-y: auto;
+}
+/* Needed because the rule above sets "display" indirectly via the list —
+   without this the dropdown would still show when we hide it. */
+.suggest__list[hidden] {
+  display: none;
+}
+
+.suggest__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+/* The row you're on (hovered, or moved to with the arrow keys) */
+.suggest__item--active,
+.suggest__item:hover {
+  background-color: rgba(95, 196, 188, 0.15); /* soft mint tint */
+}
+
+.suggest__emoji {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+.suggest__name {
+  font-weight: 700;
+  font-size: 14px;
+}
+/* Muscle group + "3 × 10", pushed to the right-hand side */
+.suggest__meta {
+  margin-left: auto;
+  text-align: right;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
 /* ---- Emoji picker (chips you tap to choose an icon) ---- */
 .emoji-picker {
   display: flex;
@@ -606,6 +668,17 @@ body {
   color: var(--muted);
   font-weight: 800;
   font-size: 14px;
+  flex-shrink: 0; /* keep "2/4" on one line next to a long last-time hint */
+}
+
+/* Phase 9: the small grey "Last time (...)" reminder under the exercise name.
+   It's allowed to wrap onto a second line when the weights varied per set. */
+.workout-exercise__lasttime {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 12px;
+  margin-top: 3px;
+  line-height: 1.35;
 }
 
 /* The row of tap-to-tick set dots */

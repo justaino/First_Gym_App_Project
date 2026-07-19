@@ -317,3 +317,151 @@ app-shell behaviour; only the anon key in client code.
 **Done when:** I can log in on my laptop and my phone and see/edit the same workouts on
 both; a brand-new device shows my data after login; and after clearing local data and
 logging back in, everything is restored.
+
+---
+
+## 9. Social & quality-of-life — Phases 8–12 (planned 2026-07-19)
+
+> **Decisions made:**
+> - A visual redesign was considered (5 mockup variants) and **parked for now** — no
+>   styling changes in these phases. New UI must simply match the current design system
+>   (section 3).
+> - Friend requests are **in-app only** (no real emails sent — that would need an Edge
+>   Function + a third-party email service; maybe later).
+> - Phases 8, 9, and 11 are pure client-side. Phases 10 and 12 touch Supabase (small SQL
+>   migrations the owner runs in the SQL editor, like Phase 7).
+>
+> **Standing rules for every phase (from CLAUDE.md — non-negotiable):** work on `dev`;
+> one phase at a time, STOP after each for owner testing; comment code for a beginner;
+> bump `CACHE_VERSION` in `sw.js` with any app-file change; ask before committing; never
+> merge/push without being asked; never claim to have run the app; update RUNBOOK.md as
+> you go. For SQL steps: hand the owner the script, **wait for confirmation it ran**
+> before writing app code against it. (Reminder: SQL-created tables need explicit
+> `GRANT`s to `anon`/`authenticated` — see RUNBOOK §Cloud sync.)
+
+### Phase 8 — Exercise suggestions ☐ *(built, awaiting owner test — cache `v27`)*
+**Goal:** stop typing exercise names from scratch.
+- ✅ New file `exercise-library.js` (loaded before `app.js` in `index.html`, added to the
+  service-worker `APP_SHELL`): a plain array `EXERCISE_LIBRARY` of ~90 common exercises,
+  each `{ name, icon, muscleGroup, defaultSets, defaultReps }`, covering chest, back,
+  shoulders, arms, legs, core, cardio (+ a small Mobility group). Icons come from the
+  app's preset emoji list — `EMOJI_PRESETS` grew from 7 to 14 to cover the library.
+- ✅ In the add/edit-exercise modal: typing in the name field shows up to 5
+  case-insensitive matches in a dropdown styled like the app (white card, rounded,
+  shadow) — emoji + name + muscle group + "3×10". Tapping one fills the name, selects
+  the emoji, and applies default sets/reps **only if the owner hasn't already changed
+  them**. Arrow keys + Enter select; Escape or an outside tap closes; typing a custom
+  name keeps working exactly as before.
+
+**Done when:** typing "ben" offers Bench press etc.; picking it fills the form; a
+made-up name still saves fine. **Test:** phone + desktop, add and edit modes, keyboard
+navigation, custom names.
+
+### Phase 9 — "Last time" hints in workout mode ☐ *(built, awaiting owner test — cache `v28`)*
+**Goal:** see what you lifted last time while training.
+- ✅ Pure client-side, computed from saved sessions: for each exercise in the workout
+  sheet, find the most recent **completed** session (same profile, any day) whose
+  entries include that exercise (with ≥1 ticked set), and show a small muted hint line
+  under the exercise name, e.g. `Last time (Mon, Jul 14): 40 kg × 10, 10, 8`. The
+  in-progress workout is excluded, so the hint doesn't shift as you tick sets.
+- ✅ No hint when there's no history (no empty boxes). Weightless history shows reps
+  only; varied weights are spelled out per set. Does not change any saved data or
+  prefills.
+
+**Done when:** a repeat workout shows accurate last-time lines; a brand-new exercise
+shows nothing. **Test:** finish a workout → start the same day again → hints match.
+
+### Phase 9b — Weight unit (kg / lb) ☐ *(built, awaiting owner test — cache `v29`)*
+**Goal:** stop assuming kilograms. Added on 2026-07-19 after Phase 9 introduced the
+app's first hard-coded unit label. Pure client-side.
+- ✅ **Settings → Weight unit** dropdown (kg / lb), saved in `gym:unit` in
+  localStorage. Like the theme this is **per device and not synced** — no SQL needed.
+- ✅ **Display only — weights are never converted.** A set saved as `40` stays `40`
+  and just reads `40 lb`. (Decided against conversion: it would rewrite real history,
+  add rounding drift to PRs/volume, and conflict across synced devices.)
+- ✅ Every weight in the app goes through `formatWeight(n)` → `"40 kg"` or
+  `unitLabel()` → `"kg"`: schedule summaries, form labels, the workout-sheet Weight
+  column, Phase 9 "last time" hints, history detail, chart tooltips + legend, the
+  Insights "kg moved" tile, PR board, "since you started" trends, monthly volume, and
+  the PR celebration card.
+
+**Done when:** switching to lb relabels every screen immediately, and switching back
+leaves all saved numbers exactly as they were. **Test:** switch mid-workout; check
+Progress + Insights; confirm the setting survives a refresh and stays per-device.
+
+### Phase 10 — Drag-to-reorder exercises ☐
+**Goal:** control the order of exercises within a day (currently fixed).
+- ☐ **SQL first (owner runs):** `alter table exercises add column sort_order integer;`
+- ☐ Add `sortOrder` to the Exercise shape (normalized like the Phase-2 per-set fields:
+  older exercises without it keep working). All views (Schedule, Today, workout mode)
+  sort by `sortOrder`, falling back to current order for legacy rows. New exercises go
+  to the end of their day.
+- ☐ Schedule view: a drag handle (⠿) on each exercise card. Drag within the same day
+  group using **Pointer Events** so it works with touch (page must not scroll while
+  dragging the handle); a visible gap shows the drop position. On drop, renumber that
+  day's exercises and save (localStorage + write-through to Supabase like other plan
+  edits, including the Phase-7g offline block with the friendly offline message).
+
+**Done when:** reordering sticks after refresh AND appears on a second logged-in device;
+workout mode follows the new order. **Test:** reorder on phone by touch; go offline →
+friendly message, order unchanged.
+
+### Phase 11 — Weekly recap ☐
+**Goal:** a motivating "your week" summary. Pure client-side.
+- ☐ A "Last week" recap card on the **Progress** tab: workouts done vs weekly goal,
+  total sets, total volume (reps × weight), any PRs set (reuse the existing PR logic),
+  and current streak. Friendly empty state if last week was empty.
+- ☐ On the **first app open in a new week**, show the same recap once as a dismissible
+  celebration card at the top of Today ("Your week in review 🎉"). Remember dismissal
+  per week key (e.g. `gym:recapSeen:<mondayKey>`) so it never nags.
+
+**Done when:** numbers match the Progress tab's own stats for last week; the Today card
+appears once per week and stays dismissed. **Test:** fake the week key to simulate a new
+week; empty-history case.
+
+### Phase 12 — Friends + nudges ☐
+**Goal:** add friends, see if they trained today, peek at their workouts, and nudge them.
+In-app only — no emails. Data refreshes on app open / tab visit (no push notifications;
+that's out of scope for a PWA on iOS).
+
+- ☐ **12a — SQL (owner runs; wait for confirmation):** one commented script creating:
+  - `user_directory(user_id pk → auth.users, email unique lowercased, display_name,
+    share_workouts boolean default true)` — the app upserts the signed-in user's own row
+    at login. RLS: each user can read/update only their own row.
+  - `find_user_by_email(text)` — a `SECURITY DEFINER` function returning `(user_id,
+    display_name)` for an exact email match, so emails are never browsable.
+  - `friendships(id, requester_id, addressee_id, status 'pending'|'accepted',
+    created_at, unique (requester_id, addressee_id))`. RLS: participants read their own
+    rows; requester inserts (status `pending` only, not to self, no duplicate pair in
+    either direction); addressee updates status to `accepted`; either side deletes.
+  - A new **SELECT policy on `sessions`**: accepted friends may read a user's sessions
+    when that user's `share_workouts` is true (owner's own access unchanged).
+  - `nudges(id, from_user, to_user, created_at, seen boolean default false)`. RLS:
+    sender inserts only toward an **accepted** friend; recipient reads + marks seen.
+    A unique index on `(from_user, to_user, (created_at::date))` = max one nudge per
+    friend per day, enforced server-side.
+  - Explicit `GRANT`s for all of the above.
+- ☐ **12b — Friends tab:** a 5th tab (🤝 Friends). Add-friend form (email → lookup →
+  request; friendly "no account with that email" error). Incoming requests with
+  Accept / Decline. Buddy list: display name, "Went today ✅" (a completed session dated
+  today) or "Not yet 💤", workouts-this-week count, a **👋 Nudge** button (becomes
+  "Nudged! ✓" and disables until tomorrow once used), and a remove-friend option
+  (confirm first). Tapping a buddy shows their recent workouts via the existing
+  session-detail modal (only if they share).
+- ☐ **12c — Today-tab tie-ins:** a small "Gym buddies" card (hidden with no friends)
+  showing each friend's went-today status; on app open, unseen nudges show a friendly
+  toast — "👋 Amara nudged you — go get that workout!" — then get marked seen.
+- ☐ **12d — Settings + polish:** "Share my workouts with friends" toggle (writes
+  `share_workouts`); include friends data in the existing offline handling (reads say
+  "reconnect to see friends"; writes use the friendly offline block); empty states; a
+  short `Documentation/WhatsNew_Friends_*.md` for testers. Extend "Delete my data" to
+  also remove the user's directory row, friendships, and nudges.
+
+**Done when:** two accounts can request/accept, each sees the other's went-today status
+and recent workouts, a nudge sent from one shows as a toast on the other's next open
+(and can't be repeated until tomorrow), sharing can be switched off, and unfriending
+works both ways. **Test with two accounts** (e.g. a second test email) on two browsers.
+
+**Watch-outs:** free Supabase pauses after ~1 week idle; never expose more than
+`display_name` via the lookup; keep `service_role` out of the repo; all friend reads
+must fail soft when offline.
