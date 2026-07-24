@@ -198,7 +198,54 @@ function normalizeExercise(exercise) {
     weight: defaultWeight,
     repsPerSet: resizeArray(existingReps, sets, defaultReps),
     weightPerSet: resizeArray(existingWeight, sets, defaultWeight),
+    // Phase 10: a number if this exercise has been given a position within its
+    // day, otherwise null. Exercises saved before Phase 10 have no order yet.
+    sortOrder:
+      typeof exercise.sortOrder === "number" ? exercise.sortOrder : null,
   };
+}
+
+/* ---- Ordering exercises within a day (Phase 10) ----
+   Each exercise can have a sortOrder (0, 1, 2, …) saying where it sits within
+   its day. Older exercises (added before drag-to-reorder existed) have none —
+   we call those "legacy" here. The rule is: legacy exercises keep their current
+   order and sit FIRST, then any exercise with a real sortOrder follows, in
+   number order. That means a newly-added exercise (which gets a number) lands
+   at the END of its day, and once you drag a day even once every exercise in it
+   gets a number, so from then on the order is purely by number. */
+function sortExercisesByOrder(list) {
+  // Attach each item's current position so legacy rows can fall back to it.
+  return list
+    .map((exercise, index) => ({ exercise: exercise, index: index }))
+    .sort((a, b) => {
+      const aHasOrder = typeof a.exercise.sortOrder === "number";
+      const bHasOrder = typeof b.exercise.sortOrder === "number";
+      if (aHasOrder && bHasOrder) {
+        return a.exercise.sortOrder - b.exercise.sortOrder;
+      }
+      if (aHasOrder) {
+        return 1; // a is numbered → it goes AFTER the un-numbered b
+      }
+      if (bHasOrder) {
+        return -1; // b is numbered → it goes after a
+      }
+      return a.index - b.index; // both legacy → keep their current order
+    })
+    .map((item) => item.exercise);
+}
+
+// The next sortOrder to give a brand-new exercise so it lands at the end of its
+// day: one more than the biggest number already used in that day (or 0 if none).
+function nextSortOrderForDay(profileId, day) {
+  const numbers = loadList(STORAGE_KEYS.exercises)
+    .filter(
+      (exercise) =>
+        exercise.profileId === profileId &&
+        exercise.day === day &&
+        typeof exercise.sortOrder === "number"
+    )
+    .map((exercise) => exercise.sortOrder);
+  return numbers.length === 0 ? 0 : Math.max(...numbers) + 1;
 }
 
 // A short text summary for an exercise card, e.g. "3 × 10", "3 × 10,12,15",
@@ -255,7 +302,9 @@ function toDateInputValue(isoString) {
    ========================================================================= */
 
 // Build one exercise card as an HTML element.
-function createExerciseCard(exercise) {
+// Build one exercise card. Pass draggable = true (used on the Schedule tab) to
+// add a drag handle and tag the card with its id, so it can be reordered.
+function createExerciseCard(exercise, draggable) {
   const card = document.createElement("div");
   card.className = "exercise";
 
@@ -302,7 +351,166 @@ function createExerciseCard(exercise) {
   card.appendChild(icon);
   card.appendChild(info);
   card.appendChild(actions);
+
+  // Phase 10: on the Schedule tab, add a grip handle at the front and remember
+  // which exercise this card is, so drag-to-reorder can move it.
+  if (draggable) {
+    card.dataset.exerciseId = exercise.id;
+
+    const drag = document.createElement("div");
+    drag.className = "exercise__drag";
+    drag.textContent = "⠿"; // a simple braille "grip" icon
+    drag.setAttribute("aria-label", "Drag to reorder");
+    drag.setAttribute("title", "Drag to reorder");
+
+    card.insertBefore(drag, card.firstChild); // put the handle on the left
+  }
+
   return card;
+}
+
+/* =========================================================================
+   DRAG-TO-REORDER EXERCISES (Phase 10)
+   On the Schedule tab you can grab an exercise card's ⠿ handle and drag it up
+   or down to reorder it WITHIN its day. We use Pointer Events (not the old
+   drag-and-drop API) because those work the same for mouse and touch, and let
+   us stop the page scrolling while you drag.
+
+   How it works: while you drag, we move the card among its siblings live (so you
+   can see where it will land). When you let go, if the order actually changed we
+   renumber that day's exercises (0, 1, 2, …) and save — locally and to the cloud,
+   with the same "you're offline" guard as other plan edits.
+   ========================================================================= */
+
+// Attach the drag behaviour to every card inside one day's list container.
+function enableDragReorder(listEl) {
+  Array.from(listEl.children).forEach((card) => {
+    const handle = card.querySelector(".exercise__drag");
+    if (handle) {
+      handle.addEventListener("pointerdown", (event) => {
+        startCardDrag(event, card, listEl);
+      });
+    }
+  });
+}
+
+// Begin dragging one card. Called on pointerdown on that card's handle.
+function startCardDrag(event, card, listEl) {
+  // Only react to the primary mouse button (or a touch/pen, which report 0).
+  if (event.button !== 0) {
+    return;
+  }
+  event.preventDefault(); // stop text selection / the page starting to scroll
+
+  const pointerId = event.pointerId;
+
+  // IMPORTANT: capture the pointer on the LIST container, not on the handle.
+  // The handle lives inside the card, and dragging moves that card around in
+  // the DOM — if the capture were on the handle, the browser would drop the
+  // capture the moment the card moved and the drag would freeze. The list
+  // container never moves, so capturing there keeps the events flowing.
+  listEl.setPointerCapture(pointerId);
+
+  // Remember the order before the drag, so afterwards we can tell if it changed.
+  const orderBefore = Array.from(listEl.children).map(
+    (child) => child.dataset.exerciseId
+  );
+
+  card.classList.add("exercise--dragging");
+
+  // As the pointer moves, slot the dragged card in among its siblings based on
+  // where the pointer is vertically.
+  function onMove(moveEvent) {
+    moveEvent.preventDefault();
+    const pointerY = moveEvent.clientY;
+
+    const siblings = Array.from(listEl.children).filter(
+      (child) => child !== card
+    );
+
+    let placedBefore = false;
+    for (let i = 0; i < siblings.length; i = i + 1) {
+      const rect = siblings[i].getBoundingClientRect();
+      const midpoint = rect.top + rect.height / 2;
+      // If the pointer is above this sibling's middle, the card belongs before it.
+      if (pointerY < midpoint) {
+        listEl.insertBefore(card, siblings[i]);
+        placedBefore = true;
+        break;
+      }
+    }
+    // Past everyone's middle → it belongs at the very end.
+    if (!placedBefore) {
+      listEl.appendChild(card);
+    }
+  }
+
+  // On release: clean up, and save if the order changed.
+  function onUp() {
+    if (listEl.hasPointerCapture(pointerId)) {
+      listEl.releasePointerCapture(pointerId);
+    }
+    listEl.removeEventListener("pointermove", onMove);
+    listEl.removeEventListener("pointerup", onUp);
+    listEl.removeEventListener("pointercancel", onUp);
+    card.classList.remove("exercise--dragging");
+
+    const orderAfter = Array.from(listEl.children).map(
+      (child) => child.dataset.exerciseId
+    );
+    const changed = orderAfter.some((exId, i) => exId !== orderBefore[i]);
+    if (changed) {
+      saveDayOrder(orderAfter);
+    }
+  }
+
+  // Listen on the list container (the capture target), so these fire for the
+  // whole drag no matter which card is currently under the pointer.
+  listEl.addEventListener("pointermove", onMove);
+  listEl.addEventListener("pointerup", onUp);
+  listEl.addEventListener("pointercancel", onUp); // e.g. an interrupting call
+}
+
+// Save a day's new order: give each listed exercise a sortOrder of 0, 1, 2, …
+// Writes to the cloud first (the source of truth), then the local cache — the
+// same pattern (and offline guard) as other plan edits.
+async function saveDayOrder(orderedIds) {
+  // Reordering the plan is a cloud write, so block it when offline and put the
+  // cards back the way they were saved.
+  if (blockedByOffline()) {
+    renderSchedule();
+    return;
+  }
+
+  const exercises = loadList(STORAGE_KEYS.exercises);
+
+  for (let i = 0; i < orderedIds.length; i = i + 1) {
+    const exercise = exercises.find((item) => item.id === orderedIds[i]);
+    if (!exercise) {
+      continue;
+    }
+    if (exercise.sortOrder === i) {
+      continue; // already in the right spot — no write needed
+    }
+
+    const { error } = await supabaseClient
+      .from("exercises")
+      .update({ sort_order: i })
+      .eq("id", orderedIds[i]);
+    if (error) {
+      reportCloudWriteError("save the new order to the cloud", error);
+      // Persist whatever already succeeded so local matches the cloud, then
+      // redraw to a consistent state.
+      saveList(STORAGE_KEYS.exercises, exercises);
+      renderSchedule();
+      return;
+    }
+
+    exercise.sortOrder = i; // keep the local copy in step with the cloud
+  }
+
+  saveList(STORAGE_KEYS.exercises, exercises);
+  renderSchedule(); // redraw so everything reflects the saved order
 }
 
 // Draw the Schedule view: exercises grouped by day.
@@ -363,9 +571,19 @@ function renderSchedule() {
     headingRow.appendChild(startBtn);
     group.appendChild(headingRow);
 
-    exercisesForDay.forEach((exercise) => {
-      group.appendChild(createExerciseCard(exercise));
+    // Phase 10: the exercise cards live in their own list container so drag-to-
+    // reorder only ever moves cards among same-day siblings (never the heading).
+    const list = document.createElement("div");
+    list.className = "day-group__exercises";
+
+    // Show this day's exercises in their saved order, each with a drag handle.
+    sortExercisesByOrder(exercisesForDay).forEach((exercise) => {
+      list.appendChild(createExerciseCard(exercise, true));
     });
+
+    group.appendChild(list);
+    // Wire up dragging for the cards we just added.
+    enableDragReorder(list);
 
     container.appendChild(group);
   });
@@ -399,8 +617,10 @@ function renderToday() {
     return;
   }
 
-  const todaysExercises = getExercisesForActiveProfile().filter(
-    (exercise) => exercise.day === todayName
+  const todaysExercises = sortExercisesByOrder(
+    getExercisesForActiveProfile().filter(
+      (exercise) => exercise.day === todayName
+    )
   );
 
   // Only show the button if there's something to do; label it Resume if a
@@ -1978,6 +2198,7 @@ function mapExerciseFromCloud(row) {
     icon: row.icon,
     day: row.day,
     notes: row.notes,
+    sortOrder: row.sort_order, // Phase 10: position within its day (may be null)
   };
 }
 function exerciseToRow(exercise) {
@@ -1993,6 +2214,10 @@ function exerciseToRow(exercise) {
     icon: exercise.icon,
     day: exercise.day,
     notes: exercise.notes,
+    // Phase 10: send null (not undefined) when there's no order yet, so the
+    // database column is cleared/kept rather than left out of the update.
+    sort_order:
+      typeof exercise.sortOrder === "number" ? exercise.sortOrder : null,
   };
 }
 
@@ -2486,6 +2711,8 @@ async function handleExerciseFormSubmit(event) {
       icon: selectedEmoji,
       day: day,
       notes: "", // reserved for a later phase
+      // Phase 10: put it at the end of its day's list.
+      sortOrder: nextSortOrderForDay(loadActiveProfileId(), day),
     };
     const { error } = await supabaseClient
       .from("exercises")
@@ -2499,6 +2726,13 @@ async function handleExerciseFormSubmit(event) {
     // EDITING: update the fields, push the change to the cloud, then cache it.
     const existing = exercises.find((item) => item.id === id);
     if (existing) {
+      // Phase 10: if the day changed, move this exercise to the end of the new
+      // day (computed BEFORE we change its day). If the day is unchanged, keep
+      // its existing position.
+      if (existing.day !== day) {
+        existing.sortOrder = nextSortOrderForDay(existing.profileId, day);
+      }
+
       existing.name = name;
       existing.sets = sets;
       existing.reps = reps;
@@ -3029,9 +3263,10 @@ function startWorkout(day) {
   let session = findInProgressSession(day);
 
   if (!session) {
-    // No workout in progress for this day → build a fresh one from the plan.
-    const exercisesForDay = getExercisesForActiveProfile().filter(
-      (exercise) => exercise.day === day
+    // No workout in progress for this day → build a fresh one from the plan,
+    // in the same order shown on the Schedule/Today tabs (Phase 10).
+    const exercisesForDay = sortExercisesByOrder(
+      getExercisesForActiveProfile().filter((exercise) => exercise.day === day)
     );
     if (exercisesForDay.length === 0) {
       window.alert("There are no exercises planned for " + day + ".");

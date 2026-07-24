@@ -57,6 +57,10 @@ All keys start with `gym:`.
 | `gym:sessions` | Saved + in-progress workouts (the history). |
 | `gym:theme` | `"light"` or `"dark"`. |
 | `gym:unit` | `"kg"` or `"lb"` — the weight label shown throughout the app (display only; per device, not synced). |
+
+> Exercise **order within a day** (Phase 10) is NOT a separate key — it lives on
+> each exercise as `sortOrder` (in `gym:exercises`) and as `sort_order` in the
+> Supabase `exercises` table. See §5h.
 | `gym:celebratedMilestones` | Easter-egg bookkeeping: which workout-count milestones each profile has already celebrated, so the trophy only plays once. |
 
 ---
@@ -320,6 +324,48 @@ you started" trends · monthly volume · the PR celebration card.
 
 ---
 
+## 5h. Drag-to-reorder exercises (Phase 10)
+
+On the **Schedule** tab each exercise card has a grip handle (⠿) on the left.
+Drag it up/down to reorder that exercise **within its day**. The order then
+shows the same everywhere (Schedule, Today, and workout mode) and syncs to your
+other devices.
+
+- **Stored as:** a `sort_order` column on the Supabase `exercises` table (added
+  by the Phase 10 SQL migration) and a `sortOrder` field on the local exercise
+  shape. Lower numbers come first.
+- **Where in the code (app.js):**
+  - `sortExercisesByOrder(list)` — the ordering rule; used by `renderSchedule`,
+    `renderToday` and `startWorkout` so all three agree.
+  - `nextSortOrderForDay(profileId, day)` — the number a new exercise gets so it
+    lands at the end of its day. Also used when an edit moves an exercise to a
+    different day.
+  - Section **"DRAG-TO-REORDER EXERCISES"** — `enableDragReorder` /
+    `startCardDrag` (Pointer Events) and `saveDayOrder` (cloud-first write with
+    the Phase-7g offline guard).
+- **Ordering rule (handles old data):** exercises saved before Phase 10 have no
+  number ("legacy"). Legacy ones keep their current order and sit **first**;
+  numbered ones follow, in number order. So a brand-new exercise (which gets a
+  number) lands at the **end** of its day, and the **first drag on a day
+  renumbers every exercise in it** (0,1,2,…), after which order is purely by
+  number.
+- **Touch:** dragging uses Pointer Events with `touch-action: none` on the
+  handle, so the page doesn't scroll while you drag. You can only reorder within
+  a day (the cards live in a per-day list container).
+  - ⚠️ **Gotcha (fixed):** the pointer is captured on the **list container**, not
+    on the handle. The handle sits inside the card, and dragging moves that card
+    in the DOM — capturing on the handle makes the browser drop the capture the
+    instant the card moves, freezing the drag ("lifts but won't move"). The list
+    container never moves, so capture there holds for the whole drag.
+- **Offline:** reordering is a plan edit, so if you're offline it shows the
+  friendly "you're offline" notice and the order snaps back — reconnect to
+  change it.
+
+> **Note:** there's no keyboard reorder (drag only), and reordering does not
+> touch any saved workout history — only the plan's display order.
+
+---
+
 ## 6. Backup & restore (import / export)
 
 Found in **Settings → Backup**.
@@ -379,6 +425,14 @@ its first weighted workout won't fire a PR (there's nothing to beat yet).
 ## 9. Change log
 
 Newest first. Add a line here whenever behaviour changes.
+
+- **2026-07-24** — **Phase 10 — drag-to-reorder exercises (on `dev`, awaiting owner
+  test):** SQL migration added a `sort_order` column to the Supabase `exercises` table;
+  the app now stores `sortOrder` per exercise, sorts every view by it
+  (`sortExercisesByOrder`), and adds a ⠿ drag handle on Schedule cards (Pointer Events,
+  touch-friendly, reorder within a day only). New exercises land at the end of their day;
+  the first drag on a day renumbers it. Cloud-first write with the offline guard. See §5h.
+  Cache `v30`.
 
 - **2026-07-19** — **Phase 9b — kg/lb unit setting (on `dev`, awaiting owner test):**
   new **Settings → Weight unit** dropdown; every weight in the app now reads through

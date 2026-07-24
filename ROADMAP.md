@@ -339,7 +339,7 @@ logging back in, everything is restored.
 > before writing app code against it. (Reminder: SQL-created tables need explicit
 > `GRANT`s to `anon`/`authenticated` — see RUNBOOK §Cloud sync.)
 
-### Phase 8 — Exercise suggestions ☐ *(built, awaiting owner test — cache `v27`)*
+### Phase 8 — Exercise suggestions ✅ *(shipped to `main` 2026-07-24 — cache `v31`)*
 **Goal:** stop typing exercise names from scratch.
 - ✅ New file `exercise-library.js` (loaded before `app.js` in `index.html`, added to the
   service-worker `APP_SHELL`): a plain array `EXERCISE_LIBRARY` of ~90 common exercises,
@@ -357,7 +357,7 @@ logging back in, everything is restored.
 made-up name still saves fine. **Test:** phone + desktop, add and edit modes, keyboard
 navigation, custom names.
 
-### Phase 9 — "Last time" hints in workout mode ☐ *(built, awaiting owner test — cache `v28`)*
+### Phase 9 — "Last time" hints in workout mode ✅ *(shipped to `main` 2026-07-24 — cache `v31`)*
 **Goal:** see what you lifted last time while training.
 - ✅ Pure client-side, computed from saved sessions: for each exercise in the workout
   sheet, find the most recent **completed** session (same profile, any day) whose
@@ -371,7 +371,7 @@ navigation, custom names.
 **Done when:** a repeat workout shows accurate last-time lines; a brand-new exercise
 shows nothing. **Test:** finish a workout → start the same day again → hints match.
 
-### Phase 9b — Weight unit (kg / lb) ☐ *(built, awaiting owner test — cache `v29`)*
+### Phase 9b — Weight unit (kg / lb) ✅ *(shipped to `main` 2026-07-24 — cache `v31`)*
 **Goal:** stop assuming kilograms. Added on 2026-07-19 after Phase 9 introduced the
 app's first hard-coded unit label. Pure client-side.
 - ✅ **Settings → Weight unit** dropdown (kg / lb), saved in `gym:unit` in
@@ -389,18 +389,22 @@ app's first hard-coded unit label. Pure client-side.
 leaves all saved numbers exactly as they were. **Test:** switch mid-workout; check
 Progress + Insights; confirm the setting survives a refresh and stays per-device.
 
-### Phase 10 — Drag-to-reorder exercises ☐
+### Phase 10 — Drag-to-reorder exercises ✅ *(shipped to `main` 2026-07-24 — cache `v31`)*
 **Goal:** control the order of exercises within a day (currently fixed).
-- ☐ **SQL first (owner runs):** `alter table exercises add column sort_order integer;`
-- ☐ Add `sortOrder` to the Exercise shape (normalized like the Phase-2 per-set fields:
+- ✅ **SQL first (owner ran 2026-07-24):** `alter table exercises add column if not
+  exists sort_order integer;` (table-level GRANTs already cover the new column, so no
+  new grants/RLS needed).
+- ✅ Added `sortOrder` to the Exercise shape (normalized like the Phase-2 per-set fields:
   older exercises without it keep working). All views (Schedule, Today, workout mode)
-  sort by `sortOrder`, falling back to current order for legacy rows. New exercises go
-  to the end of their day.
-- ☐ Schedule view: a drag handle (⠿) on each exercise card. Drag within the same day
-  group using **Pointer Events** so it works with touch (page must not scroll while
-  dragging the handle); a visible gap shows the drop position. On drop, renumber that
-  day's exercises and save (localStorage + write-through to Supabase like other plan
-  edits, including the Phase-7g offline block with the friendly offline message).
+  sort by `sortOrder` via `sortExercisesByOrder`, falling back to current order for
+  legacy rows (legacy first, numbered after). New exercises go to the end of their day
+  (`nextSortOrderForDay`); an edit that changes an exercise's day moves it to the end of
+  the new day.
+- ✅ Schedule view: a ⠿ drag handle on each exercise card. Drag within the same day's
+  list container using **Pointer Events** (touch-friendly; `touch-action: none` stops
+  the page scrolling); the card moves live to show the drop position. On drop, renumber
+  that day's exercises (0,1,2,…) and save cloud-first + localStorage, with the Phase-7g
+  offline block (order snaps back with the friendly message when offline).
 
 **Done when:** reordering sticks after refresh AND appears on a second logged-in device;
 workout mode follows the new order. **Test:** reorder on phone by touch; go offline →

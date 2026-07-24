@@ -213,6 +213,36 @@ body {
   gap: 14px;
 }
 
+/* Phase 10: drag handle on Schedule exercise cards. "touch-action: none" tells
+   the browser we'll handle touch dragging ourselves, so the page doesn't scroll
+   while you drag the handle. */
+.exercise__drag {
+  flex-shrink: 0;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  margin: -4px 0; /* enlarge the touch target without moving the icon */
+  color: var(--muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.exercise__drag:active {
+  cursor: grabbing;
+}
+
+/* The card being dragged: lift it a little so it stands out from the rest. */
+.exercise--dragging {
+  box-shadow: var(--shadow-soft);
+  transform: scale(1.02);
+  opacity: 0.97;
+  position: relative;
+  z-index: 5;
+}
+
 .exercise__icon {
   font-size: 28px;
   /* A soft tinted circle behind the emoji */
