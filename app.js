@@ -32,7 +32,14 @@ const STORAGE_KEYS = {
   // Phase 7: which logged-in user the local cache currently belongs to, so we
   // never upload one person's local data into a different person's account.
   syncedUserId: "gym:syncedUserId",
+  // Phase 9b: the weight unit label, "kg" or "lb". Like the theme, this is a
+  // DISPLAY setting saved per device — it is not synced to your account.
+  unit: "gym:unit",
 };
+
+// The weight units you can choose between in Settings.
+const UNITS = ["kg", "lb"];
+const DEFAULT_UNIT = "kg";
 
 // Easter egg: a workout milestone shows a one-time trophy celebration when your
 // total completed-workout count first reaches one of these numbers.
@@ -42,7 +49,12 @@ const WORKOUT_MILESTONES = [7, 30, 50, 100];
 const DEFAULT_WEEKLY_GOAL = 3;
 
 // The fixed list of emoji icons the user can pick from.
-const EMOJI_PRESETS = ["💪", "🏋️", "🚴", "🏃", "🧘", "🤸", "🏊"];
+// Phase 8 added the second row so every exercise in exercise-library.js has a
+// matching icon here. If you add an icon to the library, add it here too.
+const EMOJI_PRESETS = [
+  "💪", "🏋️", "🚴", "🏃", "🧘", "🤸", "🏊",
+  "🦵", "🧗", "🤾", "🔥", "🥊", "⏱️", "🚣",
+];
 
 // Days in the order we want to show them.
 const DAYS = [
@@ -89,6 +101,37 @@ function saveActiveProfileId(id) {
   } else {
     localStorage.removeItem(STORAGE_KEYS.activeProfileId);
   }
+}
+
+/* ---- Weight unit (Phase 9b) ----
+   Which label to put after weights: "kg" or "lb". IMPORTANT: this only changes
+   the LABEL. Your saved numbers are never converted or rewritten — a set saved
+   as 40 stays 40 and simply reads "40 lb" instead of "40 kg". That keeps your
+   history and personal records exactly as you recorded them at the gym.
+   Like dark mode, this is saved per device and is NOT synced to your account. */
+function loadUnit() {
+  const saved = localStorage.getItem(STORAGE_KEYS.unit);
+  // Guard against anything unexpected in storage.
+  return UNITS.includes(saved) ? saved : DEFAULT_UNIT;
+}
+function saveUnit(unit) {
+  if (UNITS.includes(unit)) {
+    localStorage.setItem(STORAGE_KEYS.unit, unit);
+  }
+}
+
+// Add the unit to a weight for display: 40 -> "40 kg".
+// Returns "" for a missing weight, so callers can easily leave it out.
+function formatWeight(value) {
+  if (value === null || value === undefined || value === "") {
+    return "";
+  }
+  return value + " " + loadUnit();
+}
+
+// Just the unit word on its own, for labels and headings like "Weight (kg)".
+function unitLabel() {
+  return loadUnit();
 }
 
 /* =========================================================================
@@ -155,7 +198,54 @@ function normalizeExercise(exercise) {
     weight: defaultWeight,
     repsPerSet: resizeArray(existingReps, sets, defaultReps),
     weightPerSet: resizeArray(existingWeight, sets, defaultWeight),
+    // Phase 10: a number if this exercise has been given a position within its
+    // day, otherwise null. Exercises saved before Phase 10 have no order yet.
+    sortOrder:
+      typeof exercise.sortOrder === "number" ? exercise.sortOrder : null,
   };
+}
+
+/* ---- Ordering exercises within a day (Phase 10) ----
+   Each exercise can have a sortOrder (0, 1, 2, …) saying where it sits within
+   its day. Older exercises (added before drag-to-reorder existed) have none —
+   we call those "legacy" here. The rule is: legacy exercises keep their current
+   order and sit FIRST, then any exercise with a real sortOrder follows, in
+   number order. That means a newly-added exercise (which gets a number) lands
+   at the END of its day, and once you drag a day even once every exercise in it
+   gets a number, so from then on the order is purely by number. */
+function sortExercisesByOrder(list) {
+  // Attach each item's current position so legacy rows can fall back to it.
+  return list
+    .map((exercise, index) => ({ exercise: exercise, index: index }))
+    .sort((a, b) => {
+      const aHasOrder = typeof a.exercise.sortOrder === "number";
+      const bHasOrder = typeof b.exercise.sortOrder === "number";
+      if (aHasOrder && bHasOrder) {
+        return a.exercise.sortOrder - b.exercise.sortOrder;
+      }
+      if (aHasOrder) {
+        return 1; // a is numbered → it goes AFTER the un-numbered b
+      }
+      if (bHasOrder) {
+        return -1; // b is numbered → it goes after a
+      }
+      return a.index - b.index; // both legacy → keep their current order
+    })
+    .map((item) => item.exercise);
+}
+
+// The next sortOrder to give a brand-new exercise so it lands at the end of its
+// day: one more than the biggest number already used in that day (or 0 if none).
+function nextSortOrderForDay(profileId, day) {
+  const numbers = loadList(STORAGE_KEYS.exercises)
+    .filter(
+      (exercise) =>
+        exercise.profileId === profileId &&
+        exercise.day === day &&
+        typeof exercise.sortOrder === "number"
+    )
+    .map((exercise) => exercise.sortOrder);
+  return numbers.length === 0 ? 0 : Math.max(...numbers) + 1;
 }
 
 // A short text summary for an exercise card, e.g. "3 × 10", "3 × 10,12,15",
@@ -172,7 +262,7 @@ function formatExerciseSummary(exercise) {
       weights.every((value) => value === weights[0]) &&
       weights[0] !== null &&
       weights[0] !== undefined;
-    summary += " · " + (weightUniform ? weights[0] : "weights vary");
+    summary += " · " + (weightUniform ? formatWeight(weights[0]) : "weights vary");
   }
   return summary;
 }
@@ -212,7 +302,9 @@ function toDateInputValue(isoString) {
    ========================================================================= */
 
 // Build one exercise card as an HTML element.
-function createExerciseCard(exercise) {
+// Build one exercise card. Pass draggable = true (used on the Schedule tab) to
+// add a drag handle and tag the card with its id, so it can be reordered.
+function createExerciseCard(exercise, draggable) {
   const card = document.createElement("div");
   card.className = "exercise";
 
@@ -259,7 +351,166 @@ function createExerciseCard(exercise) {
   card.appendChild(icon);
   card.appendChild(info);
   card.appendChild(actions);
+
+  // Phase 10: on the Schedule tab, add a grip handle at the front and remember
+  // which exercise this card is, so drag-to-reorder can move it.
+  if (draggable) {
+    card.dataset.exerciseId = exercise.id;
+
+    const drag = document.createElement("div");
+    drag.className = "exercise__drag";
+    drag.textContent = "⠿"; // a simple braille "grip" icon
+    drag.setAttribute("aria-label", "Drag to reorder");
+    drag.setAttribute("title", "Drag to reorder");
+
+    card.insertBefore(drag, card.firstChild); // put the handle on the left
+  }
+
   return card;
+}
+
+/* =========================================================================
+   DRAG-TO-REORDER EXERCISES (Phase 10)
+   On the Schedule tab you can grab an exercise card's ⠿ handle and drag it up
+   or down to reorder it WITHIN its day. We use Pointer Events (not the old
+   drag-and-drop API) because those work the same for mouse and touch, and let
+   us stop the page scrolling while you drag.
+
+   How it works: while you drag, we move the card among its siblings live (so you
+   can see where it will land). When you let go, if the order actually changed we
+   renumber that day's exercises (0, 1, 2, …) and save — locally and to the cloud,
+   with the same "you're offline" guard as other plan edits.
+   ========================================================================= */
+
+// Attach the drag behaviour to every card inside one day's list container.
+function enableDragReorder(listEl) {
+  Array.from(listEl.children).forEach((card) => {
+    const handle = card.querySelector(".exercise__drag");
+    if (handle) {
+      handle.addEventListener("pointerdown", (event) => {
+        startCardDrag(event, card, listEl);
+      });
+    }
+  });
+}
+
+// Begin dragging one card. Called on pointerdown on that card's handle.
+function startCardDrag(event, card, listEl) {
+  // Only react to the primary mouse button (or a touch/pen, which report 0).
+  if (event.button !== 0) {
+    return;
+  }
+  event.preventDefault(); // stop text selection / the page starting to scroll
+
+  const pointerId = event.pointerId;
+
+  // IMPORTANT: capture the pointer on the LIST container, not on the handle.
+  // The handle lives inside the card, and dragging moves that card around in
+  // the DOM — if the capture were on the handle, the browser would drop the
+  // capture the moment the card moved and the drag would freeze. The list
+  // container never moves, so capturing there keeps the events flowing.
+  listEl.setPointerCapture(pointerId);
+
+  // Remember the order before the drag, so afterwards we can tell if it changed.
+  const orderBefore = Array.from(listEl.children).map(
+    (child) => child.dataset.exerciseId
+  );
+
+  card.classList.add("exercise--dragging");
+
+  // As the pointer moves, slot the dragged card in among its siblings based on
+  // where the pointer is vertically.
+  function onMove(moveEvent) {
+    moveEvent.preventDefault();
+    const pointerY = moveEvent.clientY;
+
+    const siblings = Array.from(listEl.children).filter(
+      (child) => child !== card
+    );
+
+    let placedBefore = false;
+    for (let i = 0; i < siblings.length; i = i + 1) {
+      const rect = siblings[i].getBoundingClientRect();
+      const midpoint = rect.top + rect.height / 2;
+      // If the pointer is above this sibling's middle, the card belongs before it.
+      if (pointerY < midpoint) {
+        listEl.insertBefore(card, siblings[i]);
+        placedBefore = true;
+        break;
+      }
+    }
+    // Past everyone's middle → it belongs at the very end.
+    if (!placedBefore) {
+      listEl.appendChild(card);
+    }
+  }
+
+  // On release: clean up, and save if the order changed.
+  function onUp() {
+    if (listEl.hasPointerCapture(pointerId)) {
+      listEl.releasePointerCapture(pointerId);
+    }
+    listEl.removeEventListener("pointermove", onMove);
+    listEl.removeEventListener("pointerup", onUp);
+    listEl.removeEventListener("pointercancel", onUp);
+    card.classList.remove("exercise--dragging");
+
+    const orderAfter = Array.from(listEl.children).map(
+      (child) => child.dataset.exerciseId
+    );
+    const changed = orderAfter.some((exId, i) => exId !== orderBefore[i]);
+    if (changed) {
+      saveDayOrder(orderAfter);
+    }
+  }
+
+  // Listen on the list container (the capture target), so these fire for the
+  // whole drag no matter which card is currently under the pointer.
+  listEl.addEventListener("pointermove", onMove);
+  listEl.addEventListener("pointerup", onUp);
+  listEl.addEventListener("pointercancel", onUp); // e.g. an interrupting call
+}
+
+// Save a day's new order: give each listed exercise a sortOrder of 0, 1, 2, …
+// Writes to the cloud first (the source of truth), then the local cache — the
+// same pattern (and offline guard) as other plan edits.
+async function saveDayOrder(orderedIds) {
+  // Reordering the plan is a cloud write, so block it when offline and put the
+  // cards back the way they were saved.
+  if (blockedByOffline()) {
+    renderSchedule();
+    return;
+  }
+
+  const exercises = loadList(STORAGE_KEYS.exercises);
+
+  for (let i = 0; i < orderedIds.length; i = i + 1) {
+    const exercise = exercises.find((item) => item.id === orderedIds[i]);
+    if (!exercise) {
+      continue;
+    }
+    if (exercise.sortOrder === i) {
+      continue; // already in the right spot — no write needed
+    }
+
+    const { error } = await supabaseClient
+      .from("exercises")
+      .update({ sort_order: i })
+      .eq("id", orderedIds[i]);
+    if (error) {
+      reportCloudWriteError("save the new order to the cloud", error);
+      // Persist whatever already succeeded so local matches the cloud, then
+      // redraw to a consistent state.
+      saveList(STORAGE_KEYS.exercises, exercises);
+      renderSchedule();
+      return;
+    }
+
+    exercise.sortOrder = i; // keep the local copy in step with the cloud
+  }
+
+  saveList(STORAGE_KEYS.exercises, exercises);
+  renderSchedule(); // redraw so everything reflects the saved order
 }
 
 // Draw the Schedule view: exercises grouped by day.
@@ -320,9 +571,19 @@ function renderSchedule() {
     headingRow.appendChild(startBtn);
     group.appendChild(headingRow);
 
-    exercisesForDay.forEach((exercise) => {
-      group.appendChild(createExerciseCard(exercise));
+    // Phase 10: the exercise cards live in their own list container so drag-to-
+    // reorder only ever moves cards among same-day siblings (never the heading).
+    const list = document.createElement("div");
+    list.className = "day-group__exercises";
+
+    // Show this day's exercises in their saved order, each with a drag handle.
+    sortExercisesByOrder(exercisesForDay).forEach((exercise) => {
+      list.appendChild(createExerciseCard(exercise, true));
     });
+
+    group.appendChild(list);
+    // Wire up dragging for the cards we just added.
+    enableDragReorder(list);
 
     container.appendChild(group);
   });
@@ -356,8 +617,10 @@ function renderToday() {
     return;
   }
 
-  const todaysExercises = getExercisesForActiveProfile().filter(
-    (exercise) => exercise.day === todayName
+  const todaysExercises = sortExercisesByOrder(
+    getExercisesForActiveProfile().filter(
+      (exercise) => exercise.day === todayName
+    )
   );
 
   // Only show the button if there's something to do; label it Resume if a
@@ -599,7 +862,7 @@ function buildBarChartSvg(points) {
     // One tooltip per session, shared by both of its bars.
     let label = formatDate(point.date) + " · " + point.reps + " reps";
     if (point.weight !== null && point.weight !== undefined) {
-      label += " · " + point.weight + " wt";
+      label += " · " + formatWeight(point.weight);
     }
 
     // Helper to add a single bar.
@@ -728,7 +991,7 @@ function showSessionDetail(session) {
         .map((set) => {
           const weight =
             set.weight !== null && set.weight !== undefined
-              ? "×" + set.weight
+              ? "×" + formatWeight(set.weight)
               : "";
           return (set.done ? "✓" : "·") + set.reps + weight;
         })
@@ -738,7 +1001,7 @@ function showSessionDetail(session) {
       // Old shape: a single setsDone count (+ optional single weight).
       let detailText = setsDone + " sets done";
       if (entry.weight !== null && entry.weight !== undefined) {
-        detailText += " · weight " + entry.weight;
+        detailText += " · " + formatWeight(entry.weight);
       }
       detail.textContent = detailText;
       info.appendChild(name);
@@ -868,7 +1131,9 @@ function buildChartLegend() {
   };
 
   legend.appendChild(makeItem("chart-legend__swatch--reps", "Reps"));
-  legend.appendChild(makeItem("chart-legend__swatch--weight", "Weight"));
+  legend.appendChild(
+    makeItem("chart-legend__swatch--weight", "Weight (" + unitLabel() + ")")
+  );
   return legend;
 }
 
@@ -994,7 +1259,7 @@ function renderInsights(sessions) {
   // Only show "weight moved" if any weights were actually recorded.
   if (weightMoved > 0) {
     stats.appendChild(
-      buildStatTile(weightMoved.toLocaleString(), "weight moved")
+      buildStatTile(weightMoved.toLocaleString(), unitLabel() + " moved")
     );
   }
   card.appendChild(stats);
@@ -1041,7 +1306,7 @@ function renderInsights(sessions) {
 
       const best = document.createElement("div");
       best.className = "pr-row__best";
-      best.textContent = item.best.weight;
+      best.textContent = formatWeight(item.best.weight);
 
       row.appendChild(icon);
       row.appendChild(info);
@@ -1121,7 +1386,7 @@ function buildTrendCallouts(sessions) {
     const change = document.createElement("div");
     const up = item.change > 0;
     change.className = "trend-change " + (up ? "is-up" : "is-down");
-    change.textContent = (up ? "↑ " : "↓ ") + Math.abs(item.change);
+    change.textContent = (up ? "↑ " : "↓ ") + formatWeight(Math.abs(item.change));
 
     row.appendChild(icon);
     row.appendChild(name);
@@ -1169,6 +1434,39 @@ function renderWeeklyGoalInput() {
   const activeId = loadActiveProfileId();
   input.disabled = !activeId; // nothing to set without a profile
   input.value = activeId ? loadWeeklyGoal(activeId) : DEFAULT_WEEKLY_GOAL;
+}
+
+/* ---- Weight unit UI (Phase 9b) ---- */
+
+// Put the saved unit into the Settings dropdown, and write the unit into the
+// two form labels that mention it ("Default weight (kg, optional)" etc.).
+function renderUnitControls() {
+  const select = document.getElementById("unitInput");
+  if (select) {
+    select.value = loadUnit();
+  }
+
+  const weightLabel = document.getElementById("weightInputLabel");
+  if (weightLabel) {
+    weightLabel.textContent = "Default weight in " + unitLabel() + " (optional)";
+  }
+
+  const setRowsLabel = document.getElementById("setRowsLabel");
+  if (setRowsLabel) {
+    setRowsLabel.textContent = "Reps & weight (" + unitLabel() + ") per set";
+  }
+}
+
+// Called when you pick a different unit in Settings. Saves it, then redraws
+// everything so every screen picks up the new label straight away.
+function handleUnitChange(event) {
+  saveUnit(event.target.value);
+  renderUnitControls();
+  renderAll();
+  // If a workout is open behind Settings, refresh its labels too.
+  if (activeSession) {
+    renderWorkoutItems();
+  }
 }
 
 // Build the "this week" goal ring: an SVG circle that fills toward the goal.
@@ -1306,7 +1604,8 @@ function buildVolumeTrend(sessions) {
 
   const value = document.createElement("span");
   value.className = "volume-trend__value";
-  value.textContent = thisMonth.toLocaleString();
+  // Volume is reps × weight, so it's shown in whichever unit you've picked.
+  value.textContent = formatWeight(thisMonth.toLocaleString());
 
   wrap.appendChild(label);
   wrap.appendChild(value);
@@ -1547,6 +1846,7 @@ function renderAll() {
   renderHistory();
   renderProgress();
   renderWeeklyGoalInput();
+  renderUnitControls(); // Phase 9b: keep the unit dropdown + labels in sync
 }
 
 /* =========================================================================
@@ -1898,6 +2198,7 @@ function mapExerciseFromCloud(row) {
     icon: row.icon,
     day: row.day,
     notes: row.notes,
+    sortOrder: row.sort_order, // Phase 10: position within its day (may be null)
   };
 }
 function exerciseToRow(exercise) {
@@ -1913,6 +2214,10 @@ function exerciseToRow(exercise) {
     icon: exercise.icon,
     day: exercise.day,
     notes: exercise.notes,
+    // Phase 10: send null (not undefined) when there's no order yet, so the
+    // database column is cleared/kept rather than left out of the update.
+    sort_order:
+      typeof exercise.sortOrder === "number" ? exercise.sortOrder : null,
   };
 }
 
@@ -2128,6 +2433,11 @@ async function deleteExercise(id) {
 
 let selectedEmoji = EMOJI_PRESETS[0]; // remembers which emoji is chosen in the form
 
+// Phase 8: has the user typed their own sets/reps in this form yet?
+// If they have, picking a suggestion must NOT overwrite their numbers.
+// (Editing an existing exercise counts as "already set" — see the edit opener.)
+let setsRepsTouchedByUser = false;
+
 // Remembers the day used when adding exercises, so adding several in a row keeps
 // the same day. It starts as today and only resets to today on a fresh page load
 // (it lives in memory, not localStorage).
@@ -2265,6 +2575,7 @@ function openModal() {
 
 // Hide the modal.
 function closeModal() {
+  hideSuggestions(); // don't leave the Phase-8 dropdown open behind the modal
   document.getElementById("exerciseModal").hidden = true;
 }
 
@@ -2287,6 +2598,11 @@ function openExerciseModalForAdd() {
   // exercises to the same day doesn't make you re-pick it each time.
   document.getElementById("dayInput").value = lastChosenDay;
   selectEmoji(EMOJI_PRESETS[0]);
+
+  // Fresh form: the sets/reps are still our defaults, so a Phase-8 suggestion
+  // is allowed to replace them.
+  setsRepsTouchedByUser = false;
+  hideSuggestions();
 
   // Three sets of 10 reps, no weight, to start.
   buildSetRows(3, [10, 10, 10], [null, null, null]);
@@ -2312,6 +2628,11 @@ function openExerciseModalForEdit(id) {
     exercise.weight === null ? "" : exercise.weight;
   document.getElementById("dayInput").value = exercise.day;
   selectEmoji(exercise.icon);
+
+  // These sets/reps are the user's own saved numbers, so treat them as already
+  // chosen — picking a suggestion will only change the name and icon.
+  setsRepsTouchedByUser = true;
+  hideSuggestions();
 
   buildSetRows(exercise.sets, exercise.repsPerSet, exercise.weightPerSet);
 
@@ -2390,6 +2711,8 @@ async function handleExerciseFormSubmit(event) {
       icon: selectedEmoji,
       day: day,
       notes: "", // reserved for a later phase
+      // Phase 10: put it at the end of its day's list.
+      sortOrder: nextSortOrderForDay(loadActiveProfileId(), day),
     };
     const { error } = await supabaseClient
       .from("exercises")
@@ -2403,6 +2726,13 @@ async function handleExerciseFormSubmit(event) {
     // EDITING: update the fields, push the change to the cloud, then cache it.
     const existing = exercises.find((item) => item.id === id);
     if (existing) {
+      // Phase 10: if the day changed, move this exercise to the end of the new
+      // day (computed BEFORE we change its day). If the day is unchanged, keep
+      // its existing position.
+      if (existing.day !== day) {
+        existing.sortOrder = nextSortOrderForDay(existing.profileId, day);
+      }
+
       existing.name = name;
       existing.sets = sets;
       existing.reps = reps;
@@ -2435,6 +2765,276 @@ function showFormError(message) {
   const errorEl = document.getElementById("formError");
   errorEl.textContent = message;
   errorEl.hidden = false;
+}
+
+/* =========================================================================
+   7b. EXERCISE SUGGESTIONS (Phase 8)
+   As you type in the "Exercise name" box, we search the built-in list in
+   exercise-library.js and show up to 5 matches in a little dropdown. Picking
+   one fills in the name, the icon, and (only if you haven't touched them) the
+   sets and reps. Typing a name that isn't in the list still works exactly as
+   it always did — the dropdown is purely a shortcut.
+   ========================================================================= */
+
+// How many suggestions to show at once.
+const MAX_SUGGESTIONS = 5;
+
+// The matches currently on screen, and which one is highlighted.
+// -1 means "nothing highlighted yet" (the user hasn't pressed the arrow keys).
+let suggestionMatches = [];
+let activeSuggestionIndex = -1;
+
+// Find up to MAX_SUGGESTIONS library exercises whose name contains what was
+// typed (ignoring upper/lower case). Best matches come first:
+//   0. the name STARTS with what you typed  ("ben" -> "Bench press")
+//   1. a WORD in the name starts with it    ("press" -> "Bench press")
+//   2. it appears anywhere in the name      ("ench" -> "Bench press")
+function findExerciseSuggestions(typedText) {
+  const needle = typedText.trim().toLowerCase();
+  if (needle === "") {
+    return []; // nothing typed yet, so nothing to suggest
+  }
+
+  const scored = [];
+
+  EXERCISE_LIBRARY.forEach((item) => {
+    const haystack = item.name.toLowerCase();
+    const position = haystack.indexOf(needle);
+
+    if (position === -1) {
+      return; // no match at all — skip this one
+    }
+
+    let rank = 2; // "appears somewhere" is the weakest match
+    if (position === 0) {
+      rank = 0; // the whole name starts with it — the best match
+    } else if (haystack.charAt(position - 1) === " ") {
+      rank = 1; // a word inside the name starts with it
+    }
+
+    scored.push({ item: item, rank: rank });
+  });
+
+  // Sort by rank (0 first), then alphabetically so the order is predictable.
+  scored.sort((a, b) => {
+    if (a.rank !== b.rank) {
+      return a.rank - b.rank;
+    }
+    return a.item.name.localeCompare(b.item.name);
+  });
+
+  // Take the first few and hand back just the exercises themselves.
+  return scored.slice(0, MAX_SUGGESTIONS).map((entry) => entry.item);
+}
+
+// Draw the dropdown from whatever is in suggestionMatches.
+function renderSuggestions() {
+  const list = document.getElementById("nameSuggestList");
+  list.innerHTML = "";
+
+  suggestionMatches.forEach((item, index) => {
+    const row = document.createElement("li");
+    row.className = "suggest__item";
+    row.id = "suggestion-" + index; // used by aria-activedescendant below
+    row.setAttribute("role", "option");
+    row.setAttribute("aria-selected", index === activeSuggestionIndex ? "true" : "false");
+    if (index === activeSuggestionIndex) {
+      row.classList.add("suggest__item--active");
+    }
+
+    // Left: the emoji icon.
+    const emoji = document.createElement("span");
+    emoji.className = "suggest__emoji";
+    emoji.textContent = item.icon;
+
+    // Middle: the exercise name.
+    const name = document.createElement("span");
+    name.className = "suggest__name";
+    name.textContent = item.name;
+
+    // Right: muscle group + the suggested "3 × 10".
+    const meta = document.createElement("span");
+    meta.className = "suggest__meta";
+    meta.textContent =
+      item.muscleGroup + " · " + item.defaultSets + " × " + item.defaultReps;
+
+    row.appendChild(emoji);
+    row.appendChild(name);
+    row.appendChild(meta);
+
+    // Tapping/clicking a row fills the form in.
+    row.addEventListener("click", () => applySuggestion(item));
+
+    list.appendChild(row);
+  });
+}
+
+// Show the dropdown (if there is anything to show) for the current text.
+function updateSuggestions() {
+  const input = document.getElementById("nameInput");
+  suggestionMatches = findExerciseSuggestions(input.value);
+  activeSuggestionIndex = -1; // start with nothing highlighted
+
+  if (suggestionMatches.length === 0) {
+    hideSuggestions();
+    return;
+  }
+
+  renderSuggestions();
+  document.getElementById("nameSuggestList").hidden = false;
+  input.setAttribute("aria-expanded", "true");
+  input.removeAttribute("aria-activedescendant");
+}
+
+// Hide and empty the dropdown.
+function hideSuggestions() {
+  const list = document.getElementById("nameSuggestList");
+  const input = document.getElementById("nameInput");
+  if (!list || !input) {
+    return; // safety: called before the page is ready
+  }
+  list.hidden = true;
+  list.innerHTML = "";
+  suggestionMatches = [];
+  activeSuggestionIndex = -1;
+  input.setAttribute("aria-expanded", "false");
+  input.removeAttribute("aria-activedescendant");
+}
+
+// Is the dropdown currently on screen?
+function suggestionsAreOpen() {
+  const list = document.getElementById("nameSuggestList");
+  return list && !list.hidden && suggestionMatches.length > 0;
+}
+
+// Move the highlight up (-1) or down (+1), wrapping around the ends.
+function moveSuggestionHighlight(step) {
+  const count = suggestionMatches.length;
+  if (count === 0) {
+    return;
+  }
+
+  if (activeSuggestionIndex === -1) {
+    // Nothing highlighted yet: down goes to the first, up to the last.
+    activeSuggestionIndex = step > 0 ? 0 : count - 1;
+  } else {
+    // The "+ count" keeps the number positive when stepping back from 0.
+    activeSuggestionIndex = (activeSuggestionIndex + step + count) % count;
+  }
+
+  renderSuggestions();
+
+  // Tell screen readers which row is current, and scroll it into view.
+  const input = document.getElementById("nameInput");
+  input.setAttribute("aria-activedescendant", "suggestion-" + activeSuggestionIndex);
+  const activeRow = document.getElementById("suggestion-" + activeSuggestionIndex);
+  if (activeRow && activeRow.scrollIntoView) {
+    activeRow.scrollIntoView({ block: "nearest" });
+  }
+}
+
+// Fill the form in from a chosen library exercise.
+function applySuggestion(item) {
+  document.getElementById("nameInput").value = item.name;
+  selectEmoji(item.icon);
+
+  // Only touch the numbers if the user hasn't set their own. This is why
+  // editing an existing exercise never has its sets/reps overwritten.
+  if (!setsRepsTouchedByUser) {
+    const setsInput = document.getElementById("setsInput");
+    const repsInput = document.getElementById("repsInput");
+    setsInput.value = item.defaultSets;
+    repsInput.value = item.defaultReps;
+
+    // Rebuild the per-set rows so they match the new sets/reps. The existing
+    // helper does exactly this when the Sets box changes.
+    handleSetsCountChange();
+    applyDefaultRepsToRows();
+  }
+
+  hideSuggestions();
+  document.getElementById("nameInput").focus();
+}
+
+// Keyboard handling while typing in the name box.
+function handleNameInputKeydown(event) {
+  // Arrow down can also OPEN the dropdown if it's closed but there are matches.
+  if (event.key === "ArrowDown" && !suggestionsAreOpen()) {
+    updateSuggestions();
+    if (suggestionsAreOpen()) {
+      event.preventDefault();
+      moveSuggestionHighlight(1);
+    }
+    return;
+  }
+
+  if (!suggestionsAreOpen()) {
+    return; // nothing open — let the browser do its normal thing
+  }
+
+  if (event.key === "ArrowDown") {
+    event.preventDefault(); // stop the cursor jumping in the text box
+    moveSuggestionHighlight(1);
+  } else if (event.key === "ArrowUp") {
+    event.preventDefault();
+    moveSuggestionHighlight(-1);
+  } else if (event.key === "Enter") {
+    if (activeSuggestionIndex >= 0) {
+      // Take the highlighted suggestion instead of submitting the form.
+      event.preventDefault();
+      applySuggestion(suggestionMatches[activeSuggestionIndex]);
+    }
+  } else if (event.key === "Escape") {
+    // Close just the dropdown. stopPropagation keeps the app's global Escape
+    // handler from closing the whole modal underneath it.
+    event.preventDefault();
+    event.stopPropagation();
+    hideSuggestions();
+  } else if (event.key === "Tab") {
+    hideSuggestions();
+  }
+}
+
+// Wire up the suggestion dropdown. Called once from init().
+function setupExerciseSuggestions() {
+  const input = document.getElementById("nameInput");
+  const list = document.getElementById("nameSuggestList");
+  const wrap = document.getElementById("nameSuggestWrap");
+
+  // Typing refreshes the matches.
+  input.addEventListener("input", updateSuggestions);
+  input.addEventListener("keydown", handleNameInputKeydown);
+
+  // Clicking a row would normally blur the text box first, which can cancel
+  // the click. Preventing the default mousedown keeps focus in the input.
+  list.addEventListener("mousedown", (event) => event.preventDefault());
+
+  // Tabbing (or otherwise moving focus) away closes the dropdown.
+  input.addEventListener("focusout", hideSuggestions);
+
+  // Tapping anywhere outside the name box + dropdown closes it.
+  document.addEventListener("click", (event) => {
+    if (suggestionsAreOpen() && !wrap.contains(event.target)) {
+      hideSuggestions();
+    }
+  });
+
+  // Once the user types their own sets or reps, suggestions stop changing them.
+  document
+    .getElementById("setsInput")
+    .addEventListener("input", () => {
+      setsRepsTouchedByUser = true;
+    });
+  document
+    .getElementById("repsInput")
+    .addEventListener("input", () => {
+      setsRepsTouchedByUser = true;
+    });
+  // Editing a single set's reps counts as setting your own numbers too. The
+  // rows are rebuilt as you go, so we listen on the container that holds them.
+  document.getElementById("setRows").addEventListener("input", () => {
+    setsRepsTouchedByUser = true;
+  });
 }
 
 /* =========================================================================
@@ -2517,6 +3117,113 @@ function entryMaxWeight(entry) {
     : null;
 }
 
+/* ---- "Last time" hints in workout mode (Phase 9) ----
+   While you're training, each exercise shows a small grey line reminding you
+   what you did the last time you trained it, e.g.
+       Last time (Mon, Jul 14): 40 kg × 10, 10, 8   ("kg" follows your unit setting)
+   This is worked out on the fly from your saved workouts — nothing new is
+   stored, and none of your current numbers are pre-filled or changed. */
+
+// Find the most recent COMPLETED workout (same profile, any day) that actually
+// recorded this exercise, and return that workout plus its entry. Returns null
+// when there's no history yet — the caller then shows no hint at all.
+function findLastTimeForExercise(exerciseId, excludeSessionId) {
+  const activeId = loadActiveProfileId();
+
+  // Only completed workouts count, and only ones where at least one set was
+  // ticked done (an abandoned workout with nothing ticked isn't useful).
+  const matching = loadList(STORAGE_KEYS.sessions).filter((session) => {
+    if (session.profileId !== activeId) {
+      return false;
+    }
+    if (session.id === excludeSessionId) {
+      return false; // never quote the workout you're doing right now
+    }
+    if (!isCompletedSession(session)) {
+      return false;
+    }
+    return session.entries.some(
+      (entry) => entry.exerciseId === exerciseId && entrySetsDone(entry) > 0
+    );
+  });
+
+  if (matching.length === 0) {
+    return null;
+  }
+
+  // Newest first, then take the top one.
+  matching.sort((a, b) => new Date(b.date) - new Date(a.date));
+  const session = matching[0];
+  const entry = session.entries.find(
+    (item) => item.exerciseId === exerciseId && entrySetsDone(item) > 0
+  );
+
+  return { session: session, entry: entry };
+}
+
+// Turn the sets that were actually ticked done into a short readable summary.
+// Examples:
+//   same weight every set  ->  "40 kg × 10, 10, 8"
+//   no weights recorded    ->  "10, 10, 8 reps"
+//   weights varied         ->  "40 kg × 10, 40 kg × 10, 35 kg × 8"
+function describeDoneSets(entry) {
+  // Very old sessions stored a single { setsDone, weight } instead of a per-set
+  // list, so there are no individual reps to show — just say how many sets.
+  if (!Array.isArray(entry.sets)) {
+    const count = entry.setsDone || 0;
+    const setsText = count + (count === 1 ? " set" : " sets");
+    if (entry.weight === null || entry.weight === undefined) {
+      return setsText;
+    }
+    return formatWeight(entry.weight) + " × " + setsText;
+  }
+
+  const doneSets = entry.sets.filter((set) => set.done);
+  if (doneSets.length === 0) {
+    return ""; // nothing to say
+  }
+
+  const repsList = doneSets.map((set) => Number(set.reps) || 0);
+  const weightList = doneSets.map((set) =>
+    set.weight === null || set.weight === undefined ? null : set.weight
+  );
+
+  // Did every done set use the same weight (including "no weight at all")?
+  const sameWeightThroughout = weightList.every(
+    (weight) => weight === weightList[0]
+  );
+
+  if (sameWeightThroughout && weightList[0] === null) {
+    return repsList.join(", ") + " reps"; // bodyweight / weight not recorded
+  }
+  if (sameWeightThroughout) {
+    return formatWeight(weightList[0]) + " × " + repsList.join(", ");
+  }
+
+  // Weights changed between sets, so spell each one out.
+  return doneSets
+    .map((set, index) => {
+      if (weightList[index] === null) {
+        return repsList[index] + " reps";
+      }
+      return formatWeight(weightList[index]) + " × " + repsList[index];
+    })
+    .join(", ");
+}
+
+// The finished hint line for one exercise, or "" if there's nothing to show.
+function buildLastTimeHint(exerciseId, excludeSessionId) {
+  const found = findLastTimeForExercise(exerciseId, excludeSessionId);
+  if (!found) {
+    return "";
+  }
+  const summary = describeDoneSets(found.entry);
+  if (summary === "") {
+    return "";
+  }
+  return "Last time (" + formatDate(found.session.date) + "): " + summary;
+}
+
 // Find an in-progress session for the active profile + day (to resume), or null.
 function findInProgressSession(day) {
   const activeId = loadActiveProfileId();
@@ -2556,9 +3263,10 @@ function startWorkout(day) {
   let session = findInProgressSession(day);
 
   if (!session) {
-    // No workout in progress for this day → build a fresh one from the plan.
-    const exercisesForDay = getExercisesForActiveProfile().filter(
-      (exercise) => exercise.day === day
+    // No workout in progress for this day → build a fresh one from the plan,
+    // in the same order shown on the Schedule/Today tabs (Phase 10).
+    const exercisesForDay = sortExercisesByOrder(
+      getExercisesForActiveProfile().filter((exercise) => exercise.day === day)
     );
     if (exercisesForDay.length === 0) {
       window.alert("There are no exercises planned for " + day + ".");
@@ -2651,6 +3359,16 @@ function renderWorkoutItems() {
     name.textContent = exercise ? exercise.name : "(deleted exercise)";
     info.appendChild(name);
 
+    // Phase 9: a small grey reminder of what you did last time. It's only added
+    // when there IS history, so a brand-new exercise shows no empty line.
+    const lastTimeText = buildLastTimeHint(entry.exerciseId, activeSession.id);
+    if (lastTimeText !== "") {
+      const lastTime = document.createElement("div");
+      lastTime.className = "workout-exercise__lasttime";
+      lastTime.textContent = lastTimeText;
+      info.appendChild(lastTime);
+    }
+
     const doneCount = entry.sets.filter((set) => set.done).length;
     const progress = document.createElement("div");
     progress.className = "workout-exercise__progress";
@@ -2665,7 +3383,9 @@ function renderWorkoutItems() {
     const head = document.createElement("div");
     head.className = "wset-row wset-row--head";
     head.innerHTML =
-      "<span></span><span>Reps</span><span>Weight</span><span></span>";
+      "<span></span><span>Reps</span><span>Weight (" +
+      unitLabel() +
+      ")</span><span></span>";
     card.appendChild(head);
 
     // One editable row per set.
@@ -3593,9 +4313,9 @@ function celebrateAfterWorkout(personalRecords, milestone) {
 
   if (personalRecords.length > 0) {
     launchConfetti();
-    // Build a friendly line, e.g. "Squat 60 · Bench 40".
+    // Build a friendly line, e.g. "Squat 60 kg · Bench 40 kg".
     const summary = personalRecords
-      .map((record) => record.name + " " + record.weight)
+      .map((record) => record.name + " " + formatWeight(record.weight))
       .join(" · ");
     showCelebrationCard("🏅", "New personal record!", summary);
     delay = 3000; // let the PR card clear before the trophy appears
@@ -3854,6 +4574,9 @@ function init() {
     .getElementById("weightInput")
     .addEventListener("input", applyDefaultWeightToRows);
 
+  // Exercise-name suggestions dropdown (Phase 8).
+  setupExerciseSuggestions();
+
   // Workout detail pop-up: close button and backdrop both close it.
   document
     .getElementById("closeSessionBtn")
@@ -3913,6 +4636,9 @@ function init() {
       closeWorkoutOverlay(); // keeps the in-progress workout to resume later
     }
   });
+
+  // Weight unit (Phase 9b): switching kg/lb relabels weights across the app.
+  document.getElementById("unitInput").addEventListener("change", handleUnitChange);
 
   // Weekly goal (Insights): saving the number updates the goal ring on Progress.
   document.getElementById("weeklyGoalInput").addEventListener("change", (event) => {

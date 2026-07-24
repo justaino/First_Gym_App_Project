@@ -19,6 +19,7 @@ no frameworks, no build step, no backend. All data is stored in the browser with
 | `index.html` | The page structure (all the screens live here, shown/hidden by JS). |
 | `styles.css` | All styling, including the design-system colours and animations. |
 | `app.js` | All behaviour: storage, rendering, workouts, easter eggs, etc. |
+| `exercise-library.js` | Data only: the built-in list of ~90 common exercises used for the name suggestions (Phase 8). |
 
 ---
 
@@ -55,6 +56,11 @@ All keys start with `gym:`.
 | `gym:exercises` | All exercises (each tagged with a `profileId`). |
 | `gym:sessions` | Saved + in-progress workouts (the history). |
 | `gym:theme` | `"light"` or `"dark"`. |
+| `gym:unit` | `"kg"` or `"lb"` — the weight label shown throughout the app (display only; per device, not synced). |
+
+> Exercise **order within a day** (Phase 10) is NOT a separate key — it lives on
+> each exercise as `sortOrder` (in `gym:exercises`) and as `sort_order` in the
+> Supabase `exercises` table. See §5h.
 | `gym:celebratedMilestones` | Easter-egg bookkeeping: which workout-count milestones each profile has already celebrated, so the trophy only plays once. |
 
 ---
@@ -160,6 +166,10 @@ date and the history wording stay in sync.
 key** live in `supabase.js` (both are safe to ship — protected by Row-Level Security).
 The **secret key is never committed**.
 
+> 📘 **Setting this up from scratch?** `Documentation/SUPABASE-SETUP.md` explains how the
+> connection works and gives a step-by-step recipe (create project → vendor the library →
+> create client → tables → grants → RLS → auth → test), plus a troubleshooting table.
+
 - **New key system:** this project uses Supabase's new keys; the **legacy `anon` JWT is
   disabled**, so the app uses the **publishable key** (`sb_publishable_…`). The legacy
   JWT returned 401.
@@ -214,6 +224,145 @@ activity, *not* on whether you log into the dashboard, so real app usage keeps i
 it has paused, the next visitor sees errors until it's resumed: open the **Supabase dashboard
 → your project → Resume/Restore**. There may be a short cold-start delay on the first request
 after it wakes. (Exact thresholds are Supabase's policy and can change — check Project Settings.)
+
+---
+
+## 5e. Exercise-name suggestions (Phase 8)
+
+Typing in the **Exercise name** box (add/edit form) shows up to **5** matching
+exercises from a built-in list, as a dropdown under the field.
+
+- **The list:** `exercise-library.js` — a plain `EXERCISE_LIBRARY` array of ~90
+  entries, each `{ name, icon, muscleGroup, defaultSets, defaultReps }`, covering
+  chest, back, shoulders, arms, legs, core, cardio and mobility. It's **data only**,
+  loaded before `app.js` in `index.html` and cached in `sw.js`'s `APP_SHELL`.
+- **The behaviour:** app.js section **"7b. EXERCISE SUGGESTIONS"**
+  (`findExerciseSuggestions` / `updateSuggestions` / `applySuggestion` /
+  `setupExerciseSuggestions`).
+- **Matching** is case-insensitive "contains", ranked: name starts with what you
+  typed → a word in the name starts with it → appears anywhere.
+- **Picking one** fills the name and icon, and applies the suggested sets/reps
+  **only if you haven't typed your own**. Editing an existing exercise counts as
+  "your own", so its sets/reps are never overwritten (`setsRepsTouchedByUser`).
+- **Keyboard:** ↑/↓ move, Enter picks, Escape closes just the dropdown (not the
+  modal), Tab or an outside tap closes it.
+- Typing a name that isn't in the list saves exactly as before — this is only a
+  shortcut.
+
+### Adding your own exercises to the list
+Open `exercise-library.js`, copy a line, and change the words. **The `icon` must
+already be in `EMOJI_PRESETS`** near the top of `app.js` (that's the emoji picker's
+list) — otherwise the picker won't highlight it. Phase 8 extended `EMOJI_PRESETS`
+from 7 to 14 icons (added 🦵 🧗 🤾 🔥 🥊 ⏱️ 🚣) to cover the library. Bump
+`CACHE_VERSION` after editing either file.
+
+> Note: for holds (plank) `reps` means **seconds**, and for cardio it's usually
+> **minutes**. The app doesn't know the difference — it's just a number you adjust.
+
+---
+
+## 5f. "Last time" hints in workout mode (Phase 9)
+
+In workout mode, each exercise shows a small grey line under its name reminding
+you what you did last time, e.g.
+
+```
+Last time (Mon, Jul 14): 40 kg × 10, 10, 8
+```
+
+- **Where:** app.js, just above `findInProgressSession` —
+  `findLastTimeForExercise` / `describeDoneSets` / `buildLastTimeHint`, rendered
+  by `renderWorkoutItems`.
+- **Nothing is stored.** It's computed live from `gym:sessions` every time the
+  workout sheet redraws, and it never pre-fills or changes your current numbers.
+- **What counts:** the most recent **completed** workout for the **active
+  profile**, on **any day**, that recorded this exercise with **at least one
+  ticked set**. The workout you're doing right now is always excluded, so the
+  hint doesn't change as you tick sets.
+- **No history → no line at all** (not an empty box). A brand-new exercise, or
+  one whose only past workouts had nothing ticked, shows nothing.
+- **Formats:**
+
+  | History | Shown as |
+  |---|---|
+  | Same weight every set | `40 kg × 10, 10, 8` |
+  | No weights recorded | `12, 10 reps` |
+  | Weight varied per set | `40 kg × 10, 35 kg × 8` |
+  | Very old `{ setsDone }` sessions | `20 kg × 3 sets` |
+
+The unit shown comes from the **Settings → Weight unit** setting (see §5g).
+
+---
+
+## 5g. Weight unit — kg or lb (Phase 9b)
+
+**Settings → Weight unit** switches the label shown next to every weight in the
+app between **kg** and **lb**.
+
+> **It only changes the LABEL.** Nothing in storage is converted or rewritten —
+> a set saved as `40` stays `40` and simply reads `40 lb` instead of `40 kg`.
+> This was a deliberate choice: auto-converting would rewrite your real history,
+> put rounding drift into the PR board and volume totals, and get messy when two
+> synced devices disagree. The number is whatever you typed at the gym.
+
+- **Stored as:** `gym:unit` in localStorage (`"kg"` or `"lb"`, default `kg`).
+  Like `gym:theme`, this is **per device and NOT synced to your account** — set
+  it once on your laptop and once on your phone.
+- **Where:** app.js — `loadUnit` / `saveUnit` / **`formatWeight(value)`** /
+  `unitLabel()` (just below the storage helpers), plus `renderUnitControls` and
+  `handleUnitChange` (near the weekly-goal helpers). `renderAll` calls
+  `renderUnitControls`, so the dropdown and form labels stay in sync.
+- **To add a unit to a new bit of UI:** use `formatWeight(n)` → `"40 kg"` (it
+  returns `""` for a missing weight, so you can safely leave it out), or
+  `unitLabel()` → `"kg"` for headings like `Weight (kg)`.
+
+### Everywhere the unit appears
+Schedule card summaries · add/edit form labels · workout-sheet "Weight (kg)"
+column · Phase 9 "last time" hints · workout history detail · per-exercise chart
+tooltips · Progress chart legend · Insights "kg moved" tile · PR board · "since
+you started" trends · monthly volume · the PR celebration card.
+
+---
+
+## 5h. Drag-to-reorder exercises (Phase 10)
+
+On the **Schedule** tab each exercise card has a grip handle (⠿) on the left.
+Drag it up/down to reorder that exercise **within its day**. The order then
+shows the same everywhere (Schedule, Today, and workout mode) and syncs to your
+other devices.
+
+- **Stored as:** a `sort_order` column on the Supabase `exercises` table (added
+  by the Phase 10 SQL migration) and a `sortOrder` field on the local exercise
+  shape. Lower numbers come first.
+- **Where in the code (app.js):**
+  - `sortExercisesByOrder(list)` — the ordering rule; used by `renderSchedule`,
+    `renderToday` and `startWorkout` so all three agree.
+  - `nextSortOrderForDay(profileId, day)` — the number a new exercise gets so it
+    lands at the end of its day. Also used when an edit moves an exercise to a
+    different day.
+  - Section **"DRAG-TO-REORDER EXERCISES"** — `enableDragReorder` /
+    `startCardDrag` (Pointer Events) and `saveDayOrder` (cloud-first write with
+    the Phase-7g offline guard).
+- **Ordering rule (handles old data):** exercises saved before Phase 10 have no
+  number ("legacy"). Legacy ones keep their current order and sit **first**;
+  numbered ones follow, in number order. So a brand-new exercise (which gets a
+  number) lands at the **end** of its day, and the **first drag on a day
+  renumbers every exercise in it** (0,1,2,…), after which order is purely by
+  number.
+- **Touch:** dragging uses Pointer Events with `touch-action: none` on the
+  handle, so the page doesn't scroll while you drag. You can only reorder within
+  a day (the cards live in a per-day list container).
+  - ⚠️ **Gotcha (fixed):** the pointer is captured on the **list container**, not
+    on the handle. The handle sits inside the card, and dragging moves that card
+    in the DOM — capturing on the handle makes the browser drop the capture the
+    instant the card moves, freezing the drag ("lifts but won't move"). The list
+    container never moves, so capture there holds for the whole drag.
+- **Offline:** reordering is a plan edit, so if you're offline it shows the
+  friendly "you're offline" notice and the order snaps back — reconnect to
+  change it.
+
+> **Note:** there's no keyboard reorder (drag only), and reordering does not
+> touch any saved workout history — only the plan's display order.
 
 ---
 
@@ -276,6 +425,34 @@ its first weighted workout won't fire a PR (there's nothing to beat yet).
 ## 9. Change log
 
 Newest first. Add a line here whenever behaviour changes.
+
+- **2026-07-24** — **Phase 10 — drag-to-reorder exercises (on `dev`, awaiting owner
+  test):** SQL migration added a `sort_order` column to the Supabase `exercises` table;
+  the app now stores `sortOrder` per exercise, sorts every view by it
+  (`sortExercisesByOrder`), and adds a ⠿ drag handle on Schedule cards (Pointer Events,
+  touch-friendly, reorder within a day only). New exercises land at the end of their day;
+  the first drag on a day renumbers it. Cloud-first write with the offline guard. See §5h.
+  Cache `v30`.
+
+- **2026-07-19** — **Phase 9b — kg/lb unit setting (on `dev`, awaiting owner test):**
+  new **Settings → Weight unit** dropdown; every weight in the app now reads through
+  `formatWeight()` / `unitLabel()` instead of a bare number or a hard-coded "kg".
+  **Display only** — saved weights are never converted, so history and PRs are
+  untouched. Saved per device in `gym:unit` (not synced), like the theme. See §5g.
+  Cache `v29`.
+
+- **2026-07-19** — **Phase 9 — "last time" hints (on `dev`, awaiting owner test):** in
+  workout mode each exercise now shows a small grey `Last time (Mon, Jul 14): 40 kg × 10,
+  10, 8` line under its name, computed live from completed sessions (same profile, any
+  day, ≥1 ticked set; the current workout is excluded). No history = no line; nothing new
+  is stored and no prefills changed. See §5f. Cache `v28`.
+
+- **2026-07-19** — **Phase 8 — exercise suggestions (on `dev`, awaiting owner test):**
+  new `exercise-library.js` (~90 common exercises) + a suggestion dropdown under the
+  Exercise name field in the add/edit form (up to 5 matches; tap or ↑/↓ + Enter to fill
+  in name, icon and — only if untouched — sets/reps). Extended `EMOJI_PRESETS` from 7 to
+  14 icons so every library exercise has one. Custom names are unaffected. See §5e.
+  Cache `v27`.
 
 - **2026-06-26** — **Rest-timer fixes (on `dev`):** the countdown now runs off an absolute end
   time (`restEndsAt`) and recalculates from the clock each tick + on `visibilitychange`, so it
