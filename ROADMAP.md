@@ -410,14 +410,23 @@ Progress + Insights; confirm the setting survives a refresh and stays per-device
 workout mode follows the new order. **Test:** reorder on phone by touch; go offline →
 friendly message, order unchanged.
 
-### Phase 11 — Weekly recap ☐
+### Phase 11 — Weekly recap ✅ *(built 2026-07-24 — on `dev`, cache `v32`, awaiting owner test)*
 **Goal:** a motivating "your week" summary. Pure client-side.
-- ☐ A "Last week" recap card on the **Progress** tab: workouts done vs weekly goal,
-  total sets, total volume (reps × weight), any PRs set (reuse the existing PR logic),
-  and current streak. Friendly empty state if last week was empty.
-- ☐ On the **first app open in a new week**, show the same recap once as a dismissible
-  celebration card at the top of Today ("Your week in review 🎉"). Remember dismissal
-  per week key (e.g. `gym:recapSeen:<mondayKey>`) so it never nags.
+- ✅ A "Last week" recap card on the **Progress** tab, placed under the existing "This
+  week" card: workouts done vs weekly goal, total sets, total volume (reps × weight, in
+  the Phase-9b unit), any PRs set last week (same rule as the after-workout celebration —
+  last week's best must beat the best from before that week), and the current week
+  streak. Friendly empty state if last week was empty; the card is skipped entirely when
+  there's no history at all. All figures reuse the existing helpers (`entrySetsDone`,
+  `sessionVolume`, `computeWeekStreak`, `loadWeeklyGoal`) so they match the rest of
+  Progress. `sessionVolume` was lifted out of `buildVolumeTrend` to be shared.
+- ✅ On the **first app open in a new week**, the same recap appears once as a
+  dismissible celebration card at the top of Today ("Your week in review 🎉", butter
+  outline). Dismissal is remembered per profile per week in
+  `gym:recapSeen:<profileId>:<mondayKey>` (profile id added so several profiles on one
+  device each get their own recap); older keys are tidied away when a new one is written,
+  and "Delete my data" clears them all. After a **blank** week the Today card doesn't
+  appear at all — no telling-off.
 
 **Done when:** numbers match the Progress tab's own stats for last week; the Today card
 appears once per week and stays dismissed. **Test:** fake the week key to simulate a new

@@ -62,6 +62,7 @@ All keys start with `gym:`.
 > each exercise as `sortOrder` (in `gym:exercises`) and as `sort_order` in the
 > Supabase `exercises` table. See §5h.
 | `gym:celebratedMilestones` | Easter-egg bookkeeping: which workout-count milestones each profile has already celebrated, so the trophy only plays once. |
+| `gym:recapSeen:<profileId>:<monday>` | Phase 11: you've dismissed the "week in review" card on Today for that profile that week. One key per profile per week; old ones are tidied away automatically (per device, not synced). |
 
 ---
 
@@ -366,6 +367,46 @@ other devices.
 
 ---
 
+## 5i. Weekly recap (Phase 11)
+
+A friendly summary of **last week** (Monday → Sunday), in two places:
+
+1. **Progress tab → "Last week" card**, just under "This week". Always there
+   (once you have any workout history).
+2. **Today tab → "Your week in review 🎉"**, shown **once per week** on your
+   first visit of a new week, with a ✕ to dismiss it.
+
+**What it shows:** workouts vs your weekly goal, total sets, volume moved
+(reps × weight, in your kg/lb setting), your current week streak, and any
+**personal records set last week**. Plus one encouraging line about the goal.
+
+- **Nothing is stored** except the "you've seen it" flag —
+  `gym:recapSeen:<profileId>:<monday>` (see §3). It's per profile, per device,
+  and **not synced**; keys from older weeks are deleted automatically when a new
+  one is written, and "Delete my data" clears them all.
+- **Empty weeks:** the Progress card says *"No workouts last week — this week is
+  a fresh start 💪"*. The Today card **doesn't appear at all** after a blank
+  week (deliberate — no telling-off).
+- **The numbers agree with Progress** because they're computed from the same
+  list (this profile's completed sessions) using the same helpers:
+  `entrySetsDone`, `sessionVolume`, `computeWeekStreak`, `loadWeeklyGoal`.
+- **PR rule** matches the after-workout celebration: last week's heaviest weight
+  for an exercise must beat the heaviest weight **before** that week — so a
+  brand-new exercise isn't an instant "record".
+- **Where in the code (app.js):** section *"Weekly recap (Phase 11)"* —
+  `lastWeekRange`, `computeLastWeekRecap`, `findLastWeekRecords`,
+  `buildRecapCard`, and the Today side `renderTodayRecap` /
+  `markWeeklyRecapSeen` / `removeRecapSeenKeys`.
+
+### Testing it (fake a new week)
+
+In DevTools → Application → Local Storage, **delete** any `gym:recapSeen:…` row
+and refresh — the Today card comes back. To simulate "last week had workouts",
+edit a workout's **Date** (Today → Recent workouts → Edit) to a date in the
+previous Mon–Sun window.
+
+---
+
 ## 6. Backup & restore (import / export)
 
 Found in **Settings → Backup**.
@@ -425,6 +466,15 @@ its first weighted workout won't fire a PR (there's nothing to beat yet).
 ## 9. Change log
 
 Newest first. Add a line here whenever behaviour changes.
+
+- **2026-07-24** — **Phase 11 — weekly recap (on `dev`, awaiting owner test):** a
+  **"Last week"** card on Progress (under "This week") showing workouts vs goal, sets,
+  volume, week streak and any PRs set last week — plus the same recap once per week as a
+  dismissible **"Your week in review 🎉"** card at the top of Today. Pure client-side; the
+  only thing stored is the dismissal flag `gym:recapSeen:<profileId>:<monday>` (per device,
+  auto-tidied, cleared by "Delete my data"). The Today card is skipped after a blank week.
+  Small refactor: `sessionVolume()` lifted out of `buildVolumeTrend` so both features share
+  one definition. See §5i. Cache `v32`.
 
 - **2026-07-24** — **Phase 10 — drag-to-reorder exercises (on `dev`, awaiting owner
   test):** SQL migration added a `sort_order` column to the Supabase `exercises` table;
