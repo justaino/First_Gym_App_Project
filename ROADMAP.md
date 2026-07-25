@@ -513,7 +513,7 @@ must fail soft when offline.
 
 ## 10. Guide & usernames — Phases 13–14 (planned 2026-07-25)
 
-### Phase 13 — In-app guide ☐
+### Phase 13 — In-app guide ✅ *(built 2026-07-25 — `guide.js`, cache `v36`, awaiting owner test)*
 **Goal:** a tester opening the app cold can work out what everything does. Replaces
 `Documentation/USER-GUIDE.md` (decided — one copy, or they drift).
 
@@ -527,11 +527,14 @@ must fail soft when offline.
 - **Easter eggs: mention only the ones you'd never otherwise find.** The owl long-press
   and the credits card stay unlisted.
 
-- ☐ One collapsible section per tab (Today / Schedule / Progress / Friends / Settings),
-  each a few short steps written from the user's side — no "sortOrder", no "RLS".
-- ☐ A "Hidden bits" section at the end for the findable-but-obscure (rest timer beeps
-  when backgrounded, ⠿ reorder, "last time" hints, kg/lb being display-only, backup).
-- ☐ Delete `Documentation/USER-GUIDE.md` and point anything referencing it at the app.
+- ✅ One collapsible section per tab (Today / Schedule / Progress / Friends / Settings),
+  each a few short lines written from the user's side — no "sortOrder", no "RLS". A
+  **Workout mode** section was added on top of the planned five: it's where most of the
+  behaviour a beginner needs explaining actually lives.
+- ✅ An **"Easy to miss"** section at the end for the findable-but-obscure (rest timer
+  surviving a locked phone, ⠿ reorder, "last time" hints, kg/lb being display-only,
+  backup, offline limits). The owl and credits card stay unlisted, per the decision above.
+- ✅ Deleted `Documentation/USER-GUIDE.md`; README now points at the in-app guide.
 
 **Done when:** a friend who has never seen the app can get from nothing to a finished
 workout using only the guide. **Test:** read it on a phone; check both themes.

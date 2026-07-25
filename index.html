@@ -316,6 +316,18 @@
           </button>
         </div>
 
+        <!-- The in-app guide (Phase 13). Opens a full-screen sheet. -->
+        <h2 class="section-heading">Help</h2>
+        <div class="card">
+          <p class="backup__text">
+            New to Athena's Arena, or wondering what something does? The guide
+            walks through every tab in plain English.
+          </p>
+          <button class="btn btn--primary" id="openGuideBtn" type="button">
+            📖 How to use
+          </button>
+        </div>
+
         <!-- Friends (Phase 12): the name your gym buddies see. Saved to your
              account (not this device), so it's the same on every phone. -->
         <h2 class="section-heading">Friends</h2>
@@ -675,6 +687,28 @@
     </div>
 
     <!--
+      The guide (Phase 13). A full-screen sheet, same pattern as workout mode.
+      guide.js fills #guideContent from the lists at the top of that file.
+    -->
+    <div class="sheet" id="guideSheet" hidden>
+      <div
+        class="sheet__panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="guideTitle"
+      >
+        <header class="sheet__header">
+          <h2 class="sheet__title" id="guideTitle">How to use</h2>
+          <button class="btn btn--ghost btn--small" type="button" id="closeGuideBtn">
+            Close
+          </button>
+        </header>
+
+        <div id="guideContent"></div>
+      </div>
+    </div>
+
+    <!--
       "Syncing…" overlay (Phase 12e). app.js shows this while your data is being
       fetched at login — that can take a few seconds if the database has been
       asleep, and a blank screen looks broken.
@@ -764,6 +798,9 @@
     <!-- The Friends tab (Phase 12). Loaded after app.js because it uses its
          helpers (showToast, formatDate, showSessionDetail...). -->
     <script src="friends.js"></script>
+
+    <!-- The in-app guide (Phase 13). All its wording lives at the top of the file. -->
+    <script src="guide.js"></script>
     <!-- Login / sign-up gate (Phase 7) -->
     <script src="auth.js"></script>
   </body>

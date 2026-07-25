@@ -542,7 +542,12 @@ function renderSchedule() {
   // No exercises yet → friendly empty state.
   if (exercises.length === 0) {
     container.appendChild(
-      createEmptyState("💪", "No exercises yet — add your first one above!")
+      createEmptyState(
+        "💪",
+        "No exercises yet — add your first one above!",
+        "New here? Take the tour",
+        openGuide
+      )
     );
     return;
   }
@@ -622,7 +627,12 @@ function renderToday() {
   if (!activeProfile) {
     document.getElementById("startTodayBtn").hidden = true;
     container.appendChild(
-      createEmptyState("👋", "Create a profile in Settings to get started.")
+      createEmptyState(
+        "👋",
+        "Create a profile in Settings to get started.",
+        "New here? Take the tour",
+        openGuide
+      )
     );
     return;
   }
@@ -713,7 +723,10 @@ function renderActiveProfileChip() {
 }
 
 // A small helper that builds a friendly "nothing here yet" card.
-function createEmptyState(emoji, message) {
+// Pass `actionLabel` + `onAction` (Phase 13) to add a button underneath — used
+// for the "New here? Take the tour" link on the screens a first-time visitor
+// lands on.
+function createEmptyState(emoji, message, actionLabel, onAction) {
   const card = document.createElement("div");
   card.className = "card empty-state";
 
@@ -726,6 +739,16 @@ function createEmptyState(emoji, message) {
 
   card.appendChild(emojiDiv);
   card.appendChild(text);
+
+  if (actionLabel && onAction) {
+    const button = document.createElement("button");
+    button.className = "btn btn--ghost btn--small empty-state__action";
+    button.type = "button";
+    button.textContent = actionLabel;
+    button.addEventListener("click", onAction);
+    card.appendChild(button);
+  }
+
   return card;
 }
 

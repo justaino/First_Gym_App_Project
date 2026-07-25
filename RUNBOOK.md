@@ -9,8 +9,9 @@ disagrees with the code, the code wins (and the runbook should be fixed).
 ## 1. What this app is
 
 A personal, browser-based gym tracker. Plain HTML, CSS, and vanilla JavaScript —
-no frameworks, no build step, no backend. All data is stored in the browser with
-**localStorage**.
+no frameworks, no build step. Data is kept in the browser with **localStorage**
+and, since Phase 7, synced to a **Supabase** account so it follows you between
+devices (see §5d — the cloud is the source of truth, localStorage is the cache).
 
 **Files:**
 
@@ -20,6 +21,10 @@ no frameworks, no build step, no backend. All data is stored in the browser with
 | `styles.css` | All styling, including the design-system colours and animations. |
 | `app.js` | All behaviour: storage, rendering, workouts, easter eggs, etc. |
 | `exercise-library.js` | Data only: the built-in list of ~90 common exercises used for the name suggestions (Phase 8). |
+| `supabase.js` / `auth.js` | The cloud connection and the login gate (Phase 7). |
+| `friends.js` | The Friends tab: requests, buddies, nudges, close friends (Phase 12). |
+| `guide.js` | The in-app guide. All its wording is in two lists at the top (Phase 13). |
+| `sw.js` | Service worker — caches the app shell. Bump `CACHE_VERSION` on every app change. |
 
 ---
 
@@ -490,6 +495,34 @@ one side to close friend and confirm only that side can open the workouts.
 
 ---
 
+## 5k. The in-app guide (Phase 13)
+
+**Settings → 📖 How to use** opens a full-screen sheet (the same pattern as
+workout mode). It's also reachable from a "New here? Take the tour" button on
+the two screens a first-timer lands on: Today with no profile, and Schedule with
+no exercises.
+
+It has two halves: **three numbered steps** (make a profile → build your week →
+train), then a **collapsible section per tab** for looking things up, ending
+with an "Easy to miss" list.
+
+### ✏️ Editing the wording — read this before changing anything
+
+All the text lives in **two plain lists at the top of `guide.js`**:
+`GUIDE_STEPS` and `GUIDE_SECTIONS`. Add a feature = add one line to the right
+section's `items` array. You never need to touch the drawing code below them.
+Write it as you'd say it to a friend: what they see and what to tap.
+
+> **This replaced `Documentation/USER-GUIDE.md`, which was deleted.** One copy on
+> purpose — two would drift apart within a phase or two. The README now points at
+> the in-app guide instead.
+
+**Deliberately not documented:** the owl long-press and the credits card stay
+secret (see §8). The "Easy to miss" section ends with a nudge to go poking, and
+nothing more.
+
+---
+
 ## 6. Backup & restore (import / export)
 
 Found in **Settings → Backup**.
@@ -549,6 +582,14 @@ its first weighted workout won't fire a PR (there's nothing to beat yet).
 ## 9. Change log
 
 Newest first. Add a line here whenever behaviour changes.
+
+- **2026-07-25** — **Phase 13 — in-app guide (on `dev`, awaiting owner test):** new
+  `guide.js` + **Settings → 📖 How to use**, opening a full-screen sheet: three numbered
+  starting steps, then a collapsible section per tab and an "Easy to miss" list. Also
+  reachable via "New here? Take the tour" on the empty Today/Schedule states
+  (`createEmptyState` gained optional button arguments). All wording lives in two lists at
+  the top of `guide.js`. **`Documentation/USER-GUIDE.md` was deleted** — the in-app guide
+  replaces it, and the README now points there. See §5k. Cache `v36`.
 
 - **2026-07-25** — **Phase 12d + 12e — finishing Friends, and loading states (on `dev`,
   awaiting owner test):**
