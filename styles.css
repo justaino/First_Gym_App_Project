@@ -1682,6 +1682,12 @@ body {
   color: var(--text);
 }
 
+/* Phase 14d: a friend's @handle under their display name. */
+.friend__handle {
+  color: var(--muted);
+  opacity: 0.85;
+}
+
 /* "👋 Nudged you today" on a buddy's card. */
 .friend__nudged {
   color: var(--coral);
@@ -1862,6 +1868,27 @@ body {
   height: 6px;
   border-radius: 50%;
   background-color: var(--mint);
+}
+
+/* ---- Phase 14c: the username box in Settings ----
+   The hint under it turns mint when a handle is free and coral when it isn't. */
+.username-hint {
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1.4;
+  margin-top: 8px;
+}
+.username-hint.is-ok {
+  color: var(--mint);
+}
+.username-hint.is-error {
+  color: var(--coral);
+}
+/* A label that needs a bit of air above it (a second field in one card). */
+.form__label--spaced {
+  display: block;
+  margin-top: 16px;
 }
 
 /* ---- Phase 12d: the "share my workouts" switch in Settings ---- */

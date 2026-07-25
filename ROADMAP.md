@@ -539,26 +539,62 @@ must fail soft when offline.
 **Done when:** a friend who has never seen the app can get from nothing to a finished
 workout using only the guide. **Test:** read it on a phone; check both themes.
 
-### Phase 14 — Usernames ☐
+### Phase 14 — Usernames ✅ *(14a, 14c, 14d done 2026-07-25 — cache `v42`, awaiting owner test; 14b withdrawn)*
 **Goal:** send a friend request by `@username` instead of an email address.
 
-- ☐ **14a — SQL (owner runs; wait for confirmation):** add `username` to
+- ✅ **14a — SQL (owner ran 2026-07-25):** add `username` to
   `user_directory` with a unique index on `lower(username)` and a format check (3–20
   chars, letters/numbers/underscore); backfill existing users with readable generated
   names (e.g. `mintyowl42`); add `find_user_by_username()` and `is_username_available()`
   as `SECURITY DEFINER` functions alongside the email lookup.
-- ☐ **14b — Sign-up:** a username field on the sign-up form with a live
-  "✓ available / ✗ taken" check. **Wrinkle:** the directory row is created at first
-  *login*, not sign-up, so either hold the chosen name in localStorage between the two
-  or move row creation into the sign-up step.
-- ☐ **14c — Changing it:** Settings → Friends gains "Username" next to "Your name to
-  friends", same availability check. Safe to change — friendships are keyed on user id.
-- ☐ **14d — Using it:** the add-friend box accepts either; text containing `@` is treated
-  as an email, otherwise a username. Buddy cards show `@username` under the display name.
+- ❌ **14b — Sign-up: built 2026-07-25, then withdrawn the same day.** A username box on
+  the sign-up form could only check a name's *shape*, because `is_username_available()`
+  refuses callers who aren't logged in — and at sign-up you aren't. A taken handle was
+  therefore swapped for a generated one after the fact, and **silently** when the name was
+  *reserved* (that path discarded the choice before any insert, so no alert fired). It
+  also showed on the login form, where it made no sense. Replaced by 14c; the useful half
+  — always generating a handle, and filling in any row that lacks one — was kept.
+- ✅ **14c — Changing it (built 2026-07-25):** Settings → Friends gained a **Username**
+  box below "Your name to friends", with a **real** availability check — you're logged in
+  here, so the database will answer. Debounced ~400ms while typing (mint "@name is free ✓"
+  / coral "already taken"), re-checked on Save, and it copes with someone claiming the
+  name in the seconds between. Safe to change — friendships are keyed on user id.
+- ✅ **14d — Using it (built 2026-07-25):** the add-friend box accepts either. A leading
+  `@` is stripped first, so `mintyowl42` and `@mintyowl42` both work; anything still
+  containing an `@` is treated as an email. Handles are format-checked before the database
+  is asked, and "no such username" reads differently from "no such email". Buddy cards and
+  incoming requests show `@username` under the display name. The in-app guide was updated
+  in the same change.
 
 **Decisions:** username **and** display name both stay — display name for warmth,
 username for uniqueness.
 
+**Added alongside (2026-07-25):** the login panel gained a **sign-up mode** — pressing
+"Sign up" reveals a *Confirm email* field before the account is created, so a typo can't
+lock someone out of both their account and their reset email. This is also what makes the
+form able to show sign-up-only fields at all, which was half the reason 14b's username box
+felt wrong on it.
+
 **Watch-out (accepted trade-off):** usernames are guessable in a way emails aren't, so
 someone could probe for which accounts exist. They still can't see anything without an
 accepted request. Rate-limiting the lookup is the fix if it ever matters.
+
+### Phase 15 — Mutual close friends ✅ *(built 2026-07-25 — cache `v43`, awaiting owner test)*
+**Goal:** asked for by the owner after testing Phase 14 — close friendship should be
+something you agree to, not something one person decides alone.
+
+- ✅ **15a — SQL (owner ran 2026-07-25):** `close_requests` (RLS: read/withdraw either
+  side, send only to an accepted friend); `friendships.close_requested` so a new friend
+  request carries the intent; `accept_close_request()` and `end_close_friendship()` as
+  `SECURITY DEFINER` — acceptance must write *both* grant rows and ordinary RLS only lets
+  you write your own, which is exactly what stops self-promotion;
+  `friend_directory()` extended with the two pending-ask flags.
+- ✅ **15b — App:** the ⭐ control became a state machine (Ask → Asked ⭐ → Accept /
+  Decline → ⭐ Close friends); "Ask to be close friends too" on the add-friend form;
+  accepting a friend request that also asked for close prompts once and settles both;
+  ending it ends both sides, with wording that says so.
+
+**Decisions:** the one-way share stays, as *Share mine only*. Asking an existing friend
+opens your own side immediately (for a brand-new friend, both open on acceptance — you
+can't share with someone who hasn't accepted you). Existing one-way grants were left
+untouched by the migration.

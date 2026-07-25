@@ -67,6 +67,7 @@ All keys start with `gym:`.
 > each exercise as `sortOrder` (in `gym:exercises`) and as `sort_order` in the
 > Supabase `exercises` table. See §5h.
 | `gym:celebratedMilestones` | Easter-egg bookkeeping: which workout-count milestones each profile has already celebrated, so the trophy only plays once. |
+| `gym:buddiesOpen` | Phase 12e: whether the Today "Gym buddies" card is folded open. |
 | `gym:recapSeen:<profileId>:<monday>` | Phase 11: you've dismissed the "week in review" card on Today for that profile that week. One key per profile per week; old ones are tidied away automatically (per device, not synced). |
 
 ---
@@ -425,10 +426,19 @@ localStorage, and needs you to be logged in and online.
 | **Friend** | That you trained today, and your workouts-this-week count. Can nudge you. |
 | **Close friend** | All of the above **plus** your actual workouts — sets, reps, weights, exercise names. |
 
-- You promote someone with the **⭐ Close friend** button on their card. It is
-  **one-directional**: it controls what *they* see of *your* data. It's normal
-  for one of you to be close and not the other, and nobody can promote
-  themselves.
+- **Close friendship is mutual (Phase 15).** One of you taps **☆ Ask to be
+  close friends** (or ticks the box when first adding them); the other accepts,
+  and both sides open at once. Either of you can end it, and both sides close.
+- **Asking an existing friend opens your own side straight away** — you've said
+  you want to share — with theirs opening on acceptance. For someone who isn't a
+  friend yet, both open together on acceptance: you can't grant access to
+  somebody who hasn't accepted you.
+- **The one-way share survives** as *Share mine only*: they see your workouts,
+  you don't see theirs, nobody accepts anything. That's the old Phase 12
+  behaviour, kept for when you just want to show someone your training.
+- **Nobody can promote themselves.** Accepting is the only way to gain access,
+  and it's done by `accept_close_request()` — the one function allowed to write
+  both grant rows, and only after checking you really were asked.
 - It's enforced by the **database**, not the screen — an ordinary friend can't
   read your workout rows even with DevTools open. Their counts come from a
   `friend_activity()` function that returns numbers only.
@@ -524,6 +534,47 @@ nothing more.
 
 ---
 
+## 5l. Usernames (Phase 14)
+
+Every account has a **username** — a unique handle like `@mintyowl42` — as well
+as a display name. The display name is the friendly one your buddies see
+("Justice"); the username is the unique one people can type to find you.
+
+- **Rules:** lower case, 3–20 characters, letters, numbers and underscores. The
+  database enforces the format and uniqueness (`user_directory.username`).
+- **Where it comes from:**
+  - Typed on the **sign-up form** (optional). The app can only check the *shape*
+    there, not whether it's free — `is_username_available()` deliberately
+    refuses callers who aren't logged in, and at sign-up you aren't yet. So the
+    choice is parked in `gym:desiredUsername` and claimed a moment later when
+    your directory row is created. If someone beat you to it you get a
+    generated handle and an alert telling you to change it in Settings.
+  - **Generated** if you skip the box, or if your account predates usernames —
+    `ensureMyDirectoryRow()` fills in any row that has none, so the SQL backfill
+    never has to be repeated.
+- **Reserved handles** (`admin`, `athena`, `support`, `justaino`, …) live in
+  **two places on purpose**: `RESERVED_USERNAMES` in `friends.js` (what the app
+  refuses) and the list inside `is_username_available()` (what the database
+  refuses). The database's *format* constraint does NOT include them — that's
+  deliberate, so the owner can still claim one by hand in the SQL editor:
+
+  ```sql
+  update public.user_directory
+  set username = 'justaino', updated_at = now()
+  where email = 'you@example.com';
+  ```
+
+  Keep the two lists in step if you add to either.
+- **Scripts:** `Documentation/SQL-Phase14-Usernames.sql` (column, backfill,
+  lookups) and `SQL-Phase14-ReservedHandles.sql` (the owner's handles, plus the
+  fix that lets you re-save your own reserved name).
+
+> ⚠️ **Still to come:** 14c makes the handle editable in Settings, and 14d lets
+> you add a friend by handle as well as by email. Until then a generated handle
+> can only be changed in the SQL editor.
+
+---
+
 ## 6. Backup & restore (import / export)
 
 Found in **Settings → Backup**.
@@ -583,6 +634,66 @@ its first weighted workout won't fire a PR (there's nothing to beat yet).
 ## 9. Change log
 
 Newest first. Add a line here whenever behaviour changes.
+
+- **2026-07-25** — **Copy pass: fewer em dashes (on `dev`, awaiting owner test):** the
+  owner felt the app's writing leaned on "—" too heavily and it read as machine-written.
+  Every user-visible em dash was rewritten as a full stop, comma, colon or joining word,
+  across `index.html`, `app.js`, `friends.js`, `guide.js`, `auth.js` and the Friends
+  what's-new note. Two were **kept**: the `—` placeholders in the hero date and the weight
+  box, where it's a glyph meaning "nothing here yet" rather than punctuation. Also fixed
+  two stale strings found on the way: the empty Friends state still said "add someone by
+  email" (usernames work now), and the workout-detail title separator became "·" to match
+  the rest of the app. Code comments and the internal docs were left as they are.
+  Cache `v44`.
+
+- **2026-07-25** — **Phase 15 — close friends became mutual (on `dev`, awaiting owner
+  test):** SQL from `Documentation/SQL-Phase15-CloseFriendRequests.sql` (owner ran it):
+  a `close_requests` table, a `close_requested` flag on `friendships` so a brand-new
+  friend request can carry the intent, and `accept_close_request()` /
+  `end_close_friendship()` as `SECURITY DEFINER` — acceptance has to write BOTH grant
+  rows, and normal RLS lets you write only your own. `friend_directory()` gained
+  `close_asked_by_me` / `close_asked_by_them`. In the app: the ⭐ button became a small
+  state machine (Ask → Asked ⭐ → Accept/Decline → ⭐ Close friends), a tickbox on the
+  add-friend form asks in the same breath, accepting a friend request that asked for close
+  prompts once for both, and ending it now ends both sides. The **one-way share was kept**
+  as "Share mine only". Guide updated. See §5j. Cache `v43`.
+
+- **2026-07-25** — **Phase 14d — add a friend by handle (on `dev`, awaiting owner test):**
+  the add-friend box now takes **either** a username or an email. A leading `@` is
+  stripped, then anything still containing an `@` is treated as an email and anything else
+  as a handle (checked against the format rule before the database is asked), so
+  `mintyowl42`, `@mintyowl42` and `them@example.com` all work. Buddy cards and incoming
+  requests now show the person's `@handle` under their display name. `addFriendByEmail()`
+  became `addFriend()`. The guide's Friends section was updated to match. Cache `v42`.
+
+- **2026-07-25** — **Sign-up: confirm your email (on `dev`, awaiting owner test):** the
+  login panel now has a **sign-up mode**. Pressing "Sign up" reveals a **Confirm email**
+  box (and relabels the button "Create account"); pressing it again creates the account,
+  refusing if the two addresses don't match (compared case-insensitively). Pressing
+  "Log in" always returns the form to plain log-in and clears the confirm box. A typo'd
+  address otherwise locks someone out of both their account and any reset email.
+  Cache `v41`.
+
+- **2026-07-25** — **Phase 14c — pick your own username (on `dev`, awaiting owner test):**
+  **Settings → Friends → Username** is now an editable box with a live ✓/✗ availability
+  check (debounced ~400ms) and a Save that re-checks server-side. **The sign-up field
+  added in 14b was removed**: it showed on the login form too, and it could only check a
+  name's shape — a taken handle was swapped for a generated one, silently when the name
+  was *reserved* (that path discarded the choice before any insert, so no alert fired).
+  Everyone now gets a generated handle at row creation and renames it here, where the
+  check actually works. Cache `v40`.
+
+- **2026-07-25** — **Phase 14a/14b — usernames (on `dev`, awaiting owner test):** the
+  database side ran from `Documentation/SQL-Phase14-Usernames.sql` (+ the
+  `SQL-Phase14-ReservedHandles.sql` follow-up): a unique, format-checked `username` on
+  `user_directory`, everyone backfilled with a readable handle (`mintyowl42`),
+  `is_username_available()`, `find_user_by_username()`, and `friend_directory()` extended
+  to return usernames. In the app: an optional **Username** box on the sign-up form
+  (shape-checked live), and `ensureMyDirectoryRow()` now always sets a handle — claiming
+  the one you asked for, or generating one if it's taken or you skipped it. Older accounts
+  with no handle get one on their next login, so the backfill never needs repeating.
+  Settings → Friends shows your handle read-only (14c makes it editable). See §5l.
+  Cache `v39`.
 
 - **2026-07-25** — **Renamed to Athena's Arena (on `dev`, awaiting owner test):** the top
   bar said "Jonathan's Journey 💪" and the PWA was still called "Justaino". Now everywhere

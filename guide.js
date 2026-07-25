@@ -36,7 +36,7 @@ const GUIDE_STEPS = [
     title: "Build your week",
     text:
       "Schedule → ＋ Add exercise. Start typing a name and pick one of the " +
-      "suggestions — it fills in the emoji, sets and reps for you. Choose " +
+      "suggestions: it fills in the emoji, sets and reps for you. Choose " +
       "which day it belongs to, then add a few more.",
   },
   {
@@ -57,7 +57,7 @@ const GUIDE_SECTIONS = [
     summary: "Start a workout, see your week",
     items: [
       "Shows the exercises planned for today's day of the week.",
-      "▶ Start workout opens training mode. If you close it half way, the button says Resume — nothing is lost.",
+      "▶ Start workout opens training mode. If you close it half way, the button says Resume, and nothing is lost.",
       "Recent workouts lists your last few sessions. Edit one to fix a mistake, including its date.",
       "Once a week you'll get a Your week in review card summing up last week. Dismiss it and it won't come back until next week.",
       "Gym buddies shows which friends have trained today. Tap the heading to fold it away.",
@@ -69,7 +69,7 @@ const GUIDE_SECTIONS = [
     summary: "Your weekly plan",
     items: [
       "＋ Add exercise: name, emoji, sets, reps and which day it's on.",
-      "Typing a name suggests common exercises — tap one to fill in the rest, or ignore them and type your own.",
+      "Typing a name suggests common exercises. Tap one to fill in the rest, or ignore them and type your own.",
       "You can set different reps and a different weight for each set, if you want to work up in weight.",
       "Drag the ⠿ handle on the left of a card to reorder exercises within a day. Workout mode follows the same order.",
       "Edit or Delete on any card. Deleting an exercise also removes it from your saved workouts.",
@@ -80,7 +80,7 @@ const GUIDE_SECTIONS = [
     title: "Workout mode",
     summary: "What happens while you train",
     items: [
-      "Tick a set only when you've actually done it — everything else in the app counts ticked sets and ignores the rest.",
+      "Tick a set only when you've actually done it. Everything else in the app counts ticked sets and ignores the rest.",
       "Under each exercise you'll see what you lifted last time, so you know what to beat.",
       "The rest timer has 60s / 90s / 120s buttons and beeps when it's up. It keeps counting correctly even if you lock your phone or switch apps.",
       "Progress saves as you go. Close is safe; Discard throws the session away.",
@@ -94,7 +94,7 @@ const GUIDE_SECTIONS = [
     items: [
       "The ring at the top shows workouts done this week against your weekly goal (set it in Settings).",
       "Week streak counts how many weeks in a row you've trained at least once.",
-      "The 12-week grid is one square per day — darker means more sets. Tap a square to see that day.",
+      "The 12-week grid is one square per day, and darker means more sets. Tap a square to see that day.",
       "Personal records lists your heaviest weight for every exercise, and when you did it.",
       "Last week is a summary of the week just gone: workouts, sets, total weight moved and any records.",
       "Further down, each exercise gets its own chart. Tap a bar to see that whole workout.",
@@ -105,13 +105,16 @@ const GUIDE_SECTIONS = [
     title: "Friends",
     summary: "Buddies, nudges and sharing",
     items: [
-      "Add someone by typing the email they signed up with, then Send. They accept from their own Friends tab.",
+      "Add someone by typing their username (like @mintyowl42) or the email they signed up with, then Send. They accept from their own Friends tab.",
       "A normal friend sees only whether you trained today and how many workouts you've done this week.",
-      "Tap ☆ Close friend to let someone see your actual workouts — sets, reps, weights and exercise names.",
-      "Close friend is one-way: it controls what THEY see of YOUR training. If you both want to see each other's, you each tap it.",
-      "👋 Nudge gives a friend a friendly prod. One per friend per day. They'll see it next time they open the app — it isn't a phone notification.",
+      "Ask to be close friends to see each other's actual workouts: sets, reps, weights and exercise names. They have to accept, and then it works both ways.",
+      "You can ask when you first add someone (tick the box on the form), or later from their card.",
+      "Either of you can end it, and you both stop seeing each other's workouts. You stay ordinary friends.",
+      "Share mine only is the quieter option: they see your workouts, you don't see theirs, and nobody has to accept anything.",
+      "👋 Nudge gives a friend a friendly prod. One per friend per day. They'll see it next time they open the app. It isn't a phone notification.",
       "A red dot on the tab means a request or a nudge is waiting for you.",
       "Settings → Friends → Share my workouts with friends turns everything off at once, close friends included.",
+      "Your own username is in Settings → Friends. You're given one to start with. Change it to whatever you like, as long as nobody else has it.",
     ],
   },
   {
@@ -121,11 +124,11 @@ const GUIDE_SECTIONS = [
     items: [
       "Your workouts are saved to your account, so logging in on another device brings everything with you.",
       "Weekly goal sets the target for the ring on Progress.",
-      "Weight unit switches every label between kg and lb. It only changes the label — your saved numbers are never converted.",
+      "Weight unit switches every label between kg and lb. It only changes the label, so your saved numbers are never converted.",
       "The 🌙 button in the top corner switches between light and dark. It's remembered on this device only.",
       "Backup → Export downloads a copy of your data as a file. Import merges one back in. Worth doing before any big clear-out.",
       "Install app puts Athena's Arena on your home screen, so it opens full-screen like a normal app.",
-      "Delete my data removes everything permanently — workouts, plan and friends. It can't be undone.",
+      "Delete my data removes everything permanently: workouts, plan and friends. It can't be undone.",
     ],
   },
   {
@@ -133,11 +136,11 @@ const GUIDE_SECTIONS = [
     title: "Easy to miss",
     summary: "Small things worth knowing",
     items: [
-      "You can change a workout's date after the fact — Edit it from Recent workouts. The day name updates to match.",
+      "You can change a workout's date after the fact. Edit it from Recent workouts. The day name updates to match.",
       "Exercises with no weight are fine. Leave the weight box empty and the app just records your reps.",
       "The app opens and works without a connection, but anything to do with friends, and changes to your plan, need you online.",
-      "If the app seems stuck after a quiet spell, it's usually the database waking up — give it a few seconds.",
-      "Emoji are only labels — pick whichever one helps you spot an exercise in the list.",
+      "If the app seems stuck after a quiet spell, it's usually the database waking up, so give it a few seconds.",
+      "Emoji are only labels, so pick whichever one helps you spot an exercise in the list.",
       "There may be one or two surprises hidden in the app. Poke around. 🦉",
     ],
   },

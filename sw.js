@@ -16,7 +16,7 @@
 */
 
 // 🔼 Bump this whenever you change app files and want everyone to get the update.
-const CACHE_VERSION = "v38";
+const CACHE_VERSION = "v44";
 const CACHE_NAME = "athenas-arena-cache-" + CACHE_VERSION;
 
 // The core files that make up the app ("the app shell"). Relative paths so this

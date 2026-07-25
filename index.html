@@ -61,6 +61,19 @@
             placeholder="Email"
             autocomplete="email"
           />
+          <!--
+            Sign-up only (Phase 14 follow-up): typing the email twice catches
+            typos, which otherwise lock someone out of their own account.
+            auth.js reveals this when you press "Sign up".
+          -->
+          <input
+            class="input"
+            id="authEmailConfirmInput"
+            type="email"
+            placeholder="Confirm email"
+            autocomplete="email"
+            hidden
+          />
           <input
             class="input"
             id="authPasswordInput"
@@ -73,6 +86,8 @@
             <button class="btn btn--primary" id="loginBtn" type="submit">
               Log in
             </button>
+            <!-- First press switches the form to sign-up mode (revealing the
+                 confirm-email box); the second press creates the account. -->
             <button class="btn btn--ghost" id="signupBtn" type="button">
               Sign up
             </button>
@@ -262,14 +277,14 @@
              nobody can browse other people's email addresses. -->
         <div class="card">
           <label class="form__label" for="friendEmailInput">
-            Add a friend by email
+            Add a friend by username or email
           </label>
           <div class="friend-add">
             <input
               class="input"
               id="friendEmailInput"
               type="email"
-              placeholder="their@email.com"
+              placeholder="@theirhandle or their@email.com"
               autocomplete="off"
               autocapitalize="none"
             />
@@ -277,8 +292,21 @@
               Send
             </button>
           </div>
+          <!-- Phase 15: ask to be close friends in the same breath. -->
+          <label class="switch-row" for="addAsCloseInput">
+            <span class="switch-row__text">
+              <span class="switch-row__title">Ask to be close friends too</span>
+              <span class="switch-row__note">
+                If they accept, you'll each be able to see the other's
+                workouts, not just whether they trained.
+              </span>
+            </span>
+            <input type="checkbox" id="addAsCloseInput" />
+          </label>
+
           <p class="friend-add__hint">
-            They'll see your request the next time they open the app.
+            Their username is in their Settings, or use the email they signed
+            up with. They'll see your request next time they open the app.
           </p>
         </div>
 
@@ -346,6 +374,30 @@
             This is how you appear in other people's buddy lists.
           </p>
 
+          <!-- Phase 14c: your unique handle. Everyone is given one; this is
+               where you change it. -->
+          <label class="form__label form__label--spaced" for="usernameInput">
+            Username
+          </label>
+          <div class="friend-add">
+            <input
+              class="input"
+              id="usernameInput"
+              type="text"
+              maxlength="20"
+              autocomplete="off"
+              autocapitalize="none"
+              placeholder="Loading…"
+              disabled
+            />
+            <button class="btn btn--primary" id="saveUsernameBtn" type="button">
+              Save
+            </button>
+          </div>
+          <p class="username-hint" id="usernameHint">
+            3–20 characters: letters, numbers and underscores.
+          </p>
+
           <!-- Phase 12d: the master sharing switch. Off = friends see nothing
                at all, not even your "went today" tick. -->
           <label class="switch-row" for="shareWorkoutsInput">
@@ -353,7 +405,7 @@
               <span class="switch-row__title">Share my workouts with friends</span>
               <span class="switch-row__note">
                 Off means friends can't see your workouts or whether you
-                trained — not even close friends.
+                trained. Not even close friends.
               </span>
             </span>
             <input type="checkbox" id="shareWorkoutsInput" checked />
@@ -391,7 +443,7 @@
             <option value="lb">Pounds (lb)</option>
           </select>
           <p class="backup__text">
-            This only changes the label. Your saved weights aren't converted — a
+            This only changes the label. Your saved weights aren't converted, so a
             set saved as 40 still reads 40, just with the unit you pick. Saved on
             this device only.
           </p>
@@ -422,7 +474,7 @@
         <h2 class="section-heading">Backup</h2>
         <div class="card">
           <p class="backup__text">
-            Save all your profiles, exercises, and history to a file — or restore
+            Save all your profiles, exercises, and history to a file, or restore
             them from a file you saved before.
           </p>
           <div class="backup__buttons">
@@ -463,7 +515,7 @@
           <p class="backup__text">
             <strong>Delete my data</strong> permanently removes all your profiles,
             exercises, and workout history from the cloud and from this device.
-            This cannot be undone — export a backup first if you want to keep a
+            This cannot be undone. Export a backup first if you want to keep a
             copy. (Your login email isn't removed automatically; email me if you'd
             like the account itself deleted too.)
           </p>
@@ -623,7 +675,7 @@
               <span aria-hidden="true">⬆️</span> in Safari's toolbar.
             </li>
             <li>Scroll down and tap <strong>Add to Home Screen</strong>.</li>
-            <li>Tap <strong>Add</strong> — the owl appears on your home screen. 🦉</li>
+            <li>Tap <strong>Add</strong> and the owl appears on your home screen. 🦉</li>
           </ol>
         </div>
         <div class="modal__actions">

@@ -11,14 +11,14 @@ Open the app and you'll find a new **🤝 Friends** tab at the bottom.
 
 ## Adding someone
 
-Friends tab → type their email address → **Send**.
+Friends tab → type their username or the email they signed up with → **Send**.
 
 They need to have signed up to Athena's Arena with that exact address. When they
 next open the app, your request is waiting at the top of their Friends tab with
 **Accept** and **Decline** buttons.
 
 You'll see a little **red dot** on the 🤝 tab whenever something's waiting for
-you — a request, or a nudge.
+you: a request, or a nudge.
 
 ---
 
@@ -26,22 +26,22 @@ you — a request, or a nudge.
 
 This is the bit worth understanding.
 
-**Friend** — the normal level. They can see:
+**Friend** is the normal level. They can see:
 
 - whether you trained today ✅
 - how many workouts you've done this week
 
 That's it. They cannot see what you lifted, or which exercises you do.
 
-**Close friend** — tap **☆ Close friend** on someone's card to promote them.
-Now they can also open your workouts and see your sets, reps, weights and
-exercise names.
+**Close friend** is the level up. Tap **☆ Ask to be close friends** on someone's
+card (or tick the box when you first add them) and, once they accept, you can
+each open the other's workouts and see sets, reps, weights and exercise names.
 
 Two things to know:
 
-1. **It's one-way.** Marking someone as a close friend controls what *they* see
-   of *your* workouts. It doesn't give you anything back. If you both want to
-   see each other's, you each need to tap the button.
+1. **It's mutual, and they have to agree.** Either of you can end it later, and
+   you both stop seeing each other's workouts. If you'd rather just show someone
+   your training without seeing theirs, use **Share mine only** instead.
 2. **Nobody can promote themselves.** Only you decide who sees your training.
 
 Tap ⭐ again at any time to take it back.
@@ -52,8 +52,8 @@ Tap ⭐ again at any time to take it back.
 
 Tap **👋 Nudge** on a friend's card to give them a friendly prod.
 
-The next time they open the app they'll see a message — *"👋 Justice nudged you —
-go get that workout!"* — and their Friends tab will show that it came from you.
+The next time they open the app they'll see a message, *"👋 Justice nudged you.
+Go get that workout!"*, and their Friends tab will show that it came from you.
 
 You get **one nudge per friend per day**, so it stays a nice surprise rather
 than a pestering. The button turns into "Nudged! ✓" until tomorrow.
@@ -75,12 +75,13 @@ open it again.
 
 Settings → Friends has a switch: **Share my workouts with friends**.
 
-Turn it off and friends see nothing at all — not your workouts, not even your
+Turn it off and friends see nothing at all: not your workouts, not even your
 "went today" tick. It overrides everything, including close friends. Turn it
 back on and everything reappears.
 
-There's also **Your name to friends** in the same place — the name people see in
-their buddy list. Change it whenever you like.
+There's also **Your name to friends** in the same place, which is the name people
+see in their buddy list, and **Username**, your unique handle for being found.
+Change either whenever you like.
 
 ---
 
@@ -90,7 +91,7 @@ their buddy list. Change it whenever you like.
   the tab will ask you to reconnect if you're offline. Your own workouts still
   work offline as normal.
 - **Nothing is instant.** The app checks for news when you open it or visit the
-  Friends tab — there's no live updating, so your friend's tick might be a few
+  Friends tab. There's no live updating, so your friend's tick might be a few
   minutes behind.
 - **"Today" is worked out in UTC**, so right around midnight a friend's tick can
   be an hour or two out of step with their own screen.
@@ -99,8 +100,8 @@ their buddy list. Change it whenever you like.
 
 ## Removing someone
 
-**Remove** on their card, and confirm. It disconnects you both ways — they
-disappear from your list and you from theirs — and any sharing between you stops
+**Remove** on their card, and confirm. It disconnects you both ways, so they
+disappear from your list and you from theirs, and any sharing between you stops
 immediately.
 
 Enjoy, and go nudge someone. 💪
