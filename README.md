@@ -1,4 +1,4 @@
-# Athena's Arena 💪
+# Athena's Arena 🦉
 
 A friendly, personal gym planner that runs entirely in the browser. Create a profile,
 add exercises (sets, reps, an emoji icon, and a day of the week), and see your plan

@@ -110,7 +110,8 @@ localStorage.clear()
 The app is a **Progressive Web App** — installable to a home screen and works
 offline.
 
-- **Manifest:** `manifest.webmanifest` (app name "Justaino", icons, standalone).
+- **Manifest:** `manifest.webmanifest` (app name "Athena's Arena", short name
+  "Athena" so it fits under a home-screen icon, icons, standalone).
 - **Icons:** in `icons/` — the owl (`Owl.png`, transparent, is the source)
   composited onto a lavender (`#B9A7E0`) background at 192/512/180. The icons are
   **maskable**, so the owl is scaled to ~74% (a 380px box on the 512 canvas) to
@@ -582,6 +583,18 @@ its first weighted workout won't fire a PR (there's nothing to beat yet).
 ## 9. Change log
 
 Newest first. Add a line here whenever behaviour changes.
+
+- **2026-07-25** — **Renamed to Athena's Arena (on `dev`, awaiting owner test):** the top
+  bar said "Jonathan's Journey 💪" and the PWA was still called "Justaino". Now everywhere
+  the user can see: the top bar (**Athena's Arena 🦉** — flex emoji swapped for the owl),
+  the browser tab title, the login panel, the install copy, and the manifest
+  (`name` "Athena's Arena", `short_name` **"Athena"** so it isn't truncated under a
+  home-screen icon). The service-worker cache prefix changed to `athenas-arena-cache-`;
+  the activate step deletes any cache that isn't the current one, so the old
+  `justaino-cache-*` is cleared automatically. **Left alone on purpose:** 💪 as an
+  exercise icon and in encouraging copy ("you've got this 💪"), and the repo/Pages URL
+  (`justaino.github.io/First_Gym_App_Project`) — changing that would break the live link
+  your friends have. Cache `v38`.
 
 - **2026-07-25** — **Phase 13 — in-app guide (on `dev`, awaiting owner test):** new
   `guide.js` + **Settings → 📖 How to use**, opening a full-screen sheet: three numbered
