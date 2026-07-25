@@ -549,13 +549,16 @@ body {
   background: transparent;
   cursor: pointer;
   font-family: inherit;
+  position: relative; /* anchor for the Friends notification dot (Phase 12c) */
 
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
 
-  padding: 8px 12px;
+  /* Phase 12 added a 5th tab (Friends), so these are a little slimmer than
+     before to keep all five on one row. */
+  padding: 8px 8px;
   border-radius: 18px;
 
   color: var(--muted);
@@ -1369,6 +1372,40 @@ body {
   font-size: 18px;
 }
 
+/* ---- Weekly recap card (Phase 11) ----
+   Reuses the normal .card look plus the Insights stat tiles and PR rows, so it
+   needs very little of its own styling. The "--celebrate" version is the
+   once-a-week card on Today: same card, with a soft butter outline. */
+.recap__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+/* Push the ✕ to the far right of the heading row. */
+.recap__close {
+  margin-left: auto;
+  border: none;
+  background: none;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 2px 4px;
+}
+/* The friendly one-liner under the tiles (or the empty-week message). */
+.recap__note {
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 14px;
+  margin-top: 12px;
+  line-height: 1.4;
+}
+/* The Today version stands out a little — butter outline works in both themes
+   because it's a translucent tint over whatever the card colour is. */
+.recap--celebrate {
+  border: 2px solid rgba(246, 211, 101, 0.55);
+}
+
 /* "Since you started" trend callouts (reuse the .pr-row layout) */
 .trend-change {
   margin-left: auto;
@@ -1572,4 +1609,265 @@ body {
   font-weight: 700;
   font-size: 14px;
   color: var(--muted);
+}
+
+/* =========================================================================
+   PHASE 12 — Friends tab
+   Everything here reuses the existing card / exercise-row / button styles;
+   these rules only handle the bits that are new (the add-friend row, the
+   buddy card layout and the close-friend button's "on" state).
+   ========================================================================= */
+
+/* On very narrow phones, squeeze the five tabs a little more. */
+@media (max-width: 380px) {
+  .tab {
+    padding: 8px 4px;
+    font-size: 11px;
+  }
+  .tab__icon {
+    font-size: 18px;
+  }
+}
+
+/* Email box + Send button side by side. */
+.friend-add {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+.friend-add .input {
+  flex: 1;
+  min-width: 0; /* lets the box shrink instead of pushing the button out */
+}
+.friend-add__hint {
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1.4;
+  margin-top: 8px;
+}
+
+/* One buddy (or request) card. */
+.friend__top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 16px;
+}
+/* Tappable only when that friend has made YOU a close friend. */
+.friend__top--tappable {
+  cursor: pointer;
+}
+.friend__top--tappable:active {
+  background-color: rgba(95, 196, 188, 0.1); /* faint mint press feedback */
+}
+.friend__hint {
+  color: var(--mint);
+  font-weight: 700;
+}
+.friend__actions {
+  display: flex;
+  flex-wrap: wrap; /* the three buttons drop onto a second row if needed */
+  gap: 8px;
+  margin-top: 14px;
+}
+.friend__actions .btn[disabled] {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* The close-friend toggle, lit up when they can see your details. */
+.friend__close.is-on {
+  background-color: rgba(246, 211, 101, 0.25); /* butter tint */
+  color: var(--text);
+}
+
+/* "👋 Nudged you today" on a buddy's card. */
+.friend__nudged {
+  color: var(--coral);
+  font-weight: 800;
+}
+
+/* ---- Phase 12c ---- */
+
+/* Little coral dot on the 🤝 tab when a request or nudge is waiting.
+   (The .tab rule higher up sets position: relative so this can sit on it.) */
+.tab__dot {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background-color: var(--coral);
+  /* A ring in the tab-bar colour keeps it readable against the icon. */
+  box-shadow: 0 0 0 2px var(--card);
+}
+.tab__dot[hidden] {
+  display: none;
+}
+
+/* One line of the "Gym buddies" card on Today. */
+.buddy-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+.buddy-row:first-child {
+  border-top: none;
+}
+.buddy-row__name {
+  font-weight: 800;
+  font-size: 15px;
+}
+.buddy-row__status {
+  margin-left: auto;
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 14px;
+}
+.buddy-row__status.is-done {
+  color: var(--mint);
+}
+
+/* ---- Phase 12d: the "share my workouts" switch in Settings ---- */
+.switch-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  cursor: pointer;
+}
+.switch-row__text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.switch-row__title {
+  font-weight: 700;
+  font-size: 15px;
+}
+.switch-row__note {
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.switch-row input[type="checkbox"] {
+  margin-left: auto;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  accent-color: var(--coral); /* tints the tick in the app's colour */
+  cursor: pointer;
+}
+
+/* ---- Phase 12e: loading spinner ----
+   Used wherever we're waiting on the cloud. A sleeping Supabase project can
+   take a few seconds to wake up, and silence looks like a bug. */
+.loading-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.loading-card__text {
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 15px;
+}
+.spinner {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  /* A faint full ring with one coral quarter, spun round. */
+  border: 3px solid var(--border);
+  border-top-color: var(--coral);
+  animation: spinner-turn 0.8s linear infinite;
+}
+@keyframes spinner-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+/* Respect "reduce motion": show a steady ring instead of a spinning one. */
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+    opacity: 0.7;
+  }
+}
+
+/* The "Getting your workouts…" overlay shown while logging in. Sits above the
+   app but below the login gate (z-index 600). */
+.sync-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 550;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background-color: var(--bg);
+}
+.sync-overlay[hidden] {
+  display: none;
+}
+.sync-overlay__panel {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background-color: var(--card);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-soft);
+  padding: 22px 26px;
+}
+
+/* ---- Phase 12e: the collapsible "Gym buddies" heading on Today ---- */
+.buddies-toggle {
+  /* It's a button, but it should look exactly like a section heading. */
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--text);
+  text-align: left;
+}
+.buddies-toggle__summary {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+.buddies-toggle__caret {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* A row in "Amara's recent workouts" — a button that looks like a card row. */
+.friend-workout {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: none;
+  font-family: inherit;
+  color: var(--text);
+  cursor: pointer;
+  padding: 12px 4px;
+  border-top: 1px solid var(--border);
+}
+.friend-workout:first-child {
+  border-top: none;
+}
+.friend-workout:active {
+  opacity: 0.7;
 }

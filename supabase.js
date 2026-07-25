@@ -16,7 +16,8 @@ const SUPABASE_URL = "https://nbtrnhoeecrvjwmudlbp.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY =
   "sb_publishable_MQ8zRLntHhG9J8pWefYayg_Hdvyqttk";
 
-// `window.supabase` comes from the CDN <script> loaded just before this file.
+// `window.supabase` comes from vendor/supabase.js — the library is kept in this
+// repo (not loaded from a CDN) so the app still works offline. See RUNBOOK §5d.
 const supabaseClient = window.supabase.createClient(
   SUPABASE_URL,
   SUPABASE_PUBLISHABLE_KEY

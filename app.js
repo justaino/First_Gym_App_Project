@@ -35,6 +35,11 @@ const STORAGE_KEYS = {
   // Phase 9b: the weight unit label, "kg" or "lb". Like the theme, this is a
   // DISPLAY setting saved per device — it is not synced to your account.
   unit: "gym:unit",
+  // Phase 11: remembers that you've already dismissed the "week in review" card
+  // on Today. One key per profile per week, e.g.
+  //   gym:recapSeen:<profileId>:2026-07-20
+  // The prefix lets us find (and tidy up) old ones. Per device, not synced.
+  recapSeenPrefix: "gym:recapSeen:",
 };
 
 // The weight units you can choose between in Settings.
@@ -609,6 +614,11 @@ function renderToday() {
     day: "numeric",
   });
 
+  // Phase 11: the once-a-week "week in review" card (draws itself only when
+  // it's a new week, there's something to celebrate, and you haven't dismissed
+  // it yet — otherwise it clears the space).
+  renderTodayRecap();
+
   if (!activeProfile) {
     document.getElementById("startTodayBtn").hidden = true;
     container.appendChild(
@@ -715,6 +725,29 @@ function createEmptyState(emoji, message) {
   text.textContent = message;
 
   card.appendChild(emojiDiv);
+  card.appendChild(text);
+  return card;
+}
+
+// A "we're fetching this" card: a little spinning ring plus a message.
+// Anything that waits on the cloud should show one of these, because a slow
+// reply (a sleeping Supabase project can take several seconds to wake) looks
+// exactly like a broken app otherwise. (Phase 12e)
+function createLoadingCard(message) {
+  const card = document.createElement("div");
+  card.className = "card loading-card";
+
+  const spinner = document.createElement("div");
+  spinner.className = "spinner";
+  spinner.setAttribute("aria-hidden", "true");
+
+  const text = document.createElement("p");
+  text.className = "loading-card__text";
+  text.textContent = message;
+
+  // Screen readers announce the message when it appears.
+  card.setAttribute("role", "status");
+  card.appendChild(spinner);
   card.appendChild(text);
   return card;
 }
@@ -947,7 +980,10 @@ function hideChartTooltip() {
 /* ---- Workout detail pop-up (opened by clicking a chart bar) ---- */
 
 // Show every exercise from one saved session in a pop-up.
-function showSessionDetail(session) {
+// `exercisesOverride` (Phase 12) lets the Friends tab pass a FRIEND's exercise
+// list, since their exercises aren't in your local storage. Left out, it uses
+// your own — exactly as before.
+function showSessionDetail(session, exercisesOverride) {
   // Title: e.g. "Monday workout — Mon, Jun 22"
   const title = (session.day || "Workout") + " — " + formatDate(session.date);
   document.getElementById("sessionTitle").textContent = title;
@@ -956,7 +992,7 @@ function showSessionDetail(session) {
   list.innerHTML = "";
 
   // We need exercise names/emojis, which live in the exercises list.
-  const allExercises = loadList(STORAGE_KEYS.exercises);
+  const allExercises = exercisesOverride || loadList(STORAGE_KEYS.exercises);
 
   session.entries.forEach((entry) => {
     const exercise = allExercises.find((item) => item.id === entry.exerciseId);
@@ -1550,28 +1586,30 @@ function buildGoalRing(sessions, goal) {
   return wrap;
 }
 
-// Build the "volume this month vs last month" line. Volume = reps × weight
-// summed over completed sets (a measure of total work done). Returns null when
-// there's no weighted volume to show (e.g. bodyweight-only history).
+// Total "volume" in one session = reps × weight, added up over the sets you
+// actually ticked done. It's a measure of how much total work you did.
+// Only the per-set shape counts: very old sessions stored one weight for the
+// whole exercise and can't pair reps with weights reliably, so they add 0.
+// (Shared by the monthly volume trend and the Phase 11 weekly recap.)
+function sessionVolume(session) {
+  let vol = 0;
+  session.entries.forEach((entry) => {
+    if (Array.isArray(entry.sets)) {
+      entry.sets.forEach((set) => {
+        if (set.done && set.weight !== null && set.weight !== undefined) {
+          vol += (Number(set.reps) || 0) * Number(set.weight);
+        }
+      });
+    }
+  });
+  return vol;
+}
+
+// Build the "volume this month vs last month" line. Returns null when there's
+// no weighted volume to show (e.g. bodyweight-only history).
 function buildVolumeTrend(sessions) {
   const now = new Date();
   const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-
-  // Total volume in one session (per-set shape only — old sessions can't pair
-  // reps with weights reliably, so they contribute 0 here).
-  function sessionVolume(session) {
-    let vol = 0;
-    session.entries.forEach((entry) => {
-      if (Array.isArray(entry.sets)) {
-        entry.sets.forEach((set) => {
-          if (set.done && set.weight !== null && set.weight !== undefined) {
-            vol += (Number(set.reps) || 0) * Number(set.weight);
-          }
-        });
-      }
-    });
-    return vol;
-  }
 
   let thisMonth = 0;
   let lastMonth = 0;
@@ -1732,6 +1770,295 @@ function buildHeatmap(sessions) {
   return wrap;
 }
 
+/* ---- Weekly recap (Phase 11) ----
+   A friendly summary of LAST week (Monday → Sunday), shown in two places:
+     1. a "Last week" card on Progress, always available;
+     2. the same numbers once at the top of Today on your first visit in a new
+        week, as a dismissible "Your week in review 🎉" card.
+   Everything is worked out on the fly from your saved workouts — the only thing
+   stored is a small "you've seen it" flag per profile per week (per device). */
+
+// The Monday→Sunday window of LAST week, as { start, end }.
+// `start` is last week's Monday at midnight; `end` is THIS week's Monday at
+// midnight and is exclusive, so a workout dated today never counts as "last
+// week". Reuses the same Monday maths as the Insights card.
+function lastWeekRange() {
+  const thisMonday = weekMondayMidnight(new Date());
+  const lastMonday = new Date(thisMonday);
+  lastMonday.setDate(lastMonday.getDate() - 7);
+  return { start: lastMonday, end: thisMonday };
+}
+
+// Crunch last week's numbers. `sessions` must already be filtered to the active
+// profile's COMPLETED workouts (the same list the Progress view uses), so these
+// figures always agree with the rest of that screen.
+function computeLastWeekRecap(sessions) {
+  const range = lastWeekRange();
+
+  const lastWeekSessions = sessions.filter((session) => {
+    const when = new Date(session.date);
+    return when >= range.start && when < range.end;
+  });
+
+  let sets = 0;
+  let volume = 0;
+  lastWeekSessions.forEach((session) => {
+    session.entries.forEach((entry) => {
+      sets += entrySetsDone(entry); // only ticked sets count
+    });
+    volume += sessionVolume(session); // reps × weight, shared with Insights
+  });
+
+  return {
+    start: range.start,
+    end: range.end,
+    workouts: lastWeekSessions.length,
+    sets: sets,
+    volume: volume,
+    records: findLastWeekRecords(sessions, range),
+    streak: computeWeekStreak(sessions), // your current run of active weeks
+    goal: loadWeeklyGoal(loadActiveProfileId()),
+  };
+}
+
+// Which exercises hit a new personal best LAST week? Same rule as the
+// after-workout celebration (detectPersonalRecords): the heaviest weight used
+// last week must beat the heaviest weight ever used BEFORE that week — so the
+// first time you ever do an exercise isn't counted as a record.
+function findLastWeekRecords(sessions, range) {
+  const bestLastWeek = {}; // exerciseId -> heaviest weight during last week
+  const bestBefore = {}; // exerciseId -> heaviest weight before last week
+
+  sessions.forEach((session) => {
+    const when = new Date(session.date);
+    const inLastWeek = when >= range.start && when < range.end;
+    const beforeLastWeek = when < range.start;
+    if (!inLastWeek && !beforeLastWeek) {
+      return; // this week's workouts don't affect last week's recap
+    }
+
+    session.entries.forEach((entry) => {
+      const max = entryMaxWeight(entry);
+      if (max === null) {
+        return; // no weight recorded → can't be a weight record
+      }
+      const bucket = inLastWeek ? bestLastWeek : bestBefore;
+      const current = bucket[entry.exerciseId];
+      if (current === undefined || max > current) {
+        bucket[entry.exerciseId] = max;
+      }
+    });
+  });
+
+  const records = [];
+  Object.keys(bestLastWeek).forEach((exerciseId) => {
+    const previous = bestBefore[exerciseId];
+    if (previous !== undefined && bestLastWeek[exerciseId] > previous) {
+      // The exercise may since have been deleted — fall back to plain wording.
+      const exercise = findExerciseById(exerciseId);
+      records.push({
+        name: exercise ? exercise.name : "Exercise",
+        icon: exercise ? exercise.icon : "🏅",
+        weight: bestLastWeek[exerciseId],
+      });
+    }
+  });
+
+  records.sort((a, b) => b.weight - a.weight); // heaviest first
+  return records;
+}
+
+// Build the recap card itself. `options` is:
+//   { title: "Last week", onDismiss: fn }
+// Passing onDismiss adds the ✕ button and the celebratory outline — that's the
+// only difference between the Today card and the Progress card.
+function buildRecapCard(recap, options) {
+  const card = document.createElement("div");
+  card.className = "card recap";
+  if (options.onDismiss) {
+    card.classList.add("recap--celebrate");
+  }
+
+  // --- Heading row: title (+ the ✕ on the Today version) ---
+  const head = document.createElement("div");
+  head.className = "recap__head";
+
+  const title = document.createElement("div");
+  title.className = "history-card__title";
+  title.textContent = options.title;
+  head.appendChild(title);
+
+  if (options.onDismiss) {
+    const close = document.createElement("button");
+    close.className = "recap__close";
+    close.type = "button";
+    close.textContent = "✕";
+    close.setAttribute("aria-label", "Dismiss this week's recap");
+    close.addEventListener("click", options.onDismiss);
+    head.appendChild(close);
+  }
+  card.appendChild(head);
+
+  // --- The dates it covers, e.g. "Mon, Jul 13 – Sun, Jul 19" ---
+  // `end` is the exclusive Monday, so step back a day for the Sunday label.
+  const lastDay = new Date(recap.end);
+  lastDay.setDate(lastDay.getDate() - 1);
+  const range = document.createElement("div");
+  range.className = "history-card__meta";
+  range.textContent =
+    formatDate(recap.start.toISOString()) +
+    " – " +
+    formatDate(lastDay.toISOString());
+  card.appendChild(range);
+
+  // --- Nothing last week → a friendly nudge instead of a wall of zeros ---
+  if (recap.workouts === 0) {
+    const empty = document.createElement("p");
+    empty.className = "recap__note";
+    empty.textContent = "No workouts last week — this week is a fresh start 💪";
+    card.appendChild(empty);
+    return card;
+  }
+
+  // --- Stat tiles (same look as the Insights card) ---
+  const stats = document.createElement("div");
+  stats.className = "insights-stats";
+  stats.appendChild(
+    buildStatTile(recap.workouts + "/" + recap.goal, "workouts vs goal")
+  );
+  stats.appendChild(buildStatTile(recap.sets, "sets"));
+  // Only show volume if any weights were actually recorded.
+  if (recap.volume > 0) {
+    stats.appendChild(
+      buildStatTile(recap.volume.toLocaleString(), unitLabel() + " moved")
+    );
+  }
+  stats.appendChild(buildStatTile(recap.streak, "week streak 🔥"));
+  card.appendChild(stats);
+
+  // --- One encouraging line about the weekly goal ---
+  const note = document.createElement("p");
+  note.className = "recap__note";
+  if (recap.workouts >= recap.goal) {
+    note.textContent = "Goal smashed — brilliant week! 🎉";
+  } else {
+    const short = recap.goal - recap.workouts;
+    note.textContent =
+      short +
+      (short === 1 ? " workout" : " workouts") +
+      " short of your goal — you've got this 💪";
+  }
+  card.appendChild(note);
+
+  // --- Any personal records set last week (reuses the PR board styling) ---
+  if (recap.records.length > 0) {
+    const prHeading = document.createElement("div");
+    prHeading.className = "pr-board__heading";
+    prHeading.textContent = "New personal records 🏅";
+    card.appendChild(prHeading);
+
+    recap.records.forEach((record) => {
+      const row = document.createElement("div");
+      row.className = "pr-row";
+
+      const icon = document.createElement("div");
+      icon.className = "exercise__icon";
+      icon.textContent = record.icon;
+
+      const name = document.createElement("div");
+      name.className = "exercise__name";
+      name.textContent = record.name;
+
+      const best = document.createElement("div");
+      best.className = "pr-row__best";
+      best.textContent = formatWeight(record.weight);
+
+      row.appendChild(icon);
+      row.appendChild(name);
+      row.appendChild(best);
+      card.appendChild(row);
+    });
+  }
+
+  return card;
+}
+
+/* ---- Remembering that you've seen this week's Today card ---- */
+
+// One key per profile per week, e.g. "gym:recapSeen:abc123:2026-07-20".
+function recapSeenKey(profileId, mondayKey) {
+  return STORAGE_KEYS.recapSeenPrefix + profileId + ":" + mondayKey;
+}
+
+function hasSeenWeeklyRecap(profileId, mondayKey) {
+  return localStorage.getItem(recapSeenKey(profileId, mondayKey)) !== null;
+}
+
+// Remember the dismissal, then tidy away the keys from earlier weeks so they
+// don't pile up in localStorage forever.
+function markWeeklyRecapSeen(profileId, mondayKey) {
+  localStorage.setItem(recapSeenKey(profileId, mondayKey), "1");
+  removeRecapSeenKeys(mondayKey);
+}
+
+// Delete "recap seen" keys. Pass a week key to KEEP that week's keys (the
+// weekly tidy-up), or null to remove them all (Settings → Delete my data).
+function removeRecapSeenKeys(keepMondayKey) {
+  const doomed = [];
+  for (let i = 0; i < localStorage.length; i = i + 1) {
+    const key = localStorage.key(i);
+    if (!key || key.indexOf(STORAGE_KEYS.recapSeenPrefix) !== 0) {
+      continue;
+    }
+    if (keepMondayKey && key.endsWith(":" + keepMondayKey)) {
+      continue; // this week's — keep it
+    }
+    doomed.push(key);
+  }
+  // Remove afterwards: deleting inside the loop would shift the indexes.
+  doomed.forEach((key) => localStorage.removeItem(key));
+}
+
+// Draw (or clear) the once-a-week celebration card at the top of Today.
+function renderTodayRecap() {
+  const container = document.getElementById("todayRecap");
+  if (!container) {
+    return;
+  }
+  container.innerHTML = "";
+
+  const activeId = loadActiveProfileId();
+  if (!activeId) {
+    return; // no profile → nothing to recap
+  }
+
+  // Which week are we in? Already dismissed it → don't nag.
+  const mondayKey = weekKeyOf(new Date());
+  if (hasSeenWeeklyRecap(activeId, mondayKey)) {
+    return;
+  }
+
+  const sessions = loadList(STORAGE_KEYS.sessions).filter(
+    (session) => session.profileId === activeId && isCompletedSession(session)
+  );
+  const recap = computeLastWeekRecap(sessions);
+
+  // Nothing happened last week → stay quiet rather than pop up a row of zeros.
+  if (recap.workouts === 0) {
+    return;
+  }
+
+  container.appendChild(
+    buildRecapCard(recap, {
+      title: "Your week in review 🎉",
+      onDismiss: () => {
+        markWeeklyRecapSeen(activeId, mondayKey);
+        renderTodayRecap(); // redraw → the card disappears
+      },
+    })
+  );
+}
+
 // Draw the whole Progress view.
 function renderProgress() {
   const subtitle = document.getElementById("progressSubtitle");
@@ -1776,6 +2103,15 @@ function renderProgress() {
     0
   );
   summary.appendChild(buildWeekSummaryCard(workoutsThisWeek, setsThisWeek));
+
+  // --- "Last week" recap (Phase 11) ---
+  // Only once there's some history: with no workouts at all, the empty state
+  // further down already says so, and an empty recap would just be noise.
+  if (sessions.length > 0) {
+    summary.appendChild(
+      buildRecapCard(computeLastWeekRecap(sessions), { title: "Last week" })
+    );
+  }
 
   // --- Per-exercise breakdown ---
   if (sessions.length === 0) {
@@ -2055,7 +2391,9 @@ async function deleteAllMyData() {
   const ok = window.confirm(
     "Delete ALL your data?\n\n" +
       "This permanently removes every profile, exercise, and workout from the " +
-      "cloud and from this device — on all your devices. It cannot be undone.\n\n" +
+      "cloud and from this device — on all your devices. It also removes you " +
+      "from Friends: your buddies, requests and nudges all go. It cannot be " +
+      "undone.\n\n" +
       "Tip: export a backup first (Settings → Backup) if you want to keep a copy."
   );
   if (!ok) {
@@ -2091,17 +2429,53 @@ async function deleteAllMyData() {
     }
   }
 
+  // Phase 12d: the friends side of your account. These aren't scoped by a
+  // `user_id` column — each table names you in one of two columns — so they use
+  // .or(...) instead. Failures here are logged rather than fatal: your workouts
+  // are already gone, and stopping half way would be worse than a leftover row.
+  await deleteMyFriendsData(userId);
+
   // Cloud is clear — now wipe the local cache so nothing re-uploads on next login.
   clearLocalData();
   localStorage.removeItem(STORAGE_KEYS.weeklyGoal);
   localStorage.removeItem(STORAGE_KEYS.celebratedMilestones);
   localStorage.removeItem(STORAGE_KEYS.syncedUserId);
+  removeRecapSeenKeys(null); // Phase 11: forget every "week in review" flag
   renderAll(); // empty the screen behind the alert
 
   window.alert("Your data has been deleted. You'll be logged out now.");
 
   // Log out → back to the login screen, now with an empty account.
   await supabaseClient.auth.signOut();
+}
+
+// Remove everything the Friends feature stored about you: your directory entry,
+// your friendships (either direction), the nudges you sent or received, and the
+// people you'd marked as close friends.
+//
+// One thing this CAN'T do: if someone else marked YOU as their close friend,
+// that row belongs to them and only they can delete it. It's harmless — access
+// also needs an accepted friendship, and those are gone.
+async function deleteMyFriendsData(userId) {
+  const both = (columnA, columnB) =>
+    columnA + ".eq." + userId + "," + columnB + ".eq." + userId;
+
+  const jobs = [
+    supabaseClient.from("nudges").delete().or(both("from_user", "to_user")),
+    supabaseClient.from("close_friends").delete().eq("owner_id", userId),
+    supabaseClient
+      .from("friendships")
+      .delete()
+      .or(both("requester_id", "addressee_id")),
+    supabaseClient.from("user_directory").delete().eq("user_id", userId),
+  ];
+
+  const results = await Promise.all(jobs);
+  results.forEach((result) => {
+    if (result.error) {
+      console.error("Couldn't clear friends data:", result.error.message);
+    }
+  });
 }
 
 // Make sure the active profile id still points at a profile that exists.
@@ -2161,21 +2535,42 @@ async function syncOnLogin(userId) {
   uploaded =
     (await reconcileEntity(
       STORAGE_KEYS.exercises,
-      pullExercisesFromCloud,
+      // Wrapped so the user id gets through to the query (Phase 12: the pull
+      // must ask for YOUR rows only — see pullExercisesFromCloud).
+      () => pullExercisesFromCloud(userId),
       uploadExercisesToCloud,
       mapExerciseFromCloud
     )) || uploaded;
-  uploaded = (await reconcileSessions()) || uploaded; // sessions use a merge
+  uploaded = (await reconcileSessions(userId)) || uploaded; // sessions merge
 
   localStorage.setItem(STORAGE_KEYS.syncedUserId, userId);
   return firstLogin && uploaded;
 }
 
+// Show or hide the "Getting your workouts…" overlay (Phase 12e).
+function setSyncOverlay(isVisible) {
+  const overlay = document.getElementById("syncOverlay");
+  if (overlay) {
+    overlay.hidden = !isVisible;
+  }
+}
+
 // Called by auth.js when a user is signed in: sync, then redraw.
 async function onUserLoggedIn(session) {
-  const migrated = await syncOnLogin(session.user.id);
+  // Phase 12e: show a spinner while we fetch — this is the slowest moment in
+  // the app, especially if the database has been idle and needs to wake up.
+  setSyncOverlay(true);
+  let migrated = false;
+  try {
+    migrated = await syncOnLogin(session.user.id);
+  } finally {
+    // `finally` so a failed sync can never leave the overlay stuck on screen.
+    setSyncOverlay(false);
+  }
   ensureValidActiveProfile();
   renderAll();
+  // Phase 12: make sure people can find you by email, then load your friends.
+  initFriendsOnLogin();
   if (migrated) {
     // Reassure the user their pre-account data is now safely in their account.
     showToast("Welcome! Your existing workouts are now saved to your account ☁️");
@@ -2221,8 +2616,15 @@ function exerciseToRow(exercise) {
   };
 }
 
-async function pullExercisesFromCloud() {
-  const { data, error } = await supabaseClient.from("exercises").select("*");
+// NOTE (Phase 12): this MUST filter by user_id. Until Phase 12 the only rows
+// you were allowed to read were your own, so "select everything" was safe.
+// Now close friends can read each other's exercises, so without this filter a
+// friend's exercises would be pulled into YOUR local cache.
+async function pullExercisesFromCloud(userId) {
+  const { data, error } = await supabaseClient
+    .from("exercises")
+    .select("*")
+    .eq("user_id", userId);
   if (error) {
     console.error("Could not load exercises from cloud:", error.message);
     return null;
@@ -2271,8 +2673,13 @@ function sessionTime(session) {
   return new Date(session.updatedAt || session.date || 0).getTime();
 }
 
-async function pullSessionsFromCloud() {
-  const { data, error } = await supabaseClient.from("sessions").select("*");
+// Same Phase 12 note as pullExercisesFromCloud: filter by user_id, or a close
+// friend's workouts would be merged into your own history.
+async function pullSessionsFromCloud(userId) {
+  const { data, error } = await supabaseClient
+    .from("sessions")
+    .select("*")
+    .eq("user_id", userId);
   if (error) {
     console.error("Could not load sessions from cloud:", error.message);
     return null;
@@ -2312,8 +2719,8 @@ async function deleteSessionFromCloud(id) {
 // was updated most recently — so an un-pushed in-progress workout is never lost —
 // then push anything the cloud is missing or behind on.
 // Returns true if it uploaded any local-only sessions.
-async function reconcileSessions() {
-  const cloud = await pullSessionsFromCloud();
+async function reconcileSessions(userId) {
+  const cloud = await pullSessionsFromCloud(userId);
   if (cloud === null) {
     return false; // offline / error → keep local as-is
   }
@@ -4481,6 +4888,12 @@ function switchView(viewName) {
       tab.removeAttribute("aria-current");
     }
   });
+
+  // Phase 12: opening the Friends tab refreshes it, so the "went today" ticks
+  // and nudge buttons are up to date each time you look.
+  if (viewName === "friends") {
+    onFriendsTabOpened();
+  }
 }
 
 /* =========================================================================
