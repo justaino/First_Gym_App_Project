@@ -1,10 +1,10 @@
-# Athena's Arena 💪
+# Athena's Arena 🦉
 
 A friendly, personal gym planner that runs entirely in the browser. Create a profile,
 add exercises (sets, reps, an emoji icon, and a day of the week), and see your plan
 grouped by day. Built as a learning project with a soft, pastel "cute" look.
 
-📖 **New here?** See the [User Guide](Documentation/USER-GUIDE.md) for a friendly start-to-finish walkthrough.
+📖 **New here?** The guide now lives **inside the app** — open it with **Settings → 📖 How to use**, or the "New here? Take the tour" button on the empty Today and Schedule screens. Its wording is all at the top of `guide.js`, so there's one copy to keep current.
 
 🛠️ **Tinkering or testing?** See the [Runbook](RUNBOOK.md) for storage keys, DevTools/console tricks, backup & cleanup behaviour, and the easter eggs.
 

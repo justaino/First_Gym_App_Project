@@ -1682,6 +1682,12 @@ body {
   color: var(--text);
 }
 
+/* Phase 14d: a friend's @handle under their display name. */
+.friend__handle {
+  color: var(--muted);
+  opacity: 0.85;
+}
+
 /* "👋 Nudged you today" on a buddy's card. */
 .friend__nudged {
   color: var(--coral);
@@ -1730,6 +1736,159 @@ body {
 }
 .buddy-row__status.is-done {
   color: var(--mint);
+}
+
+/* =========================================================================
+   PHASE 13 — the in-app guide
+   Lives in a full-screen .sheet (shared with workout mode), so it only needs
+   styling for its own three pieces: the welcome, the numbered steps, and the
+   collapsible sections.
+   ========================================================================= */
+
+/* The little "New here? Take the tour" button on empty screens. */
+.empty-state__action {
+  margin-top: 12px;
+}
+
+/* Welcome block at the top of the guide. */
+.guide-hero {
+  background: linear-gradient(
+    140deg,
+    rgba(246, 211, 101, 0.3),
+    rgba(185, 167, 224, 0.26)
+  );
+  border-radius: var(--radius-card);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.guide-hero__title {
+  font-size: 20px;
+  font-weight: 800;
+}
+.guide-hero__text {
+  color: var(--text);
+  font-weight: 700;
+  font-size: 14px;
+  margin-top: 6px;
+  opacity: 0.8;
+}
+
+/* The three numbered steps. */
+.guide-steps {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.guide-step {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.guide-step__number {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background-color: rgba(239, 124, 124, 0.16);
+  color: var(--coral);
+  font-weight: 800;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.guide-step__title {
+  font-weight: 800;
+  font-size: 15px;
+}
+.guide-step__text {
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1.5;
+  margin-top: 3px;
+}
+
+/* One collapsible section. The header row is a button dressed as a card row. */
+.guide-section {
+  padding: 0; /* the header supplies its own padding */
+}
+.guide-section__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 16px 20px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--text);
+  text-align: left;
+}
+.guide-section__caret {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 13px;
+}
+/* The title and summary here are <span>s, because a <button> may only contain
+   inline content. Spans sit side by side by default ("TodayStart a workout…"),
+   so stack them the way the <div> rows elsewhere in the app do naturally. */
+.guide-section__header .exercise__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.guide-list {
+  list-style: none;
+  padding: 0 20px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.guide-list[hidden] {
+  display: none;
+}
+.guide-list li {
+  position: relative;
+  padding-left: 18px;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.5;
+}
+/* A soft mint dot instead of a default bullet. */
+.guide-list li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 8px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--mint);
+}
+
+/* ---- Phase 14c: the username box in Settings ----
+   The hint under it turns mint when a handle is free and coral when it isn't. */
+.username-hint {
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1.4;
+  margin-top: 8px;
+}
+.username-hint.is-ok {
+  color: var(--mint);
+}
+.username-hint.is-error {
+  color: var(--coral);
+}
+/* A label that needs a bit of air above it (a second field in one card). */
+.form__label--spaced {
+  display: block;
+  margin-top: 16px;
 }
 
 /* ---- Phase 12d: the "share my workouts" switch in Settings ---- */

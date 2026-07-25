@@ -1,6 +1,6 @@
 {
-  "name": "Justaino Gym App",
-  "short_name": "Justaino",
+  "name": "Athena's Arena",
+  "short_name": "Athena",
   "description": "A friendly, personal gym tracker — plan exercises, run workouts, and see your progress.",
   "start_url": "./",
   "scope": "./",

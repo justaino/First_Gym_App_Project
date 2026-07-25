@@ -542,7 +542,12 @@ function renderSchedule() {
   // No exercises yet → friendly empty state.
   if (exercises.length === 0) {
     container.appendChild(
-      createEmptyState("💪", "No exercises yet — add your first one above!")
+      createEmptyState(
+        "💪",
+        "No exercises yet. Add your first one above!",
+        "New here? Take the tour",
+        openGuide
+      )
     );
     return;
   }
@@ -622,7 +627,12 @@ function renderToday() {
   if (!activeProfile) {
     document.getElementById("startTodayBtn").hidden = true;
     container.appendChild(
-      createEmptyState("👋", "Create a profile in Settings to get started.")
+      createEmptyState(
+        "👋",
+        "Create a profile in Settings to get started.",
+        "New here? Take the tour",
+        openGuide
+      )
     );
     return;
   }
@@ -643,7 +653,7 @@ function renderToday() {
 
   if (todaysExercises.length === 0) {
     container.appendChild(
-      createEmptyState("🛌", "Nothing planned for today — enjoy your rest!")
+      createEmptyState("🛌", "Nothing planned for today, so enjoy your rest!")
     );
     return;
   }
@@ -663,7 +673,7 @@ function renderProfiles() {
 
   if (profiles.length === 0) {
     container.appendChild(
-      createEmptyState("👤", "No profiles yet — create one above.")
+      createEmptyState("👤", "No profiles yet. Create one above.")
     );
     return;
   }
@@ -713,7 +723,10 @@ function renderActiveProfileChip() {
 }
 
 // A small helper that builds a friendly "nothing here yet" card.
-function createEmptyState(emoji, message) {
+// Pass `actionLabel` + `onAction` (Phase 13) to add a button underneath — used
+// for the "New here? Take the tour" link on the screens a first-time visitor
+// lands on.
+function createEmptyState(emoji, message, actionLabel, onAction) {
   const card = document.createElement("div");
   card.className = "card empty-state";
 
@@ -726,6 +739,16 @@ function createEmptyState(emoji, message) {
 
   card.appendChild(emojiDiv);
   card.appendChild(text);
+
+  if (actionLabel && onAction) {
+    const button = document.createElement("button");
+    button.className = "btn btn--ghost btn--small empty-state__action";
+    button.type = "button";
+    button.textContent = actionLabel;
+    button.addEventListener("click", onAction);
+    card.appendChild(button);
+  }
+
   return card;
 }
 
@@ -985,7 +1008,7 @@ function hideChartTooltip() {
 // your own — exactly as before.
 function showSessionDetail(session, exercisesOverride) {
   // Title: e.g. "Monday workout — Mon, Jun 22"
-  const title = (session.day || "Workout") + " — " + formatDate(session.date);
+  const title = (session.day || "Workout") + " · " + formatDate(session.date);
   document.getElementById("sessionTitle").textContent = title;
 
   const list = document.getElementById("sessionDetailList");
@@ -1915,7 +1938,7 @@ function buildRecapCard(recap, options) {
   if (recap.workouts === 0) {
     const empty = document.createElement("p");
     empty.className = "recap__note";
-    empty.textContent = "No workouts last week — this week is a fresh start 💪";
+    empty.textContent = "No workouts last week. This week is a fresh start 💪";
     card.appendChild(empty);
     return card;
   }
@@ -1940,13 +1963,13 @@ function buildRecapCard(recap, options) {
   const note = document.createElement("p");
   note.className = "recap__note";
   if (recap.workouts >= recap.goal) {
-    note.textContent = "Goal smashed — brilliant week! 🎉";
+    note.textContent = "Goal smashed! Brilliant week 🎉";
   } else {
     const short = recap.goal - recap.workouts;
     note.textContent =
       short +
       (short === 1 ? " workout" : " workouts") +
-      " short of your goal — you've got this 💪";
+      " short of your goal. You've got this 💪";
   }
   card.appendChild(note);
 
@@ -2117,7 +2140,7 @@ function renderProgress() {
   if (sessions.length === 0) {
     heading.hidden = true;
     list.appendChild(
-      createEmptyState("📊", "No workouts yet — finish one to see your progress.")
+      createEmptyState("📊", "No workouts yet. Finish one to see your progress.")
     );
     return;
   }
@@ -2209,7 +2232,7 @@ function showOfflineNotice() {
   window.alert(
     "You're offline 📡\n\n" +
       "Changes to your plan are saved to the cloud, which needs a connection. " +
-      "You can still look around — reconnect to make changes."
+      "You can still look around. Reconnect to make changes."
   );
 }
 
@@ -2391,7 +2414,7 @@ async function deleteAllMyData() {
   const ok = window.confirm(
     "Delete ALL your data?\n\n" +
       "This permanently removes every profile, exercise, and workout from the " +
-      "cloud and from this device — on all your devices. It also removes you " +
+      "cloud and from this device, on all your devices. It also removes you " +
       "from Friends: your buddies, requests and nudges all go. It cannot be " +
       "undone.\n\n" +
       "Tip: export a backup first (Settings → Backup) if you want to keep a copy."
@@ -3920,7 +3943,7 @@ function finishWorkout() {
   // nothing was actually done, so don't save it as a workout.
   if (totalSets === 0) {
     window.alert(
-      "Tick at least one set as done before finishing — or tap Discard if you didn't train."
+      "Tick at least one set as done before finishing, or tap Discard if you didn't train."
     );
     return;
   }
@@ -4543,7 +4566,7 @@ function handleSecretTyping(event) {
 // Summon the owl + toast (shared by the typing shortcut and the long-press).
 function summonOwl() {
   flyOwl();
-  showToast("Athena's blessing — Wisdom +1 🦉");
+  showToast("Athena's blessing! Wisdom +1 🦉");
 }
 
 // Touch-friendly version of egg #1: press and HOLD the hero mascot for ~1.5s.
@@ -4734,7 +4757,7 @@ function celebrateAfterWorkout(personalRecords, milestone) {
       showCelebrationCard(
         "🏆",
         milestone + " workouts done!",
-        "What a streak — keep it up! 💪"
+        "What a streak! Keep it up 💪"
       );
     }, delay);
   }
@@ -5083,7 +5106,7 @@ function init() {
   // The app always opens on the Today tab (set as the active view in index.html).
   renderAll();
 
-  console.log("Athena's Arena loaded — Phase 4 ready ✅");
+  console.log("Athena's Arena loaded. Phase 4 ready ✅");
 }
 
 // Wait until the page's HTML is ready, then start the app.

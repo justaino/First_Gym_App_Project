@@ -16,7 +16,7 @@
     <meta charset="UTF-8" />
     <!-- Makes the page size correctly on phones -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Justaino's Gym App</title>
+    <title>Athena's Arena</title>
 
     <!-- Load the Nunito font from Google Fonts (a <link> font is allowed). -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -41,7 +41,7 @@
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
     <!-- Let iOS open it full-screen and label it nicely when added to home screen. -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="Justaino" />
+    <meta name="apple-mobile-web-app-title" content="Athena's Arena" />
   </head>
 
   <body>
@@ -51,7 +51,7 @@
     -->
     <div class="auth" id="authGate">
       <div class="auth__panel">
-        <div class="auth__brand">🦉 Justaino</div>
+        <div class="auth__brand">🦉 Athena's Arena</div>
         <p class="auth__sub">Log in to sync your workouts across devices.</p>
         <form class="auth__form" id="authForm">
           <input
@@ -60,6 +60,19 @@
             type="email"
             placeholder="Email"
             autocomplete="email"
+          />
+          <!--
+            Sign-up only (Phase 14 follow-up): typing the email twice catches
+            typos, which otherwise lock someone out of their own account.
+            auth.js reveals this when you press "Sign up".
+          -->
+          <input
+            class="input"
+            id="authEmailConfirmInput"
+            type="email"
+            placeholder="Confirm email"
+            autocomplete="email"
+            hidden
           />
           <input
             class="input"
@@ -73,6 +86,8 @@
             <button class="btn btn--primary" id="loginBtn" type="submit">
               Log in
             </button>
+            <!-- First press switches the form to sign-up mode (revealing the
+                 confirm-email box); the second press creates the account. -->
             <button class="btn btn--ghost" id="signupBtn" type="button">
               Sign up
             </button>
@@ -94,7 +109,7 @@
     <header class="topbar">
       <!-- Tapping this title 5 times quickly reveals a hidden credits card
            (a little easter egg). See app.js → EASTER EGGS section. -->
-      <span class="topbar__brand" id="appBrand">Jonathan's Journey 💪</span>
+      <span class="topbar__brand" id="appBrand">Athena's Arena 🦉</span>
       <div class="topbar__right">
         <!-- Dark mode toggle. app.js swaps the icon + label with the theme. -->
         <button
@@ -262,14 +277,14 @@
              nobody can browse other people's email addresses. -->
         <div class="card">
           <label class="form__label" for="friendEmailInput">
-            Add a friend by email
+            Add a friend by username or email
           </label>
           <div class="friend-add">
             <input
               class="input"
               id="friendEmailInput"
               type="email"
-              placeholder="their@email.com"
+              placeholder="@theirhandle or their@email.com"
               autocomplete="off"
               autocapitalize="none"
             />
@@ -277,8 +292,21 @@
               Send
             </button>
           </div>
+          <!-- Phase 15: ask to be close friends in the same breath. -->
+          <label class="switch-row" for="addAsCloseInput">
+            <span class="switch-row__text">
+              <span class="switch-row__title">Ask to be close friends too</span>
+              <span class="switch-row__note">
+                If they accept, you'll each be able to see the other's
+                workouts, not just whether they trained.
+              </span>
+            </span>
+            <input type="checkbox" id="addAsCloseInput" />
+          </label>
+
           <p class="friend-add__hint">
-            They'll see your request the next time they open the app.
+            Their username is in their Settings, or use the email they signed
+            up with. They'll see your request next time they open the app.
           </p>
         </div>
 
@@ -308,11 +336,23 @@
         -->
         <div class="card" id="installCard" hidden>
           <p class="backup__text">
-            Install Justaino on your device for a full-screen app that works
+            Install Athena's Arena on your device for a full-screen app that works
             offline.
           </p>
           <button class="btn btn--primary" id="installBtn" type="button">
             📲 Install app
+          </button>
+        </div>
+
+        <!-- The in-app guide (Phase 13). Opens a full-screen sheet. -->
+        <h2 class="section-heading">Help</h2>
+        <div class="card">
+          <p class="backup__text">
+            New to Athena's Arena, or wondering what something does? The guide
+            walks through every tab in plain English.
+          </p>
+          <button class="btn btn--primary" id="openGuideBtn" type="button">
+            📖 How to use
           </button>
         </div>
 
@@ -334,6 +374,30 @@
             This is how you appear in other people's buddy lists.
           </p>
 
+          <!-- Phase 14c: your unique handle. Everyone is given one; this is
+               where you change it. -->
+          <label class="form__label form__label--spaced" for="usernameInput">
+            Username
+          </label>
+          <div class="friend-add">
+            <input
+              class="input"
+              id="usernameInput"
+              type="text"
+              maxlength="20"
+              autocomplete="off"
+              autocapitalize="none"
+              placeholder="Loading…"
+              disabled
+            />
+            <button class="btn btn--primary" id="saveUsernameBtn" type="button">
+              Save
+            </button>
+          </div>
+          <p class="username-hint" id="usernameHint">
+            3–20 characters: letters, numbers and underscores.
+          </p>
+
           <!-- Phase 12d: the master sharing switch. Off = friends see nothing
                at all, not even your "went today" tick. -->
           <label class="switch-row" for="shareWorkoutsInput">
@@ -341,7 +405,7 @@
               <span class="switch-row__title">Share my workouts with friends</span>
               <span class="switch-row__note">
                 Off means friends can't see your workouts or whether you
-                trained — not even close friends.
+                trained. Not even close friends.
               </span>
             </span>
             <input type="checkbox" id="shareWorkoutsInput" checked />
@@ -379,7 +443,7 @@
             <option value="lb">Pounds (lb)</option>
           </select>
           <p class="backup__text">
-            This only changes the label. Your saved weights aren't converted — a
+            This only changes the label. Your saved weights aren't converted, so a
             set saved as 40 still reads 40, just with the unit you pick. Saved on
             this device only.
           </p>
@@ -410,7 +474,7 @@
         <h2 class="section-heading">Backup</h2>
         <div class="card">
           <p class="backup__text">
-            Save all your profiles, exercises, and history to a file — or restore
+            Save all your profiles, exercises, and history to a file, or restore
             them from a file you saved before.
           </p>
           <div class="backup__buttons">
@@ -451,7 +515,7 @@
           <p class="backup__text">
             <strong>Delete my data</strong> permanently removes all your profiles,
             exercises, and workout history from the cloud and from this device.
-            This cannot be undone — export a backup first if you want to keep a
+            This cannot be undone. Export a backup first if you want to keep a
             copy. (Your login email isn't removed automatically; email me if you'd
             like the account itself deleted too.)
           </p>
@@ -604,14 +668,14 @@
       >
         <h2 class="modal__title" id="installModalTitle">Add to home screen</h2>
         <div class="install-steps">
-          <p>To install Justaino on your iPhone or iPad:</p>
+          <p>To install Athena's Arena on your iPhone or iPad:</p>
           <ol>
             <li>
               Tap the <strong>Share</strong> button
               <span aria-hidden="true">⬆️</span> in Safari's toolbar.
             </li>
             <li>Scroll down and tap <strong>Add to Home Screen</strong>.</li>
-            <li>Tap <strong>Add</strong> — the owl appears on your home screen. 🦉</li>
+            <li>Tap <strong>Add</strong> and the owl appears on your home screen. 🦉</li>
           </ol>
         </div>
         <div class="modal__actions">
@@ -671,6 +735,28 @@
             Finish
           </button>
         </div>
+      </div>
+    </div>
+
+    <!--
+      The guide (Phase 13). A full-screen sheet, same pattern as workout mode.
+      guide.js fills #guideContent from the lists at the top of that file.
+    -->
+    <div class="sheet" id="guideSheet" hidden>
+      <div
+        class="sheet__panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="guideTitle"
+      >
+        <header class="sheet__header">
+          <h2 class="sheet__title" id="guideTitle">How to use</h2>
+          <button class="btn btn--ghost btn--small" type="button" id="closeGuideBtn">
+            Close
+          </button>
+        </header>
+
+        <div id="guideContent"></div>
       </div>
     </div>
 
@@ -764,6 +850,9 @@
     <!-- The Friends tab (Phase 12). Loaded after app.js because it uses its
          helpers (showToast, formatDate, showSessionDetail...). -->
     <script src="friends.js"></script>
+
+    <!-- The in-app guide (Phase 13). All its wording lives at the top of the file. -->
+    <script src="guide.js"></script>
     <!-- Login / sign-up gate (Phase 7) -->
     <script src="auth.js"></script>
   </body>

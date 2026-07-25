@@ -1,5 +1,5 @@
 /*
-  sw.js — the service worker for Justaino (Phase 5 PWA).
+  sw.js — the service worker for Athena's Arena (Phase 5 PWA).
 
   What it does, in plain English:
   - Saves ("caches") the app's files the first time you visit, so the app loads
@@ -16,8 +16,8 @@
 */
 
 // 🔼 Bump this whenever you change app files and want everyone to get the update.
-const CACHE_VERSION = "v35";
-const CACHE_NAME = "justaino-cache-" + CACHE_VERSION;
+const CACHE_VERSION = "v44";
+const CACHE_NAME = "athenas-arena-cache-" + CACHE_VERSION;
 
 // The core files that make up the app ("the app shell"). Relative paths so this
 // works both locally (Live Server) and under the GitHub Pages /repo-name/ path.
@@ -28,6 +28,7 @@ const APP_SHELL = [
   "./app.js",
   "./exercise-library.js", // the built-in exercise suggestions list (Phase 8)
   "./friends.js", // the Friends tab (Phase 12)
+  "./guide.js", // the in-app guide (Phase 13)
   "./vendor/supabase.js", // the Supabase library (vendored so offline works)
   "./supabase.js",
   "./auth.js",
