@@ -35,6 +35,9 @@ const STORAGE_KEYS = {
   // Phase 9b: the weight unit label, "kg" or "lb". Like the theme, this is a
   // DISPLAY setting saved per device — it is not synced to your account.
   unit: "gym:unit",
+  // Phase 16: the date of the newest release note you've opened, so we know
+  // whether to show the "there's an update" dot in Settings.
+  whatsNewSeen: "gym:whatsNewSeen",
   // Phase 11: remembers that you've already dismissed the "week in review" card
   // on Today. One key per profile per week, e.g.
   //   gym:recapSeen:<profileId>:2026-07-20
@@ -2196,6 +2199,50 @@ function renderProgress() {
   }
 }
 
+/* ---- "There's an update" dot (Phase 16) ----
+   whats-new.js holds the release notes. If its newest entry is dated later
+   than the last one you opened, a dot appears on the Settings tab and on the
+   What's new button. Opening the page clears it. Per device, like the theme. */
+
+// The date of the newest release note, e.g. "2026-07-25".
+function latestReleaseDate() {
+  if (typeof RELEASES === "undefined" || RELEASES.length === 0) {
+    return null;
+  }
+  return RELEASES[0].date;
+}
+
+// Dates are "YYYY-MM-DD", so comparing them as plain text works: later dates
+// always sort after earlier ones.
+function hasUnreadWhatsNew() {
+  const latest = latestReleaseDate();
+  if (!latest) {
+    return false;
+  }
+  const seen = localStorage.getItem(STORAGE_KEYS.whatsNewSeen);
+  return !seen || seen < latest;
+}
+
+function markWhatsNewSeen() {
+  const latest = latestReleaseDate();
+  if (latest) {
+    localStorage.setItem(STORAGE_KEYS.whatsNewSeen, latest);
+  }
+  renderWhatsNewDot();
+}
+
+function renderWhatsNewDot() {
+  const unread = hasUnreadWhatsNew();
+  const tabDot = document.getElementById("settingsTabDot");
+  const linkDot = document.getElementById("whatsNewDot");
+  if (tabDot) {
+    tabDot.hidden = !unread;
+  }
+  if (linkDot) {
+    linkDot.hidden = !unread;
+  }
+}
+
 // Redraw everything at once (simple and reliable for a small app).
 function renderAll() {
   renderActiveProfileChip();
@@ -2206,6 +2253,7 @@ function renderAll() {
   renderProgress();
   renderWeeklyGoalInput();
   renderUnitControls(); // Phase 9b: keep the unit dropdown + labels in sync
+  renderWhatsNewDot(); // Phase 16: "there's an update" dot
 }
 
 /* =========================================================================
@@ -4930,6 +4978,13 @@ function init() {
   // Dark mode: apply the saved/system theme, then wire up the toggle button.
   applyTheme(getStartingTheme());
   document.getElementById("themeToggle").addEventListener("click", toggleTheme);
+
+  // What's new (Phase 16): opening the page counts as reading it, so the dot
+  // clears. The link opens in a new tab by itself; we only do the bookkeeping.
+  const whatsNewLink = document.getElementById("whatsNewLink");
+  if (whatsNewLink) {
+    whatsNewLink.addEventListener("click", markWhatsNewSeen);
+  }
 
   // Tab bar: clicking a tab switches view.
   document.querySelectorAll(".tab").forEach((tab) => {

@@ -1891,6 +1891,25 @@ body {
   margin-top: 16px;
 }
 
+/* ---- Phase 16: the What's new link and its unread dot ---- */
+.whats-new-link {
+  /* It's an <a> dressed as a button, so it needs the bits <button> gives free. */
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  position: relative;
+}
+.whats-new-link__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background-color: #fff;
+  box-shadow: 0 0 0 2px var(--coral);
+}
+.whats-new-link__dot[hidden] {
+  display: none;
+}
 /* ---- Phase 12d: the "share my workouts" switch in Settings ---- */
 .switch-row {
   display: flex;

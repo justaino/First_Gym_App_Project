@@ -24,6 +24,7 @@ devices (see §5d — the cloud is the source of truth, localStorage is the cach
 | `supabase.js` / `auth.js` | The cloud connection and the login gate (Phase 7). |
 | `friends.js` | The Friends tab: requests, buddies, nudges, close friends (Phase 12). |
 | `guide.js` | The in-app guide. All its wording is in two lists at the top (Phase 13). |
+| `whats-new.js` / `whats-new.html` | The release notes and the page that shows them (Phase 16). |
 | `sw.js` | Service worker — caches the app shell. Bump `CACHE_VERSION` on every app change. |
 
 ---
@@ -67,6 +68,7 @@ All keys start with `gym:`.
 > each exercise as `sortOrder` (in `gym:exercises`) and as `sort_order` in the
 > Supabase `exercises` table. See §5h.
 | `gym:celebratedMilestones` | Easter-egg bookkeeping: which workout-count milestones each profile has already celebrated, so the trophy only plays once. |
+| `gym:whatsNewSeen` | Phase 16: the date of the newest release note you've opened. Older than the newest entry = the "update" dot shows. |
 | `gym:buddiesOpen` | Phase 12e: whether the Today "Gym buddies" card is folded open. |
 | `gym:recapSeen:<profileId>:<monday>` | Phase 11: you've dismissed the "week in review" card on Today for that profile that week. One key per profile per week; old ones are tidied away automatically (per device, not synced). |
 
@@ -575,6 +577,54 @@ as a display name. The display name is the friendly one your buddies see
 
 ---
 
+## 5m. The What's new page (Phase 16)
+
+**Settings → 🗞️ What's new** opens `whats-new.html` in a **new tab**. It's a
+standalone page, not a screen inside the app, but it borrows `styles.css` so it
+matches the app and follows the same dark-mode setting (a tiny inline script at
+the top of the page reads `gym:theme` before anything is drawn, so there's no
+white flash).
+
+**Layout:** the newest release is shown in full with a butter outline and a warm
+one-line intro; everything older is a row with a date pill, a title and a
+chevron that turns as it opens. The folding is automatic, so today's headline
+entry becomes tomorrow's folded row with no editing.
+
+> ⚠️ **The page's own CSS lives inside `whats-new.html`, not in `styles.css`** —
+> deliberately. The service worker caches `styles.css`, so a browser can be
+> running yesterday's copy of it; when this page first shipped that stripped its
+> styling entirely and the rows rendered as raw OS buttons. Rules that arrive
+> *with* the page can't fall out of step. `styles.css` still supplies the shared
+> basics (tokens, `.card`, `.app`) and the in-app link + dot. If you add a
+> component to this page, style it in the page.
+
+### ✏️ Adding a release — the only thing you need to do
+
+Put a new object at the **top** of `RELEASES` in `whats-new.js`:
+
+```js
+{
+  date: "2026-08-02",              // YYYY-MM-DD — also drives the unread dot
+  title: "Short, plain headline",
+  intro: "One warm sentence.",     // optional; only the top entry shows it
+  items: ["One thing per line."],
+}
+```
+
+Write it for the people using the app, not for yourself: *"Close friends works
+both ways now"*, never *"changed close_friends to mutual"*. If a change is
+invisible to them, leave it out — that's what the change log in §9 is for.
+
+**The unread dot:** the app loads `whats-new.js` too, compares the newest `date`
+against `gym:whatsNewSeen`, and shows a coral dot on the **Settings tab** and on
+the What's new button when there's something newer. Opening the page clears it.
+Dates are plain `YYYY-MM-DD` text, so a straight string comparison sorts them.
+
+> The page is in the service worker's `APP_SHELL`, so it works offline like the
+> rest of the app. If you add another page, add it there too.
+
+---
+
 ## 6. Backup & restore (import / export)
 
 Found in **Settings → Backup**.
@@ -634,6 +684,25 @@ its first weighted workout won't fire a PR (there's nothing to beat yet).
 ## 9. Change log
 
 Newest first. Add a line here whenever behaviour changes.
+
+- **2026-07-25** — **What's new page: styling moved into the page + nicer rows (on `dev`,
+  awaiting owner test):** the folded rows rendered as unstyled OS buttons ("24 JulFriends…")
+  because the service worker was serving a `styles.css` from before Phase 16 — the page was
+  new, the stylesheet wasn't. Fixed properly by moving the page's component CSS into a
+  `<style>` block in `whats-new.html`, so it can never lag behind the page again;
+  `styles.css` keeps the shared tokens and the in-app link. Rows were redesigned at the
+  same time: date as a lavender pill, bolder title, a chevron in a soft circle that rotates
+  on open, a faint mint tint on the open row, and the bullets tucked behind a left rule.
+  Cache `v46`.
+
+- **2026-07-25** — **Phase 16 — What's new page (on `dev`, awaiting owner test):** a
+  standalone `whats-new.html`, opened in a new tab from **Settings → 🗞️ What's new**,
+  listing releases newest-first: the latest in full with a warm intro, older ones folded
+  to a tappable line each. Content lives in `RELEASES` at the top of `whats-new.js`, which
+  the app also loads so it can show an unread dot (on the Settings tab and the button)
+  by comparing the newest date against `gym:whatsNewSeen`. History starts with one
+  "everything before July" summary entry, as agreed. Page is in `APP_SHELL` so it works
+  offline, and it follows the app's dark-mode setting. See §5m. Cache `v45`.
 
 - **2026-07-25** — **Copy pass: fewer em dashes (on `dev`, awaiting owner test):** the
   owner felt the app's writing leaned on "—" too heavily and it read as machine-written.
