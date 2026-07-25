@@ -598,3 +598,24 @@ something you agree to, not something one person decides alone.
 opens your own side immediately (for a brand-new friend, both open on acceptance — you
 can't share with someone who hasn't accepted you). Existing one-way grants were left
 untouched by the migration.
+
+### Phase 16 — What's new page ✅ *(built 2026-07-25 — cache `v45`, awaiting owner test)*
+**Goal:** somewhere the owner's friends can see what's changed, without digging through
+`Documentation/`. Asked for after Phase 15.
+
+**Owner's decisions (2026-07-25), from the design review artifact:**
+- **Direction C** — newest release in full, older ones folded to one line each — with
+  direction B's warmth in the top entry only.
+- **History:** one "everything before July" summary entry, proper entries from here on.
+- **Unread dot:** yes.
+- **Version number on the page:** no.
+- **Offline:** yes, added to the service worker's `APP_SHELL`.
+
+- ✅ `whats-new.html` (standalone, opened in a new tab, borrows `styles.css` and follows
+  the app's dark-mode setting) + `whats-new.js` holding the `RELEASES` list and the
+  drawing code. One entry added per release; folding is automatic.
+- ✅ Settings → 🗞️ What's new, with a coral dot on the Settings tab and the button when
+  the newest entry is later than `gym:whatsNewSeen`. Opening the page clears it.
+
+**Done when:** a friend can open it from the app and understand what changed, and adding
+the next release is one object at the top of one file.

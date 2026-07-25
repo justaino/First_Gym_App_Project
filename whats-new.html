@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<!--
+  whats-new.html — the release notes page (Phase 16).
+
+  A standalone page, opened in a new tab from Settings → What's new. All the
+  wording lives in the RELEASES list at the top of whats-new.js.
+
+  ⚠️ WHY THIS PAGE'S CSS IS IN THE PAGE, NOT IN styles.css
+  It links styles.css for the shared basics (colours, fonts, cards), but its own
+  components are styled in the <style> block below. The app's service worker
+  caches styles.css, so a browser can easily be running yesterday's copy of it —
+  which would strip this page of its styling and make it look broken. Keeping
+  the page's own rules here means they arrive with the page and can never fall
+  out of step. If you add a component to this page, style it here too.
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>What's new · Athena's Arena</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <meta name="theme-color" content="#faf6ee" />
+
+    <!--
+      Match the app's light/dark setting. This runs BEFORE the page is drawn so
+      there's no white flash on the way into dark mode. It reads the same
+      localStorage key the app writes, which works because the page is served
+      from the same address as the app.
+    -->
+    <script>
+      (function applySavedTheme() {
+        var saved = localStorage.getItem("gym:theme");
+        var prefersDark =
+          window.matchMedia &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches;
+        if (saved === "dark" || (saved !== "light" && prefersDark)) {
+          document.documentElement.setAttribute("data-theme", "dark");
+        }
+      })();
+    </script>
+
+    <style>
+      /* ---- The newest release, shown in full ---- */
+      .release--latest {
+        border: 2px solid rgba(246, 211, 101, 0.55); /* soft butter outline */
+      }
+      .release__chip {
+        display: inline-block;
+        background-color: rgba(239, 124, 124, 0.15);
+        color: var(--coral);
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        border-radius: var(--radius-pill);
+        padding: 5px 12px;
+      }
+      .release__title {
+        font-size: 21px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+        margin-top: 12px;
+      }
+      .release__intro {
+        color: var(--muted);
+        font-weight: 700;
+        font-size: 15px;
+        line-height: 1.5;
+        margin-top: 8px;
+      }
+
+      /* ---- The bullets, shared by every entry ---- */
+      .release-items {
+        list-style: none;
+        margin: 14px 0 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 11px;
+      }
+      .release-items li {
+        position: relative;
+        padding-left: 18px;
+        font-weight: 600;
+        font-size: 14.5px;
+        line-height: 1.5;
+      }
+      .release-items li::before {
+        content: "";
+        position: absolute;
+        left: 2px;
+        top: 9px;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background-color: var(--mint);
+      }
+
+      .release-heading {
+        font-size: 15px;
+        font-weight: 800;
+        color: var(--muted);
+        margin: 26px 0 12px 4px;
+      }
+
+      /* ---- Older releases: one tappable row each ---- */
+      .release-row {
+        border-radius: 18px;
+        transition: background-color 0.15s ease;
+      }
+      .release-row + .release-row {
+        margin-top: 2px;
+      }
+      .release-row--open {
+        background-color: rgba(95, 196, 188, 0.07); /* faintest mint */
+      }
+
+      .release-row__header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        padding: 13px 14px;
+        border: none;
+        background: none;
+        border-radius: 18px;
+        cursor: pointer;
+        font-family: inherit;
+        color: var(--text);
+        text-align: left;
+      }
+      .release-row__header:hover {
+        background-color: rgba(95, 196, 188, 0.09);
+      }
+      .release-row--open .release-row__header:hover {
+        background-color: transparent; /* the row is already tinted */
+      }
+
+      /* The date as a small pill, so it reads as a label not a sentence. */
+      .release-row__date {
+        flex-shrink: 0;
+        background-color: rgba(185, 167, 224, 0.22); /* faint lavender */
+        color: var(--text);
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.03em;
+        border-radius: var(--radius-pill);
+        padding: 5px 10px;
+        white-space: nowrap;
+      }
+      .release-row__title {
+        font-weight: 800;
+        font-size: 14.5px;
+        line-height: 1.35;
+      }
+
+      /* A chevron in a soft circle that turns as the row opens. */
+      .release-row__caret {
+        margin-left: auto;
+        flex-shrink: 0;
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        background-color: var(--input-bg);
+        border: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1;
+        transition: transform 0.2s ease;
+      }
+      .release-row--open .release-row__caret {
+        transform: rotate(90deg);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .release-row__caret {
+          transition: none;
+        }
+      }
+
+      /* The opened bullets, tucked under the row with a soft rule beside them. */
+      .release-row__body {
+        padding: 2px 16px 16px 16px;
+      }
+      .release-row__body[hidden] {
+        display: none;
+      }
+      .release-row__body .release-items {
+        margin-top: 0;
+        padding-left: 14px;
+        border-left: 2px solid var(--border);
+      }
+
+      .whats-new__foot {
+        color: var(--muted);
+        font-weight: 700;
+        font-size: 14px;
+        margin-top: 26px;
+        text-align: center;
+      }
+    </style>
+  </head>
+
+  <body>
+    <header class="topbar">
+      <span class="topbar__brand">Athena's Arena 🦉</span>
+    </header>
+
+    <main class="app">
+      <h1 class="view__title">What's new</h1>
+      <!-- whats-new.js fills this with the newest release's date -->
+      <p class="view__subtitle" id="lastUpdated">&nbsp;</p>
+
+      <!-- The newest release, in full -->
+      <div id="latestRelease"></div>
+
+      <!-- Everything older, folded to one line each -->
+      <div id="olderReleases"></div>
+
+      <p class="whats-new__foot">
+        Spotted something broken, or got an idea? Tell Justice.
+      </p>
+    </main>
+
+    <script src="whats-new.js"></script>
+  </body>
+</html>

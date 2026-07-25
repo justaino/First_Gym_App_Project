@@ -56,6 +56,30 @@ frameworks). Build accordingly: explain things simply and comment the code.
   don't, returning visitors stay stuck on the old cached version. See RUNBOOK.md for the
   full update flow.
 
+## Release notes & guide (keep these current — don't skip)
+Two files are written **for the owner's friends**, not for the repo. Treat them as part
+of the work, not paperwork afterwards:
+
+- **What's new page** — `whats-new.js`. Whenever a change is visible to a user, add an
+  entry at the **top** of the `RELEASES` list:
+  `{ date: "YYYY-MM-DD", title, intro (optional), items: [] }`. One entry per release,
+  newest first. The newest is drawn in full; older ones fold up automatically, so there's
+  nothing else to edit. The `date` also drives the "unread" dot in Settings, so use the
+  real release date.
+- **In-app guide** — `guide.js`. If a phase adds something a person can see or tap, add a
+  line to the right section's `items` array (or the "Easy to miss" list).
+
+Rules for both:
+- Write them the way you'd explain it to a friend: *"Close friends works both ways now"*,
+  never *"changed close_friends to mutual"*. If a change is invisible to a user, leave it
+  out entirely.
+- All the wording lives in plain arrays at the top of those two files. Never hand-edit the
+  markup or the drawing code to add content.
+- These **replace** the old `Documentation/WhatsNew_*.md` notes and `USER-GUIDE.md`. Don't
+  create new markdown versions of either.
+- `RUNBOOK.md`'s change log is the *technical* record and is still required — it's for the
+  owner, the What's new page is for everyone else. Both get updated.
+
 ## Coding conventions
 - Plain, readable functions with descriptive names. Avoid clever one-liners.
 - No external JS libraries unless explicitly approved. (A Google Font via `<link>` is

@@ -16,7 +16,7 @@
 */
 
 // 🔼 Bump this whenever you change app files and want everyone to get the update.
-const CACHE_VERSION = "v44";
+const CACHE_VERSION = "v46";
 const CACHE_NAME = "athenas-arena-cache-" + CACHE_VERSION;
 
 // The core files that make up the app ("the app shell"). Relative paths so this
@@ -29,6 +29,8 @@ const APP_SHELL = [
   "./exercise-library.js", // the built-in exercise suggestions list (Phase 8)
   "./friends.js", // the Friends tab (Phase 12)
   "./guide.js", // the in-app guide (Phase 13)
+  "./whats-new.js", // the release notes (Phase 16)
+  "./whats-new.html", // ...and the page that shows them
   "./vendor/supabase.js", // the Supabase library (vendored so offline works)
   "./supabase.js",
   "./auth.js",
