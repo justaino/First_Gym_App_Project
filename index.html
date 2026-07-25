@@ -214,6 +214,10 @@
         <!-- app.js fills this with today's exercises (or a friendly empty state) -->
         <div id="todayList"></div>
 
+        <!-- Gym buddies (Phase 12c). friends.js fills this with each friend's
+             "went today" status, and leaves it empty when you have no friends. -->
+        <div id="todayBuddies"></div>
+
         <!-- Recent workout history (filled by app.js; heading hidden when empty) -->
         <h2 class="section-heading" id="historyHeading" hidden>Recent workouts</h2>
         <div id="historyList"></div>
@@ -249,6 +253,40 @@
         <div id="exerciseProgressList"></div>
       </section>
 
+      <!-- ===================== FRIENDS VIEW (Phase 12) ===================== -->
+      <section class="view" id="view-friends" data-view="friends">
+        <h1 class="view__title">Friends</h1>
+        <p class="view__subtitle">Train together, even when you're apart.</p>
+
+        <!-- Add someone by email. The lookup happens inside the database so
+             nobody can browse other people's email addresses. -->
+        <div class="card">
+          <label class="form__label" for="friendEmailInput">
+            Add a friend by email
+          </label>
+          <div class="friend-add">
+            <input
+              class="input"
+              id="friendEmailInput"
+              type="email"
+              placeholder="their@email.com"
+              autocomplete="off"
+              autocapitalize="none"
+            />
+            <button class="btn btn--primary" id="addFriendBtn" type="button">
+              Send
+            </button>
+          </div>
+          <p class="friend-add__hint">
+            They'll see your request the next time they open the app.
+          </p>
+        </div>
+
+        <!-- friends.js fills these: requests waiting for you, then your buddies -->
+        <div id="friendRequests"></div>
+        <div id="friendsList"></div>
+      </section>
+
       <!-- ===================== SETTINGS VIEW (profiles) ===================== -->
       <section class="view" id="view-settings" data-view="settings">
         <h1 class="view__title">Profiles</h1>
@@ -276,6 +314,38 @@
           <button class="btn btn--primary" id="installBtn" type="button">
             📲 Install app
           </button>
+        </div>
+
+        <!-- Friends (Phase 12): the name your gym buddies see. Saved to your
+             account (not this device), so it's the same on every phone. -->
+        <h2 class="section-heading">Friends</h2>
+        <div class="card">
+          <label class="form__label" for="friendNameInput">
+            Your name to friends
+          </label>
+          <input
+            class="input"
+            id="friendNameInput"
+            type="text"
+            maxlength="40"
+            placeholder="e.g. Justice"
+          />
+          <p class="friend-add__hint">
+            This is how you appear in other people's buddy lists.
+          </p>
+
+          <!-- Phase 12d: the master sharing switch. Off = friends see nothing
+               at all, not even your "went today" tick. -->
+          <label class="switch-row" for="shareWorkoutsInput">
+            <span class="switch-row__text">
+              <span class="switch-row__title">Share my workouts with friends</span>
+              <span class="switch-row__note">
+                Off means friends can't see your workouts or whether you
+                trained — not even close friends.
+              </span>
+            </span>
+            <input type="checkbox" id="shareWorkoutsInput" checked />
+          </label>
         </div>
 
         <!-- Weekly goal (Insights): drives the goal ring on the Progress tab. -->
@@ -605,6 +675,18 @@
     </div>
 
     <!--
+      "Syncing…" overlay (Phase 12e). app.js shows this while your data is being
+      fetched at login — that can take a few seconds if the database has been
+      asleep, and a blank screen looks broken.
+    -->
+    <div class="sync-overlay" id="syncOverlay" hidden>
+      <div class="sync-overlay__panel" role="status">
+        <div class="spinner" aria-hidden="true"></div>
+        <p class="loading-card__text">Getting your workouts…</p>
+      </div>
+    </div>
+
+    <!--
       Floating bottom tab bar. Each button has a data-view that matches a
       <section data-view="..."> above; app.js uses it to switch views.
     -->
@@ -622,6 +704,14 @@
       <button class="tab" type="button" data-view="progress">
         <span class="tab__icon" aria-hidden="true">📈</span>
         <span class="tab__label">Progress</span>
+      </button>
+
+      <button class="tab" type="button" data-view="friends">
+        <span class="tab__icon" aria-hidden="true">🤝</span>
+        <span class="tab__label">Friends</span>
+        <!-- Little coral dot: friends.js shows it when a request is waiting or
+             someone has nudged you. -->
+        <span class="tab__dot" id="friendsTabDot" hidden></span>
       </button>
 
       <button class="tab" type="button" data-view="settings">
@@ -670,6 +760,10 @@
 
     <!-- Our app logic -->
     <script src="app.js"></script>
+
+    <!-- The Friends tab (Phase 12). Loaded after app.js because it uses its
+         helpers (showToast, formatDate, showSessionDetail...). -->
+    <script src="friends.js"></script>
     <!-- Login / sign-up gate (Phase 7) -->
     <script src="auth.js"></script>
   </body>

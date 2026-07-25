@@ -407,6 +407,89 @@ previous Mon–Sun window.
 
 ---
 
+## 5j. Friends + nudges (Phase 12)
+
+A 5th tab (🤝 **Friends**). Everything here lives in the **cloud**, not
+localStorage, and needs you to be logged in and online.
+
+### Two levels of friend (important)
+
+| Level | What they can see |
+|-------|-------------------|
+| **Friend** | That you trained today, and your workouts-this-week count. Can nudge you. |
+| **Close friend** | All of the above **plus** your actual workouts — sets, reps, weights, exercise names. |
+
+- You promote someone with the **⭐ Close friend** button on their card. It is
+  **one-directional**: it controls what *they* see of *your* data. It's normal
+  for one of you to be close and not the other, and nobody can promote
+  themselves.
+- It's enforced by the **database**, not the screen — an ordinary friend can't
+  read your workout rows even with DevTools open. Their counts come from a
+  `friend_activity()` function that returns numbers only.
+
+### Using it
+
+- **Add a friend:** type their email → **Send**. They must have signed up with
+  that exact address, or you get "no account with that email". The lookup runs
+  inside the database (`find_user_by_email`), so nobody can browse emails.
+- **Requests to you** appear at the top with Accept / Decline. Requests *you*
+  sent show as "waiting" with a Cancel option.
+- **👋 Nudge:** one per friend per day. The button becomes "Nudged! ✓" — and the
+  database rejects a second one anyway, so it can't be spammed from two devices.
+  - **What the person on the other end sees (Phase 12c):** the next time they
+    **open the app**, a toast — "👋 Justice nudged you — go get that workout!" —
+    and a coral **dot on the 🤝 tab** until they visit it. Their card also says
+    "👋 Nudged you today". There is **no push notification**: this is a PWA, so
+    nothing appears on their lock screen. A nudge is a nice surprise on their
+    next visit, not a prod in the moment.
+- **The tab dot** means "something's waiting": a friend request, or a nudge you
+  haven't looked at. Opening the Friends tab marks nudges as seen and clears it;
+  a request keeps it lit until you accept or decline.
+- **Today tab → "Gym buddies"** lists each friend with Went today ✅ / Not yet 💤
+  (🔒 if they've stopped sharing). It's hidden entirely when you have no friends.
+  Tap the heading to fold it away — the heading still shows the count and how
+  many went today. Open/closed is remembered in `gym:buddiesOpen` (per device).
+- **Settings → Friends → "Share my workouts with friends"** is the master
+  switch. Off = friends see nothing, not even your went-today tick, and it
+  overrides close-friend status. It writes `share_workouts` on your directory
+  row, and all three database rules check it.
+- **"Delete my data"** now also clears your directory row, friendships, nudges
+  and your close-friend list (`deleteMyFriendsData` in app.js). One thing it
+  can't remove: if someone else marked *you* as their close friend, that row is
+  theirs to delete — harmless, since access also needs a live friendship.
+- **Tapping a buddy** opens their recent workouts, but only if they've made you
+  a close friend *and* their sharing switch is on. Otherwise the card isn't
+  tappable and says so.
+- **Your name to friends:** Settings → Friends. Saved to your **account**
+  (unlike the theme and unit, which are per device), so it's the same on every
+  phone. It's created for you at first login from your active profile's name,
+  or the part of your email before the `@`.
+
+### Where things live
+
+- **Database:** `Documentation/SQL-Phase12-Friends.sql` — `user_directory`,
+  `friendships`, `close_friends`, `nudges`, plus the functions
+  `find_user_by_email()`, `friend_directory()`, `friend_activity()`. Run once in
+  the Supabase SQL editor (done 2026-07-24).
+- **App:** `friends.js` (its own file — app.js was long enough). app.js calls
+  into it in three places: `initFriendsOnLogin()` after login,
+  `onFriendsTabOpened()` from `switchView`, and `renderFriendNameInput()` for
+  the Settings box.
+
+> ⚠️ **Cloud-pull gotcha (fixed in the same change).** `pullExercisesFromCloud`
+> and `pullSessionsFromCloud` used to `select("*")` and let RLS return "only
+> your rows". Now close friends can read your rows, so those queries **must**
+> filter `.eq("user_id", userId)` — otherwise a friend's workouts get merged
+> into your own history. If you ever add another cloud read, filter it too.
+
+### Testing it (needs two accounts)
+
+Use two browsers (or one normal + one private window) and two email addresses.
+Send a request from A, accept on B, then check the buddy list on both. Promote
+one side to close friend and confirm only that side can open the workouts.
+
+---
+
 ## 6. Backup & restore (import / export)
 
 Found in **Settings → Backup**.
@@ -466,6 +549,50 @@ its first weighted workout won't fire a PR (there's nothing to beat yet).
 ## 9. Change log
 
 Newest first. Add a line here whenever behaviour changes.
+
+- **2026-07-25** — **Phase 12d + 12e — finishing Friends, and loading states (on `dev`,
+  awaiting owner test):**
+  - **12d:** Settings → Friends gained the master **"Share my workouts with friends"**
+    switch (writes `share_workouts`); **"Delete my data"** now also wipes your directory
+    row, friendships, nudges and close-friend list; a tester note went into
+    `Documentation/WhatsNew_Friends_2026-07-25.md`; and a stale comment in `supabase.js`
+    (claiming the library came from a CDN) was corrected — it's vendored.
+  - **12e:** a reusable **spinner** (`createLoadingCard()` in app.js, `.spinner` in CSS,
+    honours `prefers-reduced-motion`) now covers the three slow moments: logging in (a
+    full-screen "Getting your workouts…" overlay, since a sleeping Supabase project takes
+    seconds to wake), the first Friends load, and opening a friend's workouts — that
+    pop-up now opens **immediately** with a spinner instead of after the fetch. The Today
+    **"Gym buddies"** card became collapsible (`gym:buddiesOpen`), with the count and
+    "N went today" kept in the heading. See §5j. Cache `v35`.
+
+- **2026-07-25** — **Phase 12c — nudges you can actually see (on `dev`, awaiting owner
+  test):** unseen nudges now pop a friendly toast when the app opens (several at once
+  collapse into one message), a coral **dot** appears on the 🤝 tab while a request or
+  unseen nudge is waiting, a buddy's card shows "👋 Nudged you today", and Today gained a
+  **"Gym buddies"** card with each friend's went-today status (hidden when you have no
+  friends). Nudges are marked seen when you open the Friends tab, which is what clears the
+  dot. See §5j. Cache `v34`.
+
+- **2026-07-25** — **Phase 12 FIX — close friends could never read anything:** tapping a
+  close friend's card said "No workouts recorded yet" while their weekly count showed
+  fine. Cause: a policy that looks at another table is still subject to THAT table's RLS,
+  so the `sessions`/`exercises` policies couldn't see the `close_friends` or
+  `user_directory` rows they needed (you may only read your own). Fixed by moving the
+  check into a `SECURITY DEFINER` function, `may_read_workouts_of(owner)`, which both
+  policies now call — `Documentation/SQL-Phase12-Fix-CloseFriendReads.sql` (owner ran it).
+  No app change.
+
+- **2026-07-24** — **Phase 12a/12b — friends (on `dev`, awaiting owner test):** the
+  Supabase side was created by `Documentation/SQL-Phase12-Friends.sql` (owner ran it;
+  4 tables + 3 functions, all RLS-checked). New **🤝 Friends tab** in `friends.js`: add by
+  email, accept/decline requests, buddy list with went-today + weekly count, 👋 nudge
+  (one per friend per day), ⭐ close-friend toggle, remove, and a tap-through to a close
+  friend's recent workouts (reusing the workout pop-up via a new optional
+  `showSessionDetail(session, exercisesOverride)` argument). Settings gained **"Your name
+  to friends"** (stored on your account, not the device). ⚠️ Also fixed
+  `pullExercisesFromCloud` / `pullSessionsFromCloud` to filter by `user_id` — with the new
+  friend-read policies, `select("*")` would have merged a friend's data into your local
+  cache. See §5j. Cache `v33`.
 
 - **2026-07-24** — **Phase 11 — weekly recap (on `dev`, awaiting owner test):** a
   **"Last week"** card on Progress (under "This week") showing workouts vs goal, sets,

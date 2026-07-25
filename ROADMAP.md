@@ -437,7 +437,19 @@ week; empty-history case.
 In-app only — no emails. Data refreshes on app open / tab visit (no push notifications;
 that's out of scope for a PWA on iOS).
 
-- ☐ **12a — SQL (owner runs; wait for confirmation):** one commented script creating:
+> **Decision (2026-07-24) — two levels of friend.** Everyone you accept is a *friend*:
+> they see only that you trained (went-today tick + workouts-this-week) and can nudge
+> you. Promote someone to *close friend* and they can open your actual workouts (sets,
+> reps, weights, exercise names). This is enforced in the database, not just in the UI —
+> a plain friend can't read the workout rows at all. It's **one-directional** (marking
+> someone close controls what *they* see of *your* data), so nobody can promote
+> themselves. Consequences for the spec below: a `close_friends` table; the `sessions`
+> read policy is close-friends-only and a matching one covers `exercises` (names);
+> ordinary friends get their counts from a `friend_activity()` aggregate function that
+> can't leak dates, weights or names. Script written: `Documentation/SQL-Phase12-Friends.sql`.
+
+- ✅ **12a — SQL (owner ran 2026-07-24; verified via the script's own checks):** one
+  commented script (`Documentation/SQL-Phase12-Friends.sql`) creating:
   - `user_directory(user_id pk → auth.users, email unique lowercased, display_name,
     share_workouts boolean default true)` — the app upserts the signed-in user's own row
     at login. RLS: each user can read/update only their own row.
@@ -454,21 +466,39 @@ that's out of scope for a PWA on iOS).
     A unique index on `(from_user, to_user, (created_at::date))` = max one nudge per
     friend per day, enforced server-side.
   - Explicit `GRANT`s for all of the above.
-- ☐ **12b — Friends tab:** a 5th tab (🤝 Friends). Add-friend form (email → lookup →
+- ✅ **12b — Friends tab (built 2026-07-24 — `friends.js`, cache `v33`, awaiting owner
+  test; also added Settings → "Your name to friends" and fixed the cloud pulls to filter
+  by `user_id`, which the new friend-read policies made necessary):** a 5th tab (🤝 Friends). Add-friend form (email → lookup →
   request; friendly "no account with that email" error). Incoming requests with
   Accept / Decline. Buddy list: display name, "Went today ✅" (a completed session dated
   today) or "Not yet 💤", workouts-this-week count, a **👋 Nudge** button (becomes
   "Nudged! ✓" and disables until tomorrow once used), and a remove-friend option
-  (confirm first). Tapping a buddy shows their recent workouts via the existing
-  session-detail modal (only if they share).
-- ☐ **12c — Today-tab tie-ins:** a small "Gym buddies" card (hidden with no friends)
-  showing each friend's went-today status; on app open, unseen nudges show a friendly
-  toast — "👋 Amara nudged you — go get that workout!" — then get marked seen.
-- ☐ **12d — Settings + polish:** "Share my workouts with friends" toggle (writes
-  `share_workouts`); include friends data in the existing offline handling (reads say
-  "reconnect to see friends"; writes use the friendly offline block); empty states; a
-  short `Documentation/WhatsNew_Friends_*.md` for testers. Extend "Delete my data" to
-  also remove the user's directory row, friendships, and nudges.
+  (confirm first). Plus a **Friend / Close friend** toggle per buddy (default Friend)
+  writing `close_friends`. Tapping a buddy shows their recent workouts via the existing
+  session-detail modal — only if they've made *you* a close friend and still share;
+  otherwise the card isn't tappable and says "… shares workout details with close
+  friends".
+- ✅ **12c — Today-tab tie-ins (built 2026-07-25 — cache `v34`, awaiting owner test):** a
+  small "Gym buddies" card (hidden with no friends) showing each friend's went-today
+  status; on app open, unseen nudges show a friendly toast — "👋 Amara nudged you — go get
+  that workout!" (several collapse into one message). Added beyond the original spec at
+  the owner's request: a coral **dot on the 🤝 tab** while a request or unseen nudge is
+  waiting, and a "👋 Nudged you today" line on the sender's card. Nudges are marked seen
+  when the Friends tab is opened (not by the toast) so the dot survives until you've
+  actually looked.
+- ✅ **12d — Settings + polish (built 2026-07-25 — cache `v35`, awaiting owner test):**
+  "Share my workouts with friends" toggle (writes `share_workouts`); friends data uses the
+  existing offline handling (reads say "reconnect to see friends"; writes use the friendly
+  offline block); empty states; a short `Documentation/WhatsNew_Friends_2026-07-25.md` for
+  testers. "Delete my data" now also removes the user's directory row, friendships, nudges
+  and close-friend rows.
+- ✅ **12e — Collapsible buddies + loading states (added 2026-07-25 at the owner's
+  request, cache `v35`):** the Today "Gym buddies" card folds away (heading keeps the
+  count + "N went today"; remembered in `gym:buddiesOpen`). A reusable spinner
+  (`createLoadingCard()`, `.spinner`, respects `prefers-reduced-motion`) now covers the
+  three slow moments — login sync (full-screen overlay), the first Friends load, and
+  opening a friend's workouts (the pop-up opens instantly with a spinner rather than after
+  the fetch).
 
 **Done when:** two accounts can request/accept, each sees the other's went-today status
 and recent workouts, a nudge sent from one shows as a toast on the other's next open
@@ -478,3 +508,54 @@ works both ways. **Test with two accounts** (e.g. a second test email) on two br
 **Watch-outs:** free Supabase pauses after ~1 week idle; never expose more than
 `display_name` via the lookup; keep `service_role` out of the repo; all friend reads
 must fail soft when offline.
+
+---
+
+## 10. Guide & usernames — Phases 13–14 (planned 2026-07-25)
+
+### Phase 13 — In-app guide ☐
+**Goal:** a tester opening the app cold can work out what everything does. Replaces
+`Documentation/USER-GUIDE.md` (decided — one copy, or they drift).
+
+**Owner's decisions (2026-07-25), from the design review artifact:**
+- **Layout: direction C** — a short "first three steps" sequence at the top (numbered,
+  because it genuinely is an order), then direction A's accordion underneath as the
+  reference half. Built as A first, with the hero and step list added on top.
+- **Placement: Settings → "How to use"**, opening a full-screen sheet (the same pattern
+  as workout mode). No sixth tab — the bar is already tight at five. Pair it with a
+  "New here? Take the tour" line on the empty Today/Schedule states.
+- **Easter eggs: mention only the ones you'd never otherwise find.** The owl long-press
+  and the credits card stay unlisted.
+
+- ☐ One collapsible section per tab (Today / Schedule / Progress / Friends / Settings),
+  each a few short steps written from the user's side — no "sortOrder", no "RLS".
+- ☐ A "Hidden bits" section at the end for the findable-but-obscure (rest timer beeps
+  when backgrounded, ⠿ reorder, "last time" hints, kg/lb being display-only, backup).
+- ☐ Delete `Documentation/USER-GUIDE.md` and point anything referencing it at the app.
+
+**Done when:** a friend who has never seen the app can get from nothing to a finished
+workout using only the guide. **Test:** read it on a phone; check both themes.
+
+### Phase 14 — Usernames ☐
+**Goal:** send a friend request by `@username` instead of an email address.
+
+- ☐ **14a — SQL (owner runs; wait for confirmation):** add `username` to
+  `user_directory` with a unique index on `lower(username)` and a format check (3–20
+  chars, letters/numbers/underscore); backfill existing users with readable generated
+  names (e.g. `mintyowl42`); add `find_user_by_username()` and `is_username_available()`
+  as `SECURITY DEFINER` functions alongside the email lookup.
+- ☐ **14b — Sign-up:** a username field on the sign-up form with a live
+  "✓ available / ✗ taken" check. **Wrinkle:** the directory row is created at first
+  *login*, not sign-up, so either hold the chosen name in localStorage between the two
+  or move row creation into the sign-up step.
+- ☐ **14c — Changing it:** Settings → Friends gains "Username" next to "Your name to
+  friends", same availability check. Safe to change — friendships are keyed on user id.
+- ☐ **14d — Using it:** the add-friend box accepts either; text containing `@` is treated
+  as an email, otherwise a username. Buddy cards show `@username` under the display name.
+
+**Decisions:** username **and** display name both stay — display name for warmth,
+username for uniqueness.
+
+**Watch-out (accepted trade-off):** usernames are guessable in a way emails aren't, so
+someone could probe for which accounts exist. They still can't see anything without an
+accepted request. Rate-limiting the lookup is the fix if it ever matters.

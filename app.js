@@ -729,6 +729,29 @@ function createEmptyState(emoji, message) {
   return card;
 }
 
+// A "we're fetching this" card: a little spinning ring plus a message.
+// Anything that waits on the cloud should show one of these, because a slow
+// reply (a sleeping Supabase project can take several seconds to wake) looks
+// exactly like a broken app otherwise. (Phase 12e)
+function createLoadingCard(message) {
+  const card = document.createElement("div");
+  card.className = "card loading-card";
+
+  const spinner = document.createElement("div");
+  spinner.className = "spinner";
+  spinner.setAttribute("aria-hidden", "true");
+
+  const text = document.createElement("p");
+  text.className = "loading-card__text";
+  text.textContent = message;
+
+  // Screen readers announce the message when it appears.
+  card.setAttribute("role", "status");
+  card.appendChild(spinner);
+  card.appendChild(text);
+  return card;
+}
+
 // Draw the "Recent workouts" history list on the Today view.
 function renderHistory() {
   const heading = document.getElementById("historyHeading");
@@ -957,7 +980,10 @@ function hideChartTooltip() {
 /* ---- Workout detail pop-up (opened by clicking a chart bar) ---- */
 
 // Show every exercise from one saved session in a pop-up.
-function showSessionDetail(session) {
+// `exercisesOverride` (Phase 12) lets the Friends tab pass a FRIEND's exercise
+// list, since their exercises aren't in your local storage. Left out, it uses
+// your own — exactly as before.
+function showSessionDetail(session, exercisesOverride) {
   // Title: e.g. "Monday workout — Mon, Jun 22"
   const title = (session.day || "Workout") + " — " + formatDate(session.date);
   document.getElementById("sessionTitle").textContent = title;
@@ -966,7 +992,7 @@ function showSessionDetail(session) {
   list.innerHTML = "";
 
   // We need exercise names/emojis, which live in the exercises list.
-  const allExercises = loadList(STORAGE_KEYS.exercises);
+  const allExercises = exercisesOverride || loadList(STORAGE_KEYS.exercises);
 
   session.entries.forEach((entry) => {
     const exercise = allExercises.find((item) => item.id === entry.exerciseId);
@@ -2365,7 +2391,9 @@ async function deleteAllMyData() {
   const ok = window.confirm(
     "Delete ALL your data?\n\n" +
       "This permanently removes every profile, exercise, and workout from the " +
-      "cloud and from this device — on all your devices. It cannot be undone.\n\n" +
+      "cloud and from this device — on all your devices. It also removes you " +
+      "from Friends: your buddies, requests and nudges all go. It cannot be " +
+      "undone.\n\n" +
       "Tip: export a backup first (Settings → Backup) if you want to keep a copy."
   );
   if (!ok) {
@@ -2401,6 +2429,12 @@ async function deleteAllMyData() {
     }
   }
 
+  // Phase 12d: the friends side of your account. These aren't scoped by a
+  // `user_id` column — each table names you in one of two columns — so they use
+  // .or(...) instead. Failures here are logged rather than fatal: your workouts
+  // are already gone, and stopping half way would be worse than a leftover row.
+  await deleteMyFriendsData(userId);
+
   // Cloud is clear — now wipe the local cache so nothing re-uploads on next login.
   clearLocalData();
   localStorage.removeItem(STORAGE_KEYS.weeklyGoal);
@@ -2413,6 +2447,35 @@ async function deleteAllMyData() {
 
   // Log out → back to the login screen, now with an empty account.
   await supabaseClient.auth.signOut();
+}
+
+// Remove everything the Friends feature stored about you: your directory entry,
+// your friendships (either direction), the nudges you sent or received, and the
+// people you'd marked as close friends.
+//
+// One thing this CAN'T do: if someone else marked YOU as their close friend,
+// that row belongs to them and only they can delete it. It's harmless — access
+// also needs an accepted friendship, and those are gone.
+async function deleteMyFriendsData(userId) {
+  const both = (columnA, columnB) =>
+    columnA + ".eq." + userId + "," + columnB + ".eq." + userId;
+
+  const jobs = [
+    supabaseClient.from("nudges").delete().or(both("from_user", "to_user")),
+    supabaseClient.from("close_friends").delete().eq("owner_id", userId),
+    supabaseClient
+      .from("friendships")
+      .delete()
+      .or(both("requester_id", "addressee_id")),
+    supabaseClient.from("user_directory").delete().eq("user_id", userId),
+  ];
+
+  const results = await Promise.all(jobs);
+  results.forEach((result) => {
+    if (result.error) {
+      console.error("Couldn't clear friends data:", result.error.message);
+    }
+  });
 }
 
 // Make sure the active profile id still points at a profile that exists.
@@ -2472,21 +2535,42 @@ async function syncOnLogin(userId) {
   uploaded =
     (await reconcileEntity(
       STORAGE_KEYS.exercises,
-      pullExercisesFromCloud,
+      // Wrapped so the user id gets through to the query (Phase 12: the pull
+      // must ask for YOUR rows only — see pullExercisesFromCloud).
+      () => pullExercisesFromCloud(userId),
       uploadExercisesToCloud,
       mapExerciseFromCloud
     )) || uploaded;
-  uploaded = (await reconcileSessions()) || uploaded; // sessions use a merge
+  uploaded = (await reconcileSessions(userId)) || uploaded; // sessions merge
 
   localStorage.setItem(STORAGE_KEYS.syncedUserId, userId);
   return firstLogin && uploaded;
 }
 
+// Show or hide the "Getting your workouts…" overlay (Phase 12e).
+function setSyncOverlay(isVisible) {
+  const overlay = document.getElementById("syncOverlay");
+  if (overlay) {
+    overlay.hidden = !isVisible;
+  }
+}
+
 // Called by auth.js when a user is signed in: sync, then redraw.
 async function onUserLoggedIn(session) {
-  const migrated = await syncOnLogin(session.user.id);
+  // Phase 12e: show a spinner while we fetch — this is the slowest moment in
+  // the app, especially if the database has been idle and needs to wake up.
+  setSyncOverlay(true);
+  let migrated = false;
+  try {
+    migrated = await syncOnLogin(session.user.id);
+  } finally {
+    // `finally` so a failed sync can never leave the overlay stuck on screen.
+    setSyncOverlay(false);
+  }
   ensureValidActiveProfile();
   renderAll();
+  // Phase 12: make sure people can find you by email, then load your friends.
+  initFriendsOnLogin();
   if (migrated) {
     // Reassure the user their pre-account data is now safely in their account.
     showToast("Welcome! Your existing workouts are now saved to your account ☁️");
@@ -2532,8 +2616,15 @@ function exerciseToRow(exercise) {
   };
 }
 
-async function pullExercisesFromCloud() {
-  const { data, error } = await supabaseClient.from("exercises").select("*");
+// NOTE (Phase 12): this MUST filter by user_id. Until Phase 12 the only rows
+// you were allowed to read were your own, so "select everything" was safe.
+// Now close friends can read each other's exercises, so without this filter a
+// friend's exercises would be pulled into YOUR local cache.
+async function pullExercisesFromCloud(userId) {
+  const { data, error } = await supabaseClient
+    .from("exercises")
+    .select("*")
+    .eq("user_id", userId);
   if (error) {
     console.error("Could not load exercises from cloud:", error.message);
     return null;
@@ -2582,8 +2673,13 @@ function sessionTime(session) {
   return new Date(session.updatedAt || session.date || 0).getTime();
 }
 
-async function pullSessionsFromCloud() {
-  const { data, error } = await supabaseClient.from("sessions").select("*");
+// Same Phase 12 note as pullExercisesFromCloud: filter by user_id, or a close
+// friend's workouts would be merged into your own history.
+async function pullSessionsFromCloud(userId) {
+  const { data, error } = await supabaseClient
+    .from("sessions")
+    .select("*")
+    .eq("user_id", userId);
   if (error) {
     console.error("Could not load sessions from cloud:", error.message);
     return null;
@@ -2623,8 +2719,8 @@ async function deleteSessionFromCloud(id) {
 // was updated most recently — so an un-pushed in-progress workout is never lost —
 // then push anything the cloud is missing or behind on.
 // Returns true if it uploaded any local-only sessions.
-async function reconcileSessions() {
-  const cloud = await pullSessionsFromCloud();
+async function reconcileSessions(userId) {
+  const cloud = await pullSessionsFromCloud(userId);
   if (cloud === null) {
     return false; // offline / error → keep local as-is
   }
@@ -4792,6 +4888,12 @@ function switchView(viewName) {
       tab.removeAttribute("aria-current");
     }
   });
+
+  // Phase 12: opening the Friends tab refreshes it, so the "went today" ticks
+  // and nudge buttons are up to date each time you look.
+  if (viewName === "friends") {
+    onFriendsTabOpened();
+  }
 }
 
 /* =========================================================================
