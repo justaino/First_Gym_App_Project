@@ -681,6 +681,55 @@ body {
   margin-top: 4px;
 }
 
+/* Last time's note, shown under the "Last time:" line while you train. The
+   lavender rule matches how a saved note looks in the workout detail pop-up,
+   so "your own words" always reads the same way. Long notes are cut off after
+   three lines (the full text is in the hover tooltip) so one essay can't push
+   the sets off the screen. */
+.workout-exercise__lastnote {
+  color: var(--text);
+  font-weight: 600;
+  font-size: 12px;
+  line-height: 1.35;
+  margin-top: 4px;
+  padding-left: 8px;
+  border-left: 3px solid var(--lavender);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3; /* the standard property; the -webkit- one covers older Safari */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ---- The per-exercise note (button + hidden text box) ---- */
+.wnote {
+  margin-top: 6px;
+}
+
+/* The note text box only appears once you tap the button. Sized small on
+   purpose — it's a quick reminder, not somewhere to write an essay. */
+.wnote__box {
+  margin-top: 8px;
+  width: 100%;
+  min-height: 56px;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* A saved note shown back to you in the workout detail pop-up. The lavender
+   line down the side makes it read as "your words", not app data. */
+.session-note {
+  color: var(--text);
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1.4;
+  margin-top: 6px;
+  padding-left: 8px;
+  border-left: 3px solid var(--lavender);
+}
+
 /* ---- A single exercise inside the workout ---- */
 .workout-exercise {
   background-color: var(--card);

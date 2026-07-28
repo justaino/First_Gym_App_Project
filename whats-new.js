@@ -30,6 +30,20 @@
 
 const RELEASES = [
   {
+    date: "2026-07-28",
+    title: "Leave yourself a note",
+    intro:
+      "Thought of something mid-set that you want to remember for next week? " +
+      "You can write it down now, right where it happened.",
+    items: [
+      "Every exercise in a workout has a 📝 Add note button. Tap it and jot down whatever you want: \"next week try 2.5kg more\", \"felt easy\", \"left shoulder twinged\".",
+      "Next time you train that exercise, your last note is waiting for you underneath it, next to what you lifted. No digging through history to find it.",
+      "Notes save as you type and stay with that day's workout, so you can always look one up later too.",
+      "Your notes are private. Close friends can see your workouts, but never what you wrote.",
+      "Fixed: a workout now counts only the exercises you actually trained. Planning three and doing one says \"1 exercise\", not \"3\".",
+    ],
+  },
+  {
     date: "2026-07-25",
     title: "Usernames, close friends and a proper guide",
     intro:

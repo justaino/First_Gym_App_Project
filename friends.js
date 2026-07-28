@@ -1684,6 +1684,8 @@ function showFriendWorkoutList(buddy, sessions, exercises) {
     title.className = "history-card__title";
     title.textContent = (session.day || "Workout") + " workout";
 
+    // Same counting rules as your own history: only sets that were ticked, and
+    // only exercises that were actually trained.
     const totalSets = session.entries.reduce(
       (sum, entry) => sum + entrySetsDone(entry),
       0
@@ -1694,16 +1696,16 @@ function showFriendWorkoutList(buddy, sessions, exercises) {
     meta.textContent =
       formatDate(session.date) +
       " · " +
-      totalSets +
-      " sets · " +
-      session.entries.length +
-      " exercises";
+      pluralise(totalSets, "set") +
+      " · " +
+      pluralise(sessionExercisesDone(session), "exercise");
 
     row.appendChild(title);
     row.appendChild(meta);
-    // Pass THEIR exercises so the names and emojis come out right.
+    // Pass THEIR exercises so the names and emojis come out right, and `true`
+    // to hide notes — an exercise note is private to whoever wrote it.
     row.addEventListener("click", () =>
-      showSessionDetail(session, exercises)
+      showSessionDetail(session, exercises, true)
     );
     list.appendChild(row);
   });
