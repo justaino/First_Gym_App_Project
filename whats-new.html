@@ -201,6 +201,35 @@
         border-left: 2px solid var(--border);
       }
 
+      /* ---- Back to the app ----
+         This page normally opens in a new tab, but when the app is installed
+         to a home screen that "tab" has no browser chrome — no back arrow, no
+         address bar. Without this button you're stuck on the page. */
+      .backlink {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background-color: var(--card);
+        box-shadow: var(--shadow-card);
+        border: none;
+        border-radius: var(--radius-pill);
+        padding: 8px 16px 8px 12px;
+        font-family: inherit;
+        font-weight: 800;
+        font-size: 14px;
+        color: var(--text);
+        text-decoration: none;
+        cursor: pointer;
+      }
+      .backlink:active {
+        transform: scale(0.97);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .backlink:active {
+          transform: none;
+        }
+      }
+
       .whats-new__foot {
         color: var(--muted);
         font-weight: 700;
@@ -213,6 +242,12 @@
 
   <body>
     <header class="topbar">
+      <!--
+        It's a real link to the app, so it still works with no JavaScript and
+        long-press/right-click behave sensibly. The script below upgrades it to
+        a proper "back" when there IS somewhere to go back to.
+      -->
+      <a class="backlink" id="backLink" href="index.html">← Back</a>
       <span class="topbar__brand">Athena's Arena 🦉</span>
     </header>
 
@@ -231,6 +266,26 @@
         Spotted something broken, or got an idea? Tell Justice.
       </p>
     </main>
+
+    <!--
+      Make the Back button do the right thing in both cases:
+
+      • Opened in a NEW tab/window (the usual case, and the one that traps you
+        in an installed app): there's no page behind this one, so the plain
+        href does the job and loads the app.
+      • Opened in the SAME tab: going back is better than a fresh load, because
+        it returns you to the Settings tab you left rather than the Today tab.
+
+      history.length tells us which we're in: 1 means this page is all there is.
+    -->
+    <script>
+      document.getElementById("backLink").addEventListener("click", function (event) {
+        if (window.history.length > 1) {
+          event.preventDefault(); // don't follow the href — step back instead
+          window.history.back();
+        }
+      });
+    </script>
 
     <script src="whats-new.js"></script>
   </body>

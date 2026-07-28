@@ -685,6 +685,17 @@ its first weighted workout won't fire a PR (there's nothing to beat yet).
 
 Newest first. Add a line here whenever behaviour changes.
 
+- **2026-07-28** — **Back button on the What's new page (SHIPPED 2026-07-28):** the page
+  is opened with `target="_blank"`, which is fine in a browser but traps you when the app
+  is installed to a home screen — that window has no chrome, so no back arrow and no
+  address bar. Added a `← Back` control to the page's topbar. It's a real
+  `<a href="index.html">` so it works without JavaScript, with a click handler that calls
+  `history.back()` instead **only when `history.length > 1`** (i.e. the page was opened in
+  the same tab, where going back returns you to the Settings tab you left rather than
+  reloading the app onto Today). Opened in a new tab, `history.length` is 1 and the plain
+  href runs. Per §5m the styling lives in the page's own `<style>` block, not `styles.css`.
+  Cache `v48`.
+
 - **2026-07-28** — **Per-exercise workout notes + exercise-count fix (SHIPPED 2026-07-28):**
   suggested by one of the owner's friends. Each exercise in workout mode
   now has a **📝 Add note** button that reveals a small textarea (`buildWorkoutNote()` in
