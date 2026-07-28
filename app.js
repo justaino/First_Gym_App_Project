@@ -812,7 +812,9 @@ function renderHistory() {
     // session.day is the planned day; fall back to the date if it's missing.
     title.textContent = (session.day || "Workout") + " workout";
 
-    // Add up all the sets that were ticked off across the session.
+    // Add up all the sets that were ticked off across the session, and count
+    // only the exercises that were actually trained (an exercise left untouched
+    // on the plan shouldn't inflate the total).
     const totalSets = session.entries.reduce(
       (sum, entry) => sum + entrySetsDone(entry),
       0
@@ -823,10 +825,9 @@ function renderHistory() {
     meta.textContent =
       formatDate(session.date) +
       " · " +
-      totalSets +
-      " sets · " +
-      session.entries.length +
-      " exercises";
+      pluralise(totalSets, "set") +
+      " · " +
+      pluralise(sessionExercisesDone(session), "exercise");
 
     // The title + meta sit on the left; Edit/Delete on the right.
     const textWrap = document.createElement("div");
@@ -1009,7 +1010,9 @@ function hideChartTooltip() {
 // `exercisesOverride` (Phase 12) lets the Friends tab pass a FRIEND's exercise
 // list, since their exercises aren't in your local storage. Left out, it uses
 // your own — exactly as before.
-function showSessionDetail(session, exercisesOverride) {
+// `hideNotes` is set by the Friends tab too: your exercise notes are private,
+// so they're only ever drawn when you're looking at your OWN workout.
+function showSessionDetail(session, exercisesOverride, hideNotes) {
   // Title: e.g. "Monday workout — Mon, Jun 22"
   const title = (session.day || "Workout") + " · " + formatDate(session.date);
   document.getElementById("sessionTitle").textContent = title;
@@ -1068,6 +1071,16 @@ function showSessionDetail(session, exercisesOverride) {
       detail.textContent = detailText;
       info.appendChild(name);
       info.appendChild(detail);
+    }
+
+    // The note you wrote during the workout, if there was one (and if this is
+    // your own workout — notes are never shown to friends).
+    const note = (entry.note || "").trim();
+    if (note !== "" && !hideNotes) {
+      const noteEl = document.createElement("div");
+      noteEl.className = "session-note";
+      noteEl.textContent = "📝 " + note;
+      info.appendChild(noteEl);
     }
 
     row.appendChild(icon);
@@ -3544,6 +3557,19 @@ function entrySetsDone(entry) {
   return entry.setsDone || 0;
 }
 
+// How many exercises were ACTUALLY trained in a session. A workout starts with
+// every exercise planned for that day, but if you only ticked sets on one of
+// them, that's "1 exercise" — not the number that happened to be on the plan.
+function sessionExercisesDone(session) {
+  return session.entries.filter((entry) => entrySetsDone(entry) > 0).length;
+}
+
+// Small wording helper so we write "1 set" but "2 sets" (and the same for
+// exercises). Only works for words that pluralise by adding an "s".
+function pluralise(count, word) {
+  return count + " " + word + (count === 1 ? "" : "s");
+}
+
 // The last weight recorded in an entry (per-set new shape, or old single weight).
 function entryLastWeight(entry) {
   if (Array.isArray(entry.sets)) {
@@ -3702,6 +3728,56 @@ function buildLastTimeHint(exerciseId, excludeSessionId) {
   return "Last time (" + formatDate(found.session.date) + "): " + summary;
 }
 
+/* ---- The note you left yourself last time ----
+   A note is only worth writing if it comes back to you, so workout mode shows
+   the most recent one for each exercise right where you'll act on it.
+
+   This deliberately does NOT reuse findLastTimeForExercise: that one ignores
+   workouts where you ticked nothing, but "shoulder hurt, skip next week" is
+   exactly the kind of note you write on a day you didn't train. So we search
+   for the last note on its own terms. */
+function findLastNoteForExercise(exerciseId, excludeSessionId) {
+  const activeId = loadActiveProfileId();
+
+  const matching = loadList(STORAGE_KEYS.sessions).filter((session) => {
+    if (session.profileId !== activeId) {
+      return false;
+    }
+    if (session.id === excludeSessionId) {
+      return false; // never quote the workout you're doing right now
+    }
+    if (!isCompletedSession(session)) {
+      return false;
+    }
+    return session.entries.some(
+      (entry) => entry.exerciseId === exerciseId && (entry.note || "").trim() !== ""
+    );
+  });
+
+  if (matching.length === 0) {
+    return null;
+  }
+
+  // Newest first, then take the top one.
+  matching.sort((a, b) => new Date(b.date) - new Date(a.date));
+  const session = matching[0];
+  const entry = session.entries.find(
+    (item) => item.exerciseId === exerciseId && (item.note || "").trim() !== ""
+  );
+  return { session: session, note: entry.note.trim() };
+}
+
+// The finished note line for one exercise, or "" if there's nothing to show.
+// The date is always included: the note might be older than the sets shown on
+// the "Last time" line above it, and it shouldn't look like they're the same day.
+function buildLastNoteHint(exerciseId, excludeSessionId) {
+  const found = findLastNoteForExercise(exerciseId, excludeSessionId);
+  if (!found) {
+    return "";
+  }
+  return "📝 " + formatDate(found.session.date) + ": " + found.note;
+}
+
 // Find an in-progress session for the active profile + day (to resume), or null.
 function findInProgressSession(day) {
   const activeId = loadActiveProfileId();
@@ -3847,6 +3923,17 @@ function renderWorkoutItems() {
       info.appendChild(lastTime);
     }
 
+    // The last note you left yourself for this exercise, shown right where
+    // you'll act on it — that's the whole point of writing one.
+    const lastNoteText = buildLastNoteHint(entry.exerciseId, activeSession.id);
+    if (lastNoteText !== "") {
+      const lastNote = document.createElement("div");
+      lastNote.className = "workout-exercise__lastnote";
+      lastNote.textContent = lastNoteText;
+      lastNote.title = lastNoteText; // long notes are clamped; hover shows it all
+      info.appendChild(lastNote);
+    }
+
     const doneCount = entry.sets.filter((set) => set.done).length;
     const progress = document.createElement("div");
     progress.className = "workout-exercise__progress";
@@ -3879,8 +3966,64 @@ function renderWorkoutItems() {
     addBtn.addEventListener("click", () => addWorkoutSet(entryIndex));
     card.appendChild(addBtn);
 
+    // An optional note for this exercise, e.g. "next week try 2.5kg more".
+    // It's saved on the entry, so it belongs to THIS workout on THIS date —
+    // it won't reappear on next week's workout.
+    card.appendChild(buildWorkoutNote(entryIndex, entry));
+
     container.appendChild(card);
   });
+}
+
+// Build the note area for one exercise: a small button, plus a text box that
+// stays hidden until you tap it. If a note has already been written the box
+// opens straight away, so you can't lose track of one you can't see.
+function buildWorkoutNote(entryIndex, entry) {
+  const wrap = document.createElement("div");
+  wrap.className = "wnote";
+
+  const existingNote = entry.note || "";
+
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "btn btn--ghost btn--small wnote__toggle";
+
+  const box = document.createElement("textarea");
+  box.className = "input wnote__box";
+  box.rows = 2;
+  box.maxLength = 300; // keep notes short — this is a reminder, not a diary
+  box.placeholder = "e.g. next week try 2.5kg more";
+  box.value = existingNote;
+  box.setAttribute("aria-label", "Note for this exercise");
+  box.hidden = existingNote === "";
+
+  // The button's wording tells you whether there's already a note to read.
+  function refreshToggleLabel() {
+    const hasNote = box.value.trim() !== "";
+    toggle.textContent = hasNote ? "📝 Note" : "📝 Add note";
+    toggle.setAttribute("aria-expanded", box.hidden ? "false" : "true");
+  }
+  refreshToggleLabel();
+
+  toggle.addEventListener("click", () => {
+    box.hidden = !box.hidden;
+    refreshToggleLabel();
+    if (!box.hidden) {
+      box.focus();
+    }
+  });
+
+  // Save as you type, exactly like the reps and weight boxes do. We deliberately
+  // DON'T redraw the list here — that would steal focus mid-sentence.
+  box.addEventListener("input", () => {
+    activeSession.entries[entryIndex].note = box.value;
+    persistActiveSession();
+    refreshToggleLabel();
+  });
+
+  wrap.appendChild(toggle);
+  wrap.appendChild(box);
+  return wrap;
 }
 
 // Build one editable set row: [done] [reps] [weight] [remove].

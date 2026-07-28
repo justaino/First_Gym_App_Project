@@ -685,6 +685,32 @@ its first weighted workout won't fire a PR (there's nothing to beat yet).
 
 Newest first. Add a line here whenever behaviour changes.
 
+- **2026-07-28** — **Per-exercise workout notes + exercise-count fix (SHIPPED 2026-07-28):**
+  suggested by one of the owner's friends. Each exercise in workout mode
+  now has a **📝 Add note** button that reveals a small textarea (`buildWorkoutNote()` in
+  `app.js`). The text is stored as `note` on the session **entry** — deliberately inside
+  the existing `entries` JSON column, so Supabase needed **no schema change** and notes
+  sync with the workout for free. It saves on every keystroke via `persistActiveSession()`
+  and never redraws the list (that would steal focus mid-sentence). Notes are **private**:
+  `showSessionDetail()` gained a third `hideNotes` argument and `friends.js` passes `true`,
+  so a close friend viewing your workout sees everything except what you wrote. Notes
+  belong to one dated session, not to the exercise in your plan — next week's workout
+  starts blank. (Not to be confused with the `notes` field on `Exercise`, which is still
+  an unused placeholder with a column in the `exercises` table and no UI.)
+  A note is only useful if it comes back, so workout mode also shows the **last** note
+  for each exercise under the existing "Last time:" hint (`buildLastNoteHint()`). That
+  uses its own lookup, `findLastNoteForExercise()`, rather than reusing
+  `findLastTimeForExercise()` — the latter skips workouts where nothing was ticked, but
+  "shoulder hurt, skip next week" is precisely the note you write on a day you didn't
+  train. The hint always carries its own date, since the note can be older than the sets
+  quoted on the line above it, and it's clamped to three lines (full text on hover).
+  Same change fixes a counting bug: Recent workouts printed `session.entries.length`,
+  i.e. every exercise **planned** for the day, so planning 3 and training 1 read
+  "3 exercises". Now uses `sessionExercisesDone()` (entries with ≥1 set ticked), matching
+  how the sets figure has always worked, plus a `pluralise()` helper so it says
+  "1 exercise". Fixed in both `app.js` (your history) and `friends.js` (a friend viewing
+  yours). Cache `v47`.
+
 - **2026-07-25** — **What's new page: styling moved into the page + nicer rows (on `dev`,
   awaiting owner test):** the folded rows rendered as unstyled OS buttons ("24 JulFriends…")
   because the service worker was serving a `styles.css` from before Phase 16 — the page was
