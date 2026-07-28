@@ -41,6 +41,7 @@ const RELEASES = [
       "Notes save as you type and stay with that day's workout, so you can always look one up later too.",
       "Your notes are private. Close friends can see your workouts, but never what you wrote.",
       "Fixed: a workout now counts only the exercises you actually trained. Planning three and doing one says \"1 exercise\", not \"3\".",
+      "Fixed: this page now has a ← Back button. If you've added the app to your home screen, there was no way off it before.",
     ],
   },
   {
