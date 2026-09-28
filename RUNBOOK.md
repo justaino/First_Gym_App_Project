@@ -673,6 +673,21 @@ Edit the constants at the top of `xp.js` (`XP_PER_SET`, `XP_PER_WORKOUT`,
 XP is recalculated each time, a change applies to everyone's whole history at once.
 Bump `CACHE_VERSION` and update the guide line in the Today section.
 
+### After a workout (Q2b)
+`finishWorkout()` takes `computeTotalXp().total` just before marking the session
+completed and again just after. The difference is what the workout earned: it's added to
+the "Workout saved!" alert and popped over the bar by `showXpGain()` (a `.level-bar__gain`
+bubble that floats up and fades, only if the bar is on screen). `detectLevelUp(before,
+after)` returns the new level (or null); `celebrateAfterWorkout()` then plays its cards 3
+seconds apart: PR 🏅 → level up 🦉 ("Top level!" at 30) → milestone 🏆. A level up isn't
+remembered anywhere, so if a deleted workout drops you a level, earning it back
+celebrates again.
+
+**Previewing without training** (console, on the Today tab):
+- `showXpGain(170)` shows the bubble.
+- `celebrateAfterWorkout([], null, levelForXp(9000))` shows the "Level up! Level 10 · Night Owl" card.
+- `celebrateAfterWorkout([], null, levelForXp(87000))` shows the "Top level!" card.
+
 ### Checking the maths (console)
 - `computeTotalXp()` → `{ total, sets, workouts, records, fromSets, fromWorkouts, fromRecords }`
 - `levelForXp(5000)` → `{ level, name, xpIntoLevel, xpForLevel, isMax }`
@@ -750,7 +765,18 @@ Newest first. Add a line here whenever behaviour changes.
 > Entries below marked "on `dev`, awaiting owner test" were written at build time.
 > Everything up to 2026-07-28 has since been tested and released to `main`.
 
-- **2026-09-28** — **Owl Quest Q2a — XP and levels (on `dev`, awaiting owner test):**
+- **2026-09-28** — **Owl Quest Q2b — XP after a workout (on `dev`, awaiting owner test):**
+  - `finishWorkout()` (`app.js`) measures XP before/after saving; the alert now reads
+    "Workout saved! 5 sets done · +170 XP 💪". Then `showXpGain()` and
+    `celebrateAfterWorkout(personalRecords, milestone, levelUp)`.
+  - `celebrateAfterWorkout()` rewritten as a list of celebrations played 3s apart (it was
+    two hard-coded steps), adding a 🦉 level-up card between the PR and the trophy.
+  - `xp.js`: `detectLevelUp()` and `showXpGain()`. `styles.css`: `.level-bar` is now
+    `position: relative`; `.level-bar__gain` bubble with an `xp-gain-float` animation
+    (a plain fade with reduced motion); new token `--xp-fill-text`.
+  - Guide + What's new lines added; §5n updated. Cache `v55`.
+
+- **2026-09-28** — **Owl Quest Q2a — XP and levels (committed to `dev`):**
   - New file `xp.js` (added to `index.html` after `app.js`, and to `APP_SHELL`). Rules at
     the top: 10 XP per ticked set, 50 per finished workout, 25 per personal record; 30
     levels where level L → L+1 costs L × 200 XP (max 87,000). `computeTotalXp()`,

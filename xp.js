@@ -224,3 +224,37 @@ function renderLevelBar() {
 
   bar.hidden = false;
 }
+
+/* =========================================================================
+   5. AFTER A WORKOUT (Owl Quest Q2b)
+   finishWorkout() in app.js works out your XP just before and just after the
+   workout is saved, then uses these two helpers.
+   ========================================================================= */
+
+// Did going from `xpBefore` to `xpAfter` take you up a level? Returns the NEW
+// level's info (as levelForXp gives it) if so, or null if not. If one workout
+// jumps you up two levels at once, you get the higher one.
+function detectLevelUp(xpBefore, xpAfter) {
+  const before = levelForXp(xpBefore);
+  const after = levelForXp(xpAfter);
+  return after.level > before.level ? after : null;
+}
+
+// Pop a little "+170 XP" bubble over the level bar, which floats up and fades
+// away. It only shows if the Today card is on screen; the "Workout saved!"
+// message mentions the XP too, so nothing is missed either way.
+function showXpGain(amount) {
+  const bar = document.getElementById("levelBar");
+  if (!bar || bar.hidden || amount <= 0) {
+    return;
+  }
+
+  const bubble = document.createElement("span");
+  bubble.className = "level-bar__gain";
+  bubble.textContent = "+" + amount.toLocaleString() + " XP";
+  bubble.setAttribute("aria-hidden", "true"); // the alert already said it
+  bar.appendChild(bubble);
+
+  // Tidy up once the animation (in styles.css) has finished.
+  setTimeout(() => bubble.remove(), 2200);
+}

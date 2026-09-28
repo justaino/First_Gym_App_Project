@@ -4270,8 +4270,18 @@ function finishWorkout() {
     return;
   }
 
+  // Owl Quest Q2b: your XP BEFORE this workout counts (it's still "in
+  // progress" at this point, so xp.js leaves it out).
+  const xpBefore = computeTotalXp().total;
+
   activeSession.status = "completed";
   persistActiveSession();
+
+  // ...and AFTER. The difference is what this workout earned, and comparing
+  // the two tells us if it took you up a level.
+  const xpAfter = computeTotalXp().total;
+  const xpGained = xpAfter - xpBefore;
+  const levelUp = detectLevelUp(xpBefore, xpAfter);
 
   // Easter eggs: work out any celebrations BEFORE we clear activeSession.
   // (detectWorkoutMilestone also records the milestone so it only plays once.)
@@ -4281,10 +4291,14 @@ function finishWorkout() {
   closeWorkoutOverlay();
   activeSession = null;
   renderAll();
-  window.alert("Workout saved! " + totalSets + " sets done 💪");
+  window.alert(
+    "Workout saved! " + totalSets + " sets done · +" + xpGained + " XP 💪"
+  );
 
-  // After the alert is dismissed, play any celebrations on a clean screen.
-  celebrateAfterWorkout(personalRecords, milestone);
+  // After the alert is dismissed, play any celebrations on a clean screen:
+  // the "+170 XP" pop on the level bar, then PR / level up / trophy cards.
+  showXpGain(xpGained);
+  celebrateAfterWorkout(personalRecords, milestone, levelUp);
 }
 
 // Discard: delete the in-progress session entirely (after a confirm).
@@ -5073,30 +5087,51 @@ function detectWorkoutMilestone() {
   return completedCount;
 }
 
-// Play the celebrations after a workout: PR first, then any milestone trophy.
-function celebrateAfterWorkout(personalRecords, milestone) {
-  let delay = 0;
+// Play the celebrations after a workout, one after another: a PR first, then
+// a level up (Owl Quest Q2b), then any milestone trophy. `levelUp` is the new
+// level from detectLevelUp() in xp.js, or null if you didn't level up.
+function celebrateAfterWorkout(personalRecords, milestone, levelUp) {
+  // Build a list of celebrations to play, in order. Each one is a small
+  // function that throws the confetti and shows its card.
+  const celebrations = [];
 
   if (personalRecords.length > 0) {
-    launchConfetti();
-    // Build a friendly line, e.g. "Squat 60 kg · Bench 40 kg".
-    const summary = personalRecords
-      .map((record) => record.name + " " + formatWeight(record.weight))
-      .join(" · ");
-    showCelebrationCard("🏅", "New personal record!", summary);
-    delay = 3000; // let the PR card clear before the trophy appears
+    celebrations.push(() => {
+      launchConfetti();
+      // Build a friendly line, e.g. "Squat 60 kg · Bench 40 kg".
+      const summary = personalRecords
+        .map((record) => record.name + " " + formatWeight(record.weight))
+        .join(" · ");
+      showCelebrationCard("🏅", "New personal record!", summary);
+    });
+  }
+
+  if (levelUp) {
+    celebrations.push(() => {
+      launchConfetti(100);
+      showCelebrationCard(
+        "🦉",
+        levelUp.isMax ? "Top level!" : "Level up!",
+        "Level " + levelUp.level + " · " + levelUp.name
+      );
+    });
   }
 
   if (milestone) {
-    setTimeout(() => {
+    celebrations.push(() => {
       launchConfetti(120);
       showCelebrationCard(
         "🏆",
         milestone + " workouts done!",
         "What a streak! Keep it up 💪"
       );
-    }, delay);
+    });
   }
+
+  // Play them 3 seconds apart, so each card clears before the next appears.
+  celebrations.forEach((celebrate, index) => {
+    setTimeout(celebrate, index * 3000);
+  });
 }
 
 /* ---- Egg #7: tap the app title 5 times quickly for a credits card ---- */

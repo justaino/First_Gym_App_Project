@@ -38,6 +38,7 @@ const RELEASES = [
     items: [
       "A level bar sits in the card at the top of Today, showing your level, your owl's name and how close you are to the next one.",
       "You earn XP for training: 10 for every set you tick, 50 for every finished workout and 25 for every personal record.",
+      "Finish a workout and you'll see how much XP it earned. Go up a level and the owl throws a little party.",
       "Your past workouts count, so you might already be a few levels up.",
       "There are 30 levels, from Egg to Athena's Owl. The early ones come quickly; the top one takes years.",
     ],

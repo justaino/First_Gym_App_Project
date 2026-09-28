@@ -43,6 +43,7 @@
      (so the sunrise shows through) with a purple fill. */
   --xp-track: rgba(255, 255, 255, 0.65);
   --xp-fill: #6d55c4;
+  --xp-fill-text: #ffffff; /* text on the purple "+170 XP" bubble */
 
   /* "Ink" buttons: dark on light pages, light on dark ones. Used for the big
      Start workout button, which sits on the colourful Today card where a coral
@@ -87,6 +88,7 @@
 
   --xp-track: rgba(18, 15, 36, 0.5); /* a dark groove in the night sky */
   --xp-fill: #c9b8ff; /* light lilac, easy to see on the dark card */
+  --xp-fill-text: #231d42; /* dark text on the lilac bubble */
 
   --ink: #f1eefb;
   --ink-text: #231d42;
@@ -1202,6 +1204,7 @@ body {
 /* ---- Owl Quest Q2: the level bar ("Lv 4 · Owlet   340 / 800 XP") ----
    A label row on top, then a pill-shaped track that fills up with purple. */
 .level-bar {
+  position: relative; /* so the "+170 XP" bubble can float above it */
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1236,9 +1239,60 @@ body {
   background: var(--xp-fill);
   transition: width 0.6s ease; /* slides along when you earn XP */
 }
+
+/* Q2b: the "+170 XP" bubble that pops up over the bar after a workout.
+   xp.js (showXpGain) adds it and removes it again after the animation. */
+.level-bar__gain {
+  position: absolute;
+  right: 0;
+  top: -30px;
+  padding: 2px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--xp-fill);
+  color: var(--xp-fill-text);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 16px;
+  pointer-events: none; /* never gets in the way of a tap */
+  animation: xp-gain-float 2.2s ease-out forwards;
+}
+/* Pop in, hang there for a moment, then drift up and fade out. */
+@keyframes xp-gain-float {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.8);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(0) scale(1.05);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(-4px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-16px) scale(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .level-bar__fill {
     transition: none;
+  }
+  /* No movement, just a gentle fade in and out. */
+  .level-bar__gain {
+    animation-name: xp-gain-fade;
+  }
+}
+@keyframes xp-gain-fade {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  15%,
+  70% {
+    opacity: 1;
   }
 }
 

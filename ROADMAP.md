@@ -681,11 +681,14 @@ per personal record. **30 levels**, each costing more than the last (level L →
 L × 200 XP), so the max takes years (87,000 XP ≈ 500 workouts). Owl names change every
 few levels, from Egg to Athena's Owl. Code goes in a new `xp.js`.
 
-- ✅ **Q2a — Level bar** *(on `dev` 2026-09-28, cache `v54`, awaiting owner test)*: a
+- ✅ **Q2a — Level bar** *(on `dev` 2026-09-28, cache `v54`)*: a
   level + XP bar in the Today card, worked out from saved workouts (nothing stored, no
   database changes). Rules and names in RUNBOOK §5n.
-- ☐ **Q2b — XP after a workout**: a "+170 XP" message when you finish, and confetti
-  with a "Level up!" card when a workout takes you up a level.
+- ✅ **Q2b — XP after a workout** *(on `dev` 2026-09-28, cache `v55`, awaiting owner
+  test)*: "Workout saved! … · +170 XP", a "+170 XP" bubble over the level bar, and
+  confetti with a 🦉 "Level up!" card (between the PR and trophy cards).
+
+**Phase Q2 is complete** once the owner has tested it. Next up is Q3 (the week path).
 
 ### Phase Q3 — The week path ☐
 The stepping-stone path on Today: done days, today (highlighted), and planned days.
