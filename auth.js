@@ -2,8 +2,8 @@
   auth.js — login / sign-up gate (Phase 7d).
 
   Shows a full-screen login screen until the user is signed in, then reveals the
-  app. Uses `supabaseClient` from supabase.js. For now this ONLY gates the app —
-  your data still comes from localStorage; moving data into the cloud is 7e.
+  app. Uses `supabaseClient` from supabase.js. Once someone is signed in it calls
+  `onUserLoggedIn()` (in app.js), which syncs their data with the cloud.
 */
 
 // Show the right thing based on whether someone is logged in.

@@ -30,6 +30,13 @@
 
 const RELEASES = [
   {
+    date: "2026-09-28",
+    title: "A clearer privacy note",
+    items: [
+      "The privacy note (Settings → Privacy & data) now explains exactly what friends can see: friends see that you trained, close friends can open your workouts, and nobody ever sees your notes or your email.",
+    ],
+  },
+  {
     date: "2026-07-28",
     title: "Leave yourself a note",
     intro:

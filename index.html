@@ -2,11 +2,13 @@
 <!--
   index.html — the single page for Athena's Arena.
 
-  Phase 1 (the MVP): profiles + exercises.
-  - Create profiles and pick the active one (Settings tab).
-  - Add / edit / delete exercises for the active profile.
-  - See the plan grouped by day (Schedule tab) and today's exercises (Today tab).
-  - Everything is saved in the browser with localStorage, so it survives a refresh.
+  Every screen lives in this one file and JavaScript shows/hides them:
+  - The login gate (auth.js), shown until you're signed in.
+  - Five tabs: Today, Schedule, Progress, Friends (friends.js) and Settings.
+  - Pop-ups and full-screen sheets: the exercise form, workout mode, a saved
+    workout's details, the install steps and the in-app guide (guide.js).
+  - Data is saved to your Supabase account and cached in the browser's
+    localStorage, so it syncs between devices and still opens offline.
 
   The HTML below is just the *structure* (the boxes). The styling lives in
   styles.css and all the behaviour (buttons, saving, etc.) lives in app.js.
@@ -520,7 +522,8 @@
           <p class="backup__text">
             Your email and workout data (profiles, exercises, and history) are
             stored in the cloud with <strong>Supabase</strong>, a third-party
-            service, so they sync across your devices. Only you can see your data.
+            service, so they sync across your devices. Only you can see your
+            workouts, unless you share them with close friends.
           </p>
           <p class="backup__text">
             <a
@@ -533,7 +536,8 @@
           </p>
           <p class="backup__text">
             <strong>Delete my data</strong> permanently removes all your profiles,
-            exercises, and workout history from the cloud and from this device.
+            exercises, workout history and friends details from the cloud and
+            from this device.
             This cannot be undone. Export a backup first if you want to keep a
             copy. (Your login email isn't removed automatically; email me if you'd
             like the account itself deleted too.)
