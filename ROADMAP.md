@@ -684,14 +684,23 @@ few levels, from Egg to Athena's Owl. Code goes in a new `xp.js`.
 - ✅ **Q2a — Level bar** *(on `dev` 2026-09-28, cache `v54`)*: a
   level + XP bar in the Today card, worked out from saved workouts (nothing stored, no
   database changes). Rules and names in RUNBOOK §5n.
-- ✅ **Q2b — XP after a workout** *(on `dev` 2026-09-28, cache `v55`, awaiting owner
-  test)*: "Workout saved! … · +170 XP", a "+170 XP" bubble over the level bar, and
+- ✅ **Q2b — XP after a workout** *(on `dev` 2026-09-28, cache `v55`)*: "Workout saved! … · +170 XP", a "+170 XP" bubble over the level bar, and
   confetti with a 🦉 "Level up!" card (between the PR and trophy cards).
 
-**Phase Q2 is complete** once the owner has tested it. Next up is Q3 (the week path).
+**Phase Q2 is complete.**
 
-### Phase Q3 — The week path ☐
-The stepping-stone path on Today: done days, today (highlighted), and planned days.
+### Phase Q3 — The week path ✅ *(on `dev` 2026-09-29, cache `v56`, awaiting owner test)*
+**Owner's decisions (2026-09-29):** the count follows the **schedule** ("2 of 4 done"),
+not the weekly goal; missed days stay as **paler stones** rather than disappearing.
+
+A "This week" card under the Today card: one stepping stone per scheduled day, Monday →
+Sunday, in a wave joined by a dotted line. Done (butter + ✓, tap for the workout), today
+(bigger coral, gently pulsing, tap to start), coming up (lavender), missed (paler), and a
+small dashed "Rest" stone for today on a rest day. An unplanned day you trained still gets
+a done stone. Computed from the schedule and saved workouts; nothing stored. Details in
+RUNBOOK §5o.
+
+**Phase Q3 is complete** once the owner has tested it. Next up is Q4 (workout screen).
 
 ### Phase Q4 — Workout screen ☐
 One exercise at a time, tap a star per set, a rest timer that floats on screen, and the

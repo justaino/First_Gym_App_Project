@@ -30,6 +30,19 @@
 
 const RELEASES = [
   {
+    date: "2026-09-29",
+    title: "Your week as a path",
+    intro:
+      "See your whole week at a glance, right under today's plan.",
+    items: [
+      "A new This week card on Today shows each day in your schedule as a stepping stone, joined by a dotted trail.",
+      "Days you've trained turn yellow with a ✓. Tap one to see that workout.",
+      "Today is the big coral stone. Tap it to start your workout.",
+      "Missed a day? Its stone just goes paler, no guilt trip. And if you train on a day that wasn't planned, it still gets a stone.",
+      "The count in the corner shows how you're doing, like \"2 of 4 done\".",
+    ],
+  },
+  {
     date: "2026-09-28",
     title: "Level up your owl",
     intro:

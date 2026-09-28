@@ -648,6 +648,10 @@ function renderToday() {
   // itself when there's no profile.
   renderLevelBar();
 
+  // Owl Quest Q3: this week's stepping-stone path, under the Today card (see
+  // week-path.js). It hides itself when there's nothing planned or done.
+  renderWeekPath();
+
   if (!activeProfile) {
     plan.hidden = true;
     startBtn.hidden = true;

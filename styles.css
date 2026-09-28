@@ -45,6 +45,20 @@
   --xp-fill: #6d55c4;
   --xp-fill-text: #ffffff; /* text on the purple "+170 XP" bubble */
 
+  /* Owl Quest Q3: the week path's stepping stones. */
+  --stone-done: #f6d365; /* butter: a day you trained */
+  --stone-done-edge: #d9ae3a;
+  --stone-done-text: #5c4610;
+  --stone-later: #ebe6f7; /* pale lavender: coming up (and missed, faded) */
+  --stone-later-edge: #d6cdef;
+  --stone-later-text: #7d7598;
+  --stone-missed: #f5f2fc; /* missed: a paler, solid stone (solid so the */
+  --stone-missed-edge: #e7e1f6; /* dotted line doesn't show through it) */
+  --stone-missed-text: #b1aac8;
+  --stone-glow: rgba(239, 124, 124, 0.28); /* the soft ring around today */
+  --path-line: #c9bdec; /* the dotted line between stones */
+  --on-accent: #ffffff; /* text on coral / mint (the same in both modes) */
+
   /* "Ink" buttons: dark on light pages, light on dark ones. Used for the big
      Start workout button, which sits on the colourful Today card where a coral
      button would blend in. */
@@ -89,6 +103,18 @@
   --xp-track: rgba(18, 15, 36, 0.5); /* a dark groove in the night sky */
   --xp-fill: #c9b8ff; /* light lilac, easy to see on the dark card */
   --xp-fill-text: #231d42; /* dark text on the lilac bubble */
+
+  --stone-done: #f6d365; /* butter glows nicely on the night sky */
+  --stone-done-edge: #b8912b;
+  --stone-done-text: #3d2f08;
+  --stone-later: #3d3568;
+  --stone-later-edge: #221c40;
+  --stone-later-text: #c3bbe0;
+  --stone-missed: #2d2654;
+  --stone-missed-edge: #1c1738;
+  --stone-missed-text: #7f76a8;
+  --stone-glow: rgba(239, 124, 124, 0.35);
+  --path-line: #6a5ca8;
 
   --ink: #f1eefb;
   --ink-text: #231d42;
@@ -1293,6 +1319,153 @@ body {
   15%,
   70% {
     opacity: 1;
+  }
+}
+
+/* ---- Owl Quest Q3: the week path ("This week" card under the Today card) ----
+   week-path.js places each stone by its centre (left as a %, top in px) and
+   draws the dotted line behind them as an SVG that stretches to fit. */
+.week-path-card {
+  padding: 16px 16px 10px;
+}
+.week-path-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  padding: 0 4px;
+}
+.week-path-card__title {
+  font-size: 18px;
+  font-weight: 800;
+}
+.week-path-card__count {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--muted);
+}
+.week-path {
+  position: relative; /* the stones are positioned inside this box */
+  /* height is set by week-path.js */
+}
+.week-path__line {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.week-path__line path {
+  fill: none;
+  stroke: var(--path-line);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: 1 11; /* round dots */
+}
+
+/* One stepping stone: a chunky circle with a solid edge underneath, like the
+   buttons. Centred on its point with translate(-50%, -50%). */
+.week-stone {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 46px;
+  height: 46px;
+  border: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 13px;
+  line-height: 1;
+  background: var(--stone-later);
+  color: var(--stone-later-text);
+  box-shadow: 0 4px 0 var(--stone-later-edge);
+}
+button.week-stone {
+  cursor: pointer;
+}
+/* Pressing a stone squashes it onto its edge, like the chunky buttons. */
+button.week-stone:active {
+  transform: translate(-50%, calc(-50% + 3px));
+  box-shadow: 0 1px 0 var(--stone-later-edge);
+}
+
+.week-stone--done {
+  background: var(--stone-done);
+  color: var(--stone-done-text);
+  box-shadow: 0 4px 0 var(--stone-done-edge);
+}
+button.week-stone--done:active {
+  box-shadow: 0 1px 0 var(--stone-done-edge);
+}
+/* The little mint ✓ badge on a done stone. */
+.week-stone__tick {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  background: var(--mint);
+  color: var(--on-accent);
+  box-shadow: 0 2px 0 var(--mint-edge);
+}
+
+/* Today: bigger and coral. */
+.week-stone--today {
+  width: 56px;
+  height: 56px;
+  font-size: 14px;
+  background: var(--coral);
+  color: var(--on-accent);
+  box-shadow: 0 5px 0 var(--coral-edge), 0 0 0 6px var(--stone-glow);
+}
+button.week-stone--today:active {
+  box-shadow: 0 1px 0 var(--coral-edge), 0 0 0 6px var(--stone-glow);
+}
+/* Today, once you've trained: stays butter but keeps the soft coral ring. */
+.week-stone--done.week-stone--current {
+  width: 56px;
+  height: 56px;
+  font-size: 14px;
+  box-shadow: 0 5px 0 var(--stone-done-edge), 0 0 0 6px var(--stone-glow);
+}
+button.week-stone--done.week-stone--current:active {
+  box-shadow: 0 1px 0 var(--stone-done-edge), 0 0 0 6px var(--stone-glow);
+}
+
+/* A planned day that went by without a workout: paler, with no ✓. */
+.week-stone--missed {
+  background: var(--stone-missed);
+  color: var(--stone-missed-text);
+  box-shadow: 0 4px 0 var(--stone-missed-edge);
+}
+
+/* Today on a rest day: small, with a dashed coral outline so you can still
+   see where you are. */
+.week-stone--rest {
+  width: 40px;
+  height: 40px;
+  font-size: 12px;
+  background: var(--card);
+  box-shadow: none;
+  border: 2.5px dashed var(--coral);
+}
+
+/* Today's stone gently breathes, unless the phone asks for less motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .week-stone--today {
+    animation: stone-pulse 1.8s ease-in-out infinite;
+  }
+}
+@keyframes stone-pulse {
+  50% {
+    transform: translate(-50%, -50%) scale(1.07);
   }
 }
 

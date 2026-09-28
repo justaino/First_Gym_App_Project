@@ -262,6 +262,20 @@
         </div>
 
         <!--
+          Owl Quest Q3: the week path. A trail of stepping stones, one per day
+          in your schedule (done, today, coming up, missed). week-path.js
+          (renderWeekPath) fills #weekPath and the "2 of 4 done" count, and
+          hides the card when nothing is planned yet.
+        -->
+        <div class="card week-path-card" id="weekPathCard" hidden>
+          <div class="week-path-card__head">
+            <h2 class="week-path-card__title">This week</h2>
+            <span class="week-path-card__count" id="weekPathCount"></span>
+          </div>
+          <div class="week-path" id="weekPath"></div>
+        </div>
+
+        <!--
           Phase 11 + Q1b: last week's recap. On the first visit of a new week
           app.js shows a one-line summary here; tapping it opens the full
           "Your week in review 🎉" card. Empty once dismissed.
@@ -913,6 +927,9 @@
 
     <!-- XP and levels (Owl Quest Q2). Uses app.js's helpers, so it comes after it. -->
     <script src="xp.js"></script>
+
+    <!-- The week path on Today (Owl Quest Q3). Also uses app.js's helpers. -->
+    <script src="week-path.js"></script>
 
     <!-- The Friends tab (Phase 12). Loaded after app.js because it uses its
          helpers (showToast, formatDate, showSessionDetail...). -->

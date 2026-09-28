@@ -25,6 +25,7 @@ devices (see §5d — the cloud is the source of truth, localStorage is the cach
 | `friends.js` | The Friends tab: requests, buddies, nudges, close friends (Phase 12). |
 | `guide.js` | The in-app guide. All its wording is in two lists at the top (Phase 13). |
 | `xp.js` | XP and levels, worked out from saved workouts. The rules are at the top (Owl Quest Q2). |
+| `week-path.js` | The "This week" stepping-stone path on Today (Owl Quest Q3). |
 | `whats-new.js` / `whats-new.html` | The release notes and the page that shows them (Phase 16). |
 | `sw.js` | Service worker — caches the app shell. Bump `CACHE_VERSION` on every app change. |
 
@@ -693,6 +694,38 @@ celebrates again.
 - `levelForXp(5000)` → `{ level, name, xpIntoLevel, xpForLevel, isMax }`
 - `xpNeededForLevel(10)` → `9000`
 
+## 5o. The week path (Owl Quest Q3)
+
+The "This week" card under the Today card (`#weekPathCard`), drawn by `renderWeekPath()`
+in `week-path.js`, called from `renderToday()`. Nothing is stored.
+
+**Which stones appear** (`buildWeekStones()`), Monday → Sunday:
+| Stone | When |
+|---|---|
+| **done** (butter, mint ✓) | A finished workout whose **date** is that day this week (by the date, not `session.day`). Tap → `showSessionDetail()` |
+| **today** (big coral, pulses) | Today is planned and not done yet (an in-progress workout doesn't count as done). Tap → `startWorkout()` |
+| **later** (lavender) | A planned day after today |
+| **missed** (paler) | A planned day before today with no finished workout |
+| **rest** (small, dashed coral) | Today, when nothing is planned and you haven't trained |
+
+"Planned" = any exercise in the Schedule for that day. A day you trained that isn't
+planned still gets a done stone; rest days otherwise get no stone. Today, once done, stays
+butter but keeps the coral ring (`.week-stone--current`). The week starts Monday
+(`weekMondayMidnight()`, same as the recap and streak).
+
+**The count** ("2 of 4 done") = done stones ÷ all stones except the rest stone. The card
+is hidden with no profile, or when the only stone would be "Rest" (nothing planned or
+done this week).
+
+**Layout:** stones are absolutely positioned by their centre: `left` = evenly spread
+percentages, `top` alternating `WEEK_PATH_LOW` / `WEEK_PATH_HIGH` (px). The dotted line is
+an SVG (`viewBox` 100 wide, `preserveAspectRatio="none"`, `vector-effect:
+non-scaling-stroke` so the dots stay round) with an S-curve between each pair of stones.
+Colours are `--stone-*`, `--path-line` and `--on-accent` tokens (light + dark).
+
+**Testing:** add an exercise to another day in Schedule → a new stone appears. To see a
+missed stone, plan something for a day earlier this week that you didn't train.
+
 ---
 
 ## 6. Backup & restore (import / export)
@@ -765,7 +798,19 @@ Newest first. Add a line here whenever behaviour changes.
 > Entries below marked "on `dev`, awaiting owner test" were written at build time.
 > Everything up to 2026-07-28 has since been tested and released to `main`.
 
-- **2026-09-28** — **Owl Quest Q2b — XP after a workout (on `dev`, awaiting owner test):**
+- **2026-09-29** — **Owl Quest Q3 — the week path (on `dev`, awaiting owner test):**
+  - New file `week-path.js` (in `index.html` after `xp.js`, and in `APP_SHELL`):
+    `buildWeekStones()`, `renderWeekPath()`, `buildWeekPathLine()`, `buildWeekStone()`.
+  - `index.html`: `#weekPathCard` (title, `#weekPathCount`, `#weekPath`) between the
+    Today card and the recap. `renderToday()` calls `renderWeekPath()`.
+  - `styles.css`: `.week-path*` and `.week-stone*` rules (done / today / later / missed /
+    rest / current, press-down, a pulse on today that's off with reduced motion). New
+    tokens `--stone-*`, `--path-line`, `--on-accent`. Missed stones use solid paler
+    colours rather than opacity, so the dotted line doesn't show through them.
+  - Guide (Today), What's new ("Your week as a path", 2026-09-29), §5o, `CLAUDE.md`
+    file table. Cache `v56`.
+
+- **2026-09-28** — **Owl Quest Q2b — XP after a workout (committed to `dev`):**
   - `finishWorkout()` (`app.js`) measures XP before/after saving; the alert now reads
     "Workout saved! 5 sets done · +170 XP 💪". Then `showXpGain()` and
     `celebrateAfterWorkout(personalRecords, milestone, levelUp)`.
