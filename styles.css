@@ -33,6 +33,17 @@
   --danger-edge: #b33f44;
   --edge: #e3dcf5; /* soft lavender edge under white cards */
 
+  /* The Today card's background (a warm sunrise in light mode). */
+  --hero-from: rgba(246, 211, 101, 0.55);
+  --hero-to: rgba(239, 124, 124, 0.4);
+
+  /* "Ink" buttons: dark on light pages, light on dark ones. Used for the big
+     Start workout button, which sits on the colourful Today card where a coral
+     button would blend in. */
+  --ink: #2c2546;
+  --ink-text: #ffffff;
+  --ink-edge: #120d26;
+
   /* Form surfaces — kept as variables so dark mode can swap them. */
   --input-bg: #ffffff; /* text boxes, emoji chips, set dots */
   --border: #e6e0f5; /* soft lavender border */
@@ -61,6 +72,13 @@
   --purple: #c9b8ff; /* the strong accent needs to be light on a dark page */
 
   --edge: #120f24; /* dark edge under cards */
+
+  --hero-from: #3d3170; /* night sky... */
+  --hero-to: #5e3b78; /* ...turning plum */
+
+  --ink: #f1eefb;
+  --ink-text: #231d42;
+  --ink-edge: #8e84b8;
   --input-bg: #302856;
   --border: #3d3568;
 
@@ -72,6 +90,15 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+/* Anything with the `hidden` attribute stays hidden, full stop. Without this, a
+   class that sets `display` (like .btn--block's display: block) quietly wins
+   and the "hidden" thing shows anyway — which is how the Start workout button
+   used to appear on rest days. The older ".something[hidden]" rules further
+   down do the same job one element at a time; this covers everything. */
+[hidden] {
+  display: none !important;
 }
 
 /* ---- Page base ---- */
@@ -1071,25 +1098,29 @@ body {
    PHASE 4 — polish: hero header, animations, and accessibility
    ========================================================================= */
 
-/* ---- Today hero header (mascot + greeting) ---- */
+/* ---- The Today card ("hero") ----
+   Owl Quest Q1b: a stack of three parts — the mascot + greeting row, today's
+   plan, and the big Start workout button. */
 .hero {
   display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 22px;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
   margin-bottom: 18px;
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
-  /* Soft pastel gradient, like the reference's header art */
-  background: linear-gradient(
-    135deg,
-    rgba(246, 211, 101, 0.55),
-    rgba(239, 124, 124, 0.4)
-  );
+  /* Sunrise in light mode, night sky in dark mode (see --hero-from/-to). */
+  background: linear-gradient(135deg, var(--hero-from), var(--hero-to));
+}
+/* The first row: mascot on the left, greeting + date on the right. */
+.hero__top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
 }
 .hero__mascot {
-  width: 76px;
-  height: 76px;
+  width: 64px;
+  height: 64px;
   flex-shrink: 0;
 }
 .hero__mascot svg {
@@ -1106,6 +1137,39 @@ body {
   font-weight: 700;
   color: var(--text);
   opacity: 0.72; /* charcoal at lower opacity keeps good contrast on the gradient */
+}
+
+/* Today's plan: "3 exercises · 9 sets" in bold, then the exercise emoji. */
+.hero__plan {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.hero__plan-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 19px;
+  line-height: 1.25;
+}
+.hero__plan-icons {
+  font-size: 22px;
+  letter-spacing: 2px;
+}
+/* The Start button already sits inside a card, so it needs no gap below it. */
+.hero__start {
+  margin-bottom: 0;
+  font-size: 18px;
+  padding: 14px 20px;
+}
+
+/* A dark "ink" button (light in dark mode) — see --ink in the tokens. */
+.btn--ink {
+  background-color: var(--ink);
+  color: var(--ink-text);
+  box-shadow: 0 4px 0 var(--ink-edge);
+}
+.btn--ink:active {
+  box-shadow: 0 1px 0 var(--ink-edge);
 }
 
 /* ---- Small animations ---- */
@@ -1489,6 +1553,45 @@ body {
    because it's a translucent tint over whatever the card colour is. */
 .recap--celebrate {
   border: 2px solid rgba(246, 211, 101, 0.55);
+}
+
+/* Owl Quest Q1b: the folded, one-line recap on Today. A pill-shaped row: the
+   summary (a button that opens the full card) and a ✕ to dismiss it. */
+.recap-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 18px;
+  padding: 4px 10px 4px 4px;
+  background-color: var(--card);
+  border: 2px solid rgba(246, 211, 101, 0.55); /* same butter outline */
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-card);
+}
+.recap-row__open {
+  flex: 1;
+  min-width: 0; /* lets long text wrap instead of pushing the ✕ off */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 14px;
+  color: var(--text);
+}
+.recap-row__text {
+  flex: 1;
+}
+.recap-row__chevron {
+  color: var(--muted);
+  font-family: var(--font-display); /* Nunito's › looks like a comma */
+  font-size: 22px;
+  line-height: 1;
 }
 
 /* "Since you started" trend callouts (reuse the .pr-row layout) */
