@@ -662,8 +662,11 @@ dark mode; Claude may merge each step's pull request into `dev` itself.
   dark palette; Baloo 2 on headings/buttons/numbers; chunky buttons and cards with a
   solid bottom edge; lavender active tab; the phone status bar follows the theme. Design
   system in `CLAUDE.md` updated. No layout or data changes.
-- ☐ **Q1b — Today screen:** a top card with today's plan and a big **Start workout**
-  button inside it; the weekly recap shrinks to one tappable line.
+- ✅ **Q1b — Today screen** *(on `dev` 2026-09-28, cache `v51`)*: the Today card now
+  holds the greeting, today's plan ("3 exercises · 10 sets" + their emoji, or a rest-day
+  line) and a big **Start workout** button; the weekly recap starts as one tappable line
+  that opens the full card; night-sky colours for the card in dark mode. Also fixed a
+  live bug: elements with `hidden` could still show (the Start button on rest days).
 - ☐ **Q1c — Four tabs:** Settings moves behind a round avatar in the top corner (the
   What's new dot moves with it); guide text updated.
 

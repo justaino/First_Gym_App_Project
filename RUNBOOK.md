@@ -713,6 +713,30 @@ Newest first. Add a line here whenever behaviour changes.
 > Entries below marked "on `dev`, awaiting owner test" were written at build time.
 > Everything up to 2026-07-28 has since been tested and released to `main`.
 
+- **2026-09-28** — **Owl Quest Q1b — Today screen (merged to `dev`):**
+  - `index.html`: the `.hero` card now has three parts — `.hero__top` (mascot +
+    greeting, unchanged ids so the owl long-press still works), a new `#heroPlan`
+    (`#heroPlanTitle` + `#heroPlanIcons`), and `#startTodayBtn`, which moved *inside* the
+    card. New `#todayListHeading` above `#todayList`.
+  - `renderToday()` fills the plan line ("3 exercises · 10 sets" via `pluralise()`, plus
+    the exercises' emoji). On a rest day the card says so and the button and heading are
+    hidden; the old rest-day empty-state card is gone (the hero says it). No profile →
+    plan and button hidden, tour empty state as before.
+  - **Recap:** `renderTodayRecap()` now draws `buildRecapSummaryRow()` — a one-line pill
+    ("🎉 Last week: 3 of 3 workouts · 2 new records ›", text from
+    `describeRecapInOneLine()`) with its own ✕. Tapping it sets `todayRecapOpen` (memory
+    only, so it's folded again next time the app opens) and redraws the full
+    `buildRecapCard()`. Dismissal is unchanged (`gym:recapSeen:…`).
+  - `styles.css`: `.hero` is now a column; new `--hero-from/--hero-to` tokens (sunrise in
+    light, night-sky purple → plum in dark — fixes the muddy dark card); new `.btn--ink`
+    button (`--ink`, `--ink-text`, `--ink-edge`; dark on light, light on dark) because a
+    coral button disappears on the warm card; `.recap-row` styles.
+  - **Bug fix (was live):** a class that sets `display` (e.g. `.btn--block`) beat the
+    browser's built-in `[hidden]` rule, so the Start workout button showed on rest days.
+    Added a global `[hidden] { display: none !important; }` in the reset. A sandbox check
+    of every tab found that button was the only element affected.
+  - Guide (Today section) and What's new updated. Cache `v51`.
+
 - **2026-09-28** — **Owl Quest Q1a — colours, font and buttons (merged to `dev`):** the
   first step of the redesign (ROADMAP §11). All in `styles.css` except where noted:
   - **Colour tokens** at the top of the file replaced: lavender sky `--bg-top` fading

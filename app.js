@@ -604,7 +604,8 @@ function renderSchedule() {
   });
 }
 
-// Draw the Today view: only today's exercises.
+// Draw the Today view: the Today card at the top (greeting, today's plan and
+// the Start button), then today's exercises underneath.
 function renderToday() {
   const container = document.getElementById("todayList");
   container.innerHTML = "";
@@ -624,13 +625,22 @@ function renderToday() {
     day: "numeric",
   });
 
-  // Phase 11: the once-a-week "week in review" card (draws itself only when
-  // it's a new week, there's something to celebrate, and you haven't dismissed
-  // it yet — otherwise it clears the space).
+  // The pieces of the Today card we fill in below (Owl Quest phase Q1b).
+  const plan = document.getElementById("heroPlan");
+  const planTitle = document.getElementById("heroPlanTitle");
+  const planIcons = document.getElementById("heroPlanIcons");
+  const startBtn = document.getElementById("startTodayBtn");
+  const listHeading = document.getElementById("todayListHeading");
+
+  // Phase 11: last week's recap (a one-line summary you can tap open). It
+  // draws itself only when it's a new week, there's something to celebrate,
+  // and you haven't dismissed it yet — otherwise it clears the space.
   renderTodayRecap();
 
   if (!activeProfile) {
-    document.getElementById("startTodayBtn").hidden = true;
+    plan.hidden = true;
+    startBtn.hidden = true;
+    listHeading.hidden = true;
     container.appendChild(
       createEmptyState(
         "👋",
@@ -648,21 +658,37 @@ function renderToday() {
     )
   );
 
-  // Only show the button if there's something to do; label it Resume if a
-  // workout for today is already in progress.
-  const startBtn = document.getElementById("startTodayBtn");
-  startBtn.hidden = todaysExercises.length === 0;
+  plan.hidden = false;
+
+  // Rest day: the Today card says so, and there's no button or list.
+  if (todaysExercises.length === 0) {
+    planTitle.textContent = "Rest day. Nothing planned, so enjoy it 🛌";
+    planIcons.textContent = "";
+    startBtn.hidden = true;
+    listHeading.hidden = true;
+    return;
+  }
+
+  // A workout day: "3 exercises · 9 sets", then each exercise's emoji.
+  const totalSets = todaysExercises.reduce(
+    (sum, exercise) => sum + normalizeExercise(exercise).sets,
+    0
+  );
+  planTitle.textContent =
+    pluralise(todaysExercises.length, "exercise") +
+    " · " +
+    pluralise(totalSets, "set");
+  planIcons.textContent = todaysExercises
+    .map((exercise) => exercise.icon)
+    .join(" ");
+
+  // The big button: labelled Resume if today's workout is already under way.
+  startBtn.hidden = false;
   startBtn.textContent = findInProgressSession(todayName)
     ? "▶ Resume workout"
     : "▶ Start workout";
 
-  if (todaysExercises.length === 0) {
-    container.appendChild(
-      createEmptyState("🛌", "Nothing planned for today, so enjoy your rest!")
-    );
-    return;
-  }
-
+  listHeading.hidden = false;
   todaysExercises.forEach((exercise) => {
     container.appendChild(createExerciseCard(exercise));
   });
@@ -2089,15 +2115,92 @@ function renderTodayRecap() {
     return;
   }
 
+  // Dismissing (the ✕ on either version) hides it until next week.
+  const dismiss = () => {
+    markWeeklyRecapSeen(activeId, mondayKey);
+    todayRecapOpen = false;
+    renderTodayRecap(); // redraw → it disappears
+  };
+
+  // Owl Quest Q1b: start as a one-line summary so it doesn't push today's
+  // workout off the screen. Tapping it opens the full card.
+  if (!todayRecapOpen) {
+    container.appendChild(buildRecapSummaryRow(recap, dismiss));
+    return;
+  }
+
   container.appendChild(
     buildRecapCard(recap, {
       title: "Your week in review 🎉",
-      onDismiss: () => {
-        markWeeklyRecapSeen(activeId, mondayKey);
-        renderTodayRecap(); // redraw → the card disappears
-      },
+      onDismiss: dismiss,
     })
   );
+}
+
+// Whether the Today recap is opened up into the full card. Kept in memory
+// only, so it starts folded each time the app opens.
+let todayRecapOpen = false;
+
+// The folded, one-line version of last week's recap for the Today tab, e.g.
+//   🎉 Last week: 3 of 3 workouts · 2 new records   ›   ✕
+// Tapping the text opens the full card; the ✕ dismisses it for the week.
+function buildRecapSummaryRow(recap, onDismiss) {
+  const row = document.createElement("div");
+  row.className = "recap-row";
+
+  const open = document.createElement("button");
+  open.type = "button";
+  open.className = "recap-row__open";
+  open.setAttribute("aria-label", "Open last week's recap");
+
+  const text = document.createElement("span");
+  text.className = "recap-row__text";
+  text.textContent = describeRecapInOneLine(recap);
+
+  const chevron = document.createElement("span");
+  chevron.className = "recap-row__chevron";
+  chevron.setAttribute("aria-hidden", "true");
+  chevron.textContent = "›";
+
+  open.appendChild(text);
+  open.appendChild(chevron);
+  open.addEventListener("click", () => {
+    todayRecapOpen = true;
+    renderTodayRecap(); // redraw as the full card
+  });
+
+  const close = document.createElement("button");
+  close.type = "button";
+  close.className = "recap__close";
+  close.textContent = "✕";
+  close.setAttribute("aria-label", "Dismiss this week's recap");
+  close.addEventListener("click", onDismiss);
+
+  row.appendChild(open);
+  row.appendChild(close);
+  return row;
+}
+
+// Last week in a few words: the goal result first, then the best bit of news
+// (new records if there were any, otherwise how many sets you did).
+function describeRecapInOneLine(recap) {
+  const goalMet = recap.workouts >= recap.goal;
+  let line =
+    (goalMet ? "🎉 " : "💪 ") +
+    "Last week: " +
+    recap.workouts +
+    " of " +
+    recap.goal +
+    " workouts";
+  if (recap.records.length > 0) {
+    line +=
+      " · " +
+      recap.records.length +
+      (recap.records.length === 1 ? " new record" : " new records");
+  } else {
+    line += " · " + pluralise(recap.sets, "set");
+  }
+  return line;
 }
 
 // Draw the whole Progress view.
