@@ -689,7 +689,7 @@ few levels, from Egg to Athena's Owl. Code goes in a new `xp.js`.
 
 **Phase Q2 is complete.**
 
-### Phase Q3 — The week path ✅ *(on `dev` 2026-09-29, cache `v56`, awaiting owner test)*
+### Phase Q3 — The week path ✅ *(on `dev` 2026-09-29, cache `v56`, tested by the owner)*
 **Owner's decisions (2026-09-29):** the count follows the **schedule** ("2 of 4 done"),
 not the weekly goal; missed days stay as **paler stones** rather than disappearing.
 
@@ -700,7 +700,7 @@ small dashed "Rest" stone for today on a rest day. An unplanned day you trained 
 a done stone. Computed from the schedule and saved workouts; nothing stored. Details in
 RUNBOOK §5o.
 
-**Phase Q3 is complete** once the owner has tested it. Next up is Q4 (workout screen).
+**Phase Q3 is complete.** Next up is Q4 (workout screen).
 
 ### Phase Q4 — Workout screen ☐
 One exercise at a time, tap a star per set, a rest timer that floats on screen, and the
@@ -723,6 +723,9 @@ SQL change, so it goes last and follows the SQL-first rule.
 - **2026-07-28 — Per-exercise workout notes** (a friend's suggestion): a private note on
   each exercise in workout mode, shown next time as a hint. Friends never see notes.
 - **2026-07-28 — Back button on the What's new page** for the installed app.
+- **2026-09-29 — Workouts left open are closed quietly** (after Q3, owner's request): an
+  unfinished workout untouched for 12+ hours is finished if it has ticked sets, or
+  removed if not, instead of being resumed the next time that weekday comes round.
 - **2026-09-28 — Full exercise names on cards** (after Q1c, owner's request): Edit and
   Delete became ✏️ / 🗑️ icon buttons and names wrap up to three lines instead of being
   cut to one ("Bench…").

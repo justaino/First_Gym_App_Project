@@ -40,6 +40,7 @@ const RELEASES = [
       "Today is the big coral stone. Tap it to start your workout.",
       "Missed a day? Its stone just goes paler, no guilt trip. And if you train on a day that wasn't planned, it still gets a stone.",
       "The count in the corner shows how you're doing, like \"2 of 4 done\".",
+      "Fixed: a workout you left open weeks ago no longer pops back up the next time that day comes round. If you'd ticked any sets it's saved to your history; if not, it's tidied away.",
     ],
   },
   {

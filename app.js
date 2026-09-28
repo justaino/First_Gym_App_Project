@@ -2787,6 +2787,9 @@ async function onUserLoggedIn(session) {
     setSyncOverlay(false);
   }
   ensureValidActiveProfile();
+  // Quietly finish (or remove) any workouts left open long ago, now that this
+  // device has the latest copy of everything.
+  closeStaleWorkouts();
   renderAll();
   // Phase 12: make sure people can find you by email, then load your friends.
   initFriendsOnLogin();
@@ -3914,6 +3917,8 @@ function buildLastNoteHint(exerciseId, excludeSessionId) {
 }
 
 // Find an in-progress session for the active profile + day (to resume), or null.
+// A workout left open for ages (see isStaleWorkout) is never resumed — otherwise
+// a Tuesday workout abandoned weeks ago would pop up again next Tuesday.
 function findInProgressSession(day) {
   const activeId = loadActiveProfileId();
   return (
@@ -3921,9 +3926,73 @@ function findInProgressSession(day) {
       (session) =>
         session.profileId === activeId &&
         session.day === day &&
-        session.status === "in-progress"
+        session.status === "in-progress" &&
+        !isStaleWorkout(session)
     ) || null
   );
+}
+
+// --- Workouts left open (fix, 2026-09-29) ---
+
+// How long an unfinished workout can sit untouched before we treat it as
+// "left open" and close it. 12 hours means a late workout that runs past
+// midnight is still fine to resume.
+const STALE_WORKOUT_HOURS = 12;
+
+// Is this an unfinished workout nobody has touched for STALE_WORKOUT_HOURS?
+function isStaleWorkout(session) {
+  if (session.status !== "in-progress") {
+    return false;
+  }
+  const ageInHours = (Date.now() - sessionTime(session)) / (1000 * 60 * 60);
+  return ageInHours > STALE_WORKOUT_HOURS;
+}
+
+// Quietly tidy away workouts that were left open:
+//   - First, drop any entries for exercises that have since been deleted (so no
+//     "(deleted exercise)" rows are left behind).
+//   - If any sets were ticked, FINISH it: it's saved to your history as normal.
+//   - If nothing was ticked, REMOVE it: with no sets done it isn't a workout
+//     (the same rule as the Finish button).
+// Runs after the login sync and whenever a workout starts. Changes go to the
+// cloud too; if you're offline, the next login sync catches up.
+function closeStaleWorkouts() {
+  const sessions = loadList(STORAGE_KEYS.sessions);
+  const exerciseIds = loadList(STORAGE_KEYS.exercises).map((exercise) => exercise.id);
+  const kept = [];
+  let changed = false;
+
+  sessions.forEach((session) => {
+    // Leave everything else alone, including a workout that's open right now.
+    const isOpenNow = activeSession && activeSession.id === session.id;
+    if (!isStaleWorkout(session) || isOpenNow) {
+      kept.push(session);
+      return;
+    }
+
+    changed = true;
+    const entries = session.entries.filter((entry) =>
+      exerciseIds.includes(entry.exerciseId)
+    );
+    const setsDone = entries.reduce((sum, entry) => sum + entrySetsDone(entry), 0);
+
+    if (setsDone > 0) {
+      const finished = {
+        ...session,
+        entries: entries,
+        status: "completed",
+        updatedAt: new Date().toISOString(),
+      };
+      kept.push(finished);
+      pushSessionToCloud(finished);
+    } else {
+      deleteSessionFromCloud(session.id); // not kept → removed locally too
+    }
+  });
+
+  if (changed) {
+    saveList(STORAGE_KEYS.sessions, kept);
+  }
 }
 
 // Save the active session into gym:sessions (replace if present, else add).
@@ -3949,6 +4018,9 @@ function findExerciseById(id) {
 
 // Begin a NEW workout for a day, or resume the in-progress one if it exists.
 function startWorkout(day) {
+  // Tidy away any workouts left open long ago before we look for one to resume.
+  closeStaleWorkouts();
+
   let session = findInProgressSession(day);
 
   if (!session) {

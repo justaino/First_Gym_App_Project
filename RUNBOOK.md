@@ -798,7 +798,23 @@ Newest first. Add a line here whenever behaviour changes.
 > Entries below marked "on `dev`, awaiting owner test" were written at build time.
 > Everything up to 2026-07-28 has since been tested and released to `main`.
 
-- **2026-09-29** — **Owl Quest Q3 — the week path (on `dev`, awaiting owner test):**
+- **2026-09-29** — **Fix: workouts left open are closed quietly (on `dev`, awaiting owner
+  test):** the owner tapped the Today stone and got an old Tuesday workout showing two
+  "(deleted exercise)" rows. Cause: `findInProgressSession(day)` matched by day **name**
+  only, so a workout left open in an earlier week was resumed; its exercises had since
+  been deleted (the entry clean-up in `deleteExercise()` only runs on the device that
+  deletes, and the sync keeps a newer local in-progress copy).
+  - `app.js`: `STALE_WORKOUT_HOURS = 12`; `isStaleWorkout()` (in progress and
+    `sessionTime()` more than 12 h ago); `findInProgressSession()` now skips stale ones.
+  - `closeStaleWorkouts()` drops entries for exercises that no longer exist, then
+    **finishes** the workout (status `completed`, `pushSessionToCloud`) if any set was
+    ticked, or **removes** it (`deleteSessionFromCloud`) if not. It skips the workout
+    that's open right now. Called in `onUserLoggedIn()` after the sync (before
+    `renderAll()`) and at the top of `startWorkout()`. If a cloud delete fails offline,
+    the next login pulls it back and closes it again.
+  - What's new: a "Fixed:" line on "Your week as a path". Cache `v57`.
+
+- **2026-09-29** — **Owl Quest Q3 — the week path (committed to `dev`):**
   - New file `week-path.js` (in `index.html` after `xp.js`, and in `APP_SHELL`):
     `buildWeekStones()`, `renderWeekPath()`, `buildWeekPathLine()`, `buildWeekStone()`.
   - `index.html`: `#weekPathCard` (title, `#weekPathCount`, `#weekPath`) between the
