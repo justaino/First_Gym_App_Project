@@ -31,8 +31,13 @@
 const RELEASES = [
   {
     date: "2026-09-28",
-    title: "A clearer privacy note",
+    title: "A fresh new look",
+    intro:
+      "Athena's owl has redecorated. Same app, same data, just a brighter " +
+      "place to train.",
     items: [
+      "New colours: a lavender sky at the top of every screen, and a night-purple dark mode.",
+      "Chunkier buttons that press down when you tap them, and a rounder font for headings and numbers.",
       "The privacy note (Settings → Privacy & data) now explains exactly what friends can see: friends see that you trained, close friends can open your workouts, and nobody ever sees your notes or your email.",
     ],
   },

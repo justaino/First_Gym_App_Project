@@ -36,6 +36,10 @@ pill buttons, friendly emoji icons, floating bottom tab bar).
 
 ## 3. Design system (the "cute" look)
 
+> **Replaced by "Owl Quest" (phase Q1a, 2026-09-28):** lavender instead of cream, Baloo 2
+> for headings, chunky buttons. The current rules are in `CLAUDE.md` → "Design system".
+> The table below is the original look, kept for reference.
+
 | Token            | Value                          | Used for                         |
 |------------------|--------------------------------|----------------------------------|
 | Background       | `#FAF6EE` (warm cream)         | Page background                  |
@@ -648,12 +652,20 @@ the next release is one object at the top of one file.
 > phase at a time, the owner tests on `dev` before anything is released to `main`, bump
 > `CACHE_VERSION`, update the What's new page, the guide and the RUNBOOK change log.
 
-### Phase Q1 — New look ☐
-Lavender-to-white background, the rounder **Baloo 2** font, chunky buttons with a solid
-"pressable" shadow. Today puts **Start workout** first and shrinks the weekly recap to one
-tappable line. Four tabs (Today, Plan, Progress, Friends) with Settings behind an avatar
-in the top corner. Update the design system in `CLAUDE.md` and section 3 here.
-No new logic, no database changes.
+### Phase Q1 — New look (split into three steps)
+**Owner's decisions (2026-09-28):** keep the tab name **"Schedule"**; Baloo 2 for
+headings, buttons and big numbers only (Nunito stays for sentences); a **night-purple**
+dark mode; Claude may merge each step's pull request into `dev` itself.
+
+- ✅ **Q1a — Colours, font and buttons** *(on `dev` 2026-09-28, cache `v50`)*: new
+  colour tokens (lavender sky → white, deep indigo text, purple accent) and a night-owl
+  dark palette; Baloo 2 on headings/buttons/numbers; chunky buttons and cards with a
+  solid bottom edge; lavender active tab; the phone status bar follows the theme. Design
+  system in `CLAUDE.md` updated. No layout or data changes.
+- ☐ **Q1b — Today screen:** a top card with today's plan and a big **Start workout**
+  button inside it; the weekly recap shrinks to one tappable line.
+- ☐ **Q1c — Four tabs:** Settings moves behind a round avatar in the top corner (the
+  What's new dot moves with it); guide text updated.
 
 ### Phase Q2 — XP and levels ☐
 XP computed from saved workouts (starting rules to agree with the owner, e.g. 10 XP per

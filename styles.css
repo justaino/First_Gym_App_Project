@@ -1,51 +1,70 @@
 /*
-  styles.css — the "cute" pastel design system for Athena's Arena.
+  styles.css — the design system for Athena's Arena.
 
-  Phase 1 styling: top bar, the four views, exercise cards, the add/edit form
-  (in a pop-up modal), profiles, and the floating bottom tab bar.
+  Look: "Owl Quest" (since phase Q1a) — a lavender sky fading to white, chunky
+  "press-me" buttons and cards with a solid bottom edge, and the rounded Baloo 2
+  font for headings, buttons and big numbers (normal text stays in Nunito).
 
-  Tip: the colours below are kept in one place as CSS variables (the :root block)
-  so we can reuse them everywhere and change them in a single spot later.
+  Tip: every colour lives in one place as a CSS variable (the :root block
+  below), and dark mode just swaps those variables. So to change a colour
+  everywhere, change it once here — and give it a dark-mode value too.
 */
 
-/* ---- Design tokens (colours from CLAUDE.md / ROADMAP.md) ---- */
+/* ---- Design tokens (see CLAUDE.md → "Design system") ---- */
 :root {
-  --bg: #faf6ee; /* warm cream page background */
+  /* Page background: a lavender "sky" at the top (--bg-top) that fades into a
+     near-white lavender (--bg) as you scroll down. */
+  --bg-top: #e2d9f7;
+  --bg: #f7f4fe;
   --card: #ffffff; /* white cards */
-  --text: #2e2e33; /* charcoal text */
-  /* Slightly darker than the original #9A9A9A so small grey text meets
-     accessibility contrast guidelines on the cream/white backgrounds. */
-  --muted: #70707a; /* secondary/label text */
+  --text: #2c2546; /* deep indigo-charcoal text */
+  --muted: #6b6488; /* secondary/label text (passes contrast on white + --bg) */
 
-  --coral: #ef7c7c; /* primary / "today" */
-  --mint: #5fc4bc; /* active states / accents */
-  --butter: #f6d365; /* highlights */
+  --coral: #ef7c7c; /* primary buttons / "today" */
+  --mint: #5fc4bc; /* done / success / accents */
+  --butter: #f6d365; /* highlights, gold */
   --lavender: #b9a7e0; /* highlights */
+  --purple: #6d55c4; /* strong accent: active tab, links on lavender */
+
+  /* The darker "edge" colours that sit under chunky buttons and cards, so they
+     look like they're raised and can be pressed down. */
+  --coral-edge: #c85c5c;
+  --mint-edge: #3fa39b;
+  --danger-edge: #b33f44;
+  --edge: #e3dcf5; /* soft lavender edge under white cards */
 
   /* Form surfaces — kept as variables so dark mode can swap them. */
   --input-bg: #ffffff; /* text boxes, emoji chips, set dots */
-  --border: #efe9dd; /* their soft cream-grey border */
+  --border: #e6e0f5; /* soft lavender border */
+
+  /* Fonts: Baloo 2 is the fun, chunky one for headings/buttons/numbers;
+     Nunito is kept for sentences because it's easier to read in long text. */
+  --font-body: "Nunito", system-ui, sans-serif;
+  --font-display: "Baloo 2", "Nunito", system-ui, sans-serif;
 
   --radius-card: 24px; /* rounded corners on cards */
   --radius-pill: 999px; /* fully rounded (pill) shape */
-  --shadow-soft: 0 10px 30px rgba(46, 46, 51, 0.08); /* soft diffuse shadow */
-  --shadow-card: 0 6px 18px rgba(46, 46, 51, 0.06); /* lighter shadow for small cards */
+  --shadow-soft: 0 10px 30px rgba(60, 40, 120, 0.12); /* soft diffuse shadow */
+  /* Cards: a solid lavender edge underneath instead of a blurry shadow. */
+  --shadow-card: 0 4px 0 var(--edge);
 }
 
-/* ---- Dark mode palette ----
+/* ---- Dark mode palette ("night owl") ----
    app.js puts data-theme="dark" on the <html> element. Because everything uses
    the variables above, overriding them here re-themes the whole app at once. */
 :root[data-theme="dark"] {
-  --bg: #17171c; /* near-black background */
-  --card: #23232b; /* dark card surface */
-  --text: #f3f2ef; /* light text */
-  --muted: #a3a3ad; /* lighter grey for contrast on dark */
+  --bg-top: #2b2350; /* night sky */
+  --bg: #17142b;
+  --card: #262046; /* dark purple card surface */
+  --text: #f1eefb; /* light text */
+  --muted: #b1a8d0; /* lighter lavender-grey for contrast on dark */
+  --purple: #c9b8ff; /* the strong accent needs to be light on a dark page */
 
-  --input-bg: #2b2b34;
-  --border: #3a3a44;
+  --edge: #120f24; /* dark edge under cards */
+  --input-bg: #302856;
+  --border: #3d3568;
 
-  --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.45);
-  --shadow-card: 0 6px 18px rgba(0, 0, 0, 0.35);
+  --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
 /* ---- Reset a few defaults so layout is predictable ---- */
@@ -58,8 +77,12 @@
 /* ---- Page base ---- */
 body {
   background-color: var(--bg);
+  /* The lavender sky at the top, fading into --bg. It's painted once at the
+     top of the page (no-repeat), so long pages just continue in --bg. */
+  background-image: linear-gradient(180deg, var(--bg-top) 0, var(--bg) 420px);
+  background-repeat: no-repeat;
   color: var(--text);
-  font-family: "Nunito", system-ui, sans-serif;
+  font-family: var(--font-body);
   min-height: 100vh;
   /* Centre everything and keep it phone-width on big screens */
   display: flex;
@@ -144,24 +167,32 @@ body {
   margin-bottom: 16px;
 }
 
-/* ---- Buttons (pill-shaped) ---- */
+/* ---- Buttons (pill-shaped, "chunky") ----
+   Filled buttons have a solid darker edge underneath (a box-shadow with no
+   blur). Pressing one slides it down onto that edge, so it feels like a real
+   button being pushed. */
 .btn {
   border: none;
   cursor: pointer;
-  font-family: inherit;
+  font-family: var(--font-display);
   font-weight: 700;
-  font-size: 15px;
+  font-size: 16px;
+  line-height: 1.2;
   border-radius: var(--radius-pill);
   padding: 12px 20px;
-  transition: transform 0.08s ease, opacity 0.15s ease;
+  transition: transform 0.08s ease, box-shadow 0.08s ease, opacity 0.15s ease;
 }
 .btn:active {
-  transform: scale(0.97); /* tiny press effect */
+  transform: translateY(3px); /* press down onto the edge */
 }
 
 .btn--primary {
   background-color: var(--coral);
   color: #fff;
+  box-shadow: 0 4px 0 var(--coral-edge);
+}
+.btn--primary:active {
+  box-shadow: 0 1px 0 var(--coral-edge); /* edge "squashed" while pressed */
 }
 
 .btn--ghost {
@@ -174,6 +205,10 @@ body {
 .btn--danger {
   background-color: #e5575c;
   color: #fff;
+  box-shadow: 0 4px 0 var(--danger-edge);
+}
+.btn--danger:active {
+  box-shadow: 0 1px 0 var(--danger-edge);
 }
 
 /* A button that fills the row width (used for "Add exercise") */
@@ -573,10 +608,11 @@ body {
   line-height: 1;
 }
 
-/* The active tab gets a soft tinted "chip" and coloured text. */
+/* The active tab gets a soft lavender "chip" and purple text. (It was coral
+   before Owl Quest; coral is now kept for the main "do this" buttons.) */
 .tab--active {
-  background-color: rgba(239, 124, 124, 0.15); /* faint coral tint */
-  color: var(--coral);
+  background-color: rgba(185, 167, 224, 0.25); /* faint lavender tint */
+  color: var(--purple);
 }
 
 /* =========================================================================
@@ -2097,4 +2133,55 @@ body {
 }
 .friend-workout:active {
   opacity: 0.7;
+}
+
+/* =========================================================================
+   OWL QUEST THEME (phase Q1a) — fonts and the bits the colour tokens can't
+   reach on their own. Colours themselves are all in the :root block at the top.
+   ========================================================================= */
+
+/* Headings, titles and big numbers use the rounder Baloo 2 font. Everything
+   else (sentences, labels, form text) stays in Nunito via the body rule. */
+.topbar__brand,
+.view__title,
+.section-heading,
+.day-group__heading,
+.hero__greeting,
+.modal__title,
+.sheet__title,
+.auth__brand,
+.stat__number,
+.timer__display,
+.goal__text,
+.goal__title,
+.heatmap-heading,
+.pr-board__heading,
+.volume-trend__value,
+.celebrate__title,
+.credits-card__title,
+.guide-hero__title,
+.guide-step__number,
+.guide-step__title,
+.tab__label {
+  font-family: var(--font-display);
+}
+
+/* Baloo 2 sits a little lower and looser than Nunito, so tighten the line
+   height on the biggest headings so they don't look spaced out. */
+.view__title,
+.hero__greeting,
+.sheet__title,
+.modal__title {
+  line-height: 1.15;
+}
+
+/* The floating tab bar gets the same chunky edge as the cards. */
+.tabbar {
+  box-shadow: 0 4px 0 var(--edge), var(--shadow-soft);
+}
+
+/* The round dark-mode toggle and the profile chip get the chunky edge too. */
+.icon-btn,
+.profile-chip {
+  box-shadow: 0 3px 0 var(--edge);
 }

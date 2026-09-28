@@ -4623,9 +4623,23 @@ function importData(file) {
    The choice is saved so it sticks between visits.
    ========================================================================= */
 
+// The colour a phone paints its status bar / browser bar in, per theme. These
+// match --bg-top in styles.css so the bar blends into the top of the page.
+const THEME_BAR_COLOURS = { light: "#e2d9f7", dark: "#2b2350" };
+
 // Apply a theme ("light" or "dark") to the page and update the toggle button.
 function applyTheme(theme) {
   const toggle = document.getElementById("themeToggle");
+
+  // Recolour the phone's status bar to match (the <meta name="theme-color">
+  // tag in index.html). Owl Quest phase Q1a.
+  const barColourTag = document.querySelector('meta[name="theme-color"]');
+  if (barColourTag) {
+    barColourTag.setAttribute(
+      "content",
+      theme === "dark" ? THEME_BAR_COLOURS.dark : THEME_BAR_COLOURS.light
+    );
+  }
 
   if (theme === "dark") {
     document.documentElement.setAttribute("data-theme", "dark");

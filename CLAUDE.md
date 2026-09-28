@@ -76,8 +76,9 @@ readability — add any new file to `index.html` and to `APP_SHELL` in `sw.js`.
 - **`dev`** is the working branch. Pushing to `dev` does **not** affect the live site.
 - **Claude Code cloud sessions** work on their own `claude/…` branch, cut from `dev`.
   When a step is ready (and the owner has said to commit/push), push that branch and open
-  a **pull request into `dev`** — never into `main`. The owner reviews the pull request on
-  GitHub, merges it, pulls `dev`, and tests locally with Live Server.
+  a **pull request into `dev`** — never into `main`. The owner has said Claude may
+  **merge its own pull requests into `dev`** once a step is ready (2026-09-28); the owner
+  then pulls `dev` and tests locally with Live Server.
 - **Releasing = merging `dev` → `main` and pushing.** Only do this when asked. When you do,
   remember to bump `CACHE_VERSION` (see below).
 - ⚠️ Testing locally uses the **same Supabase database as the live site** — there is no
@@ -126,16 +127,27 @@ Rules for both:
 - Handle the offline case gracefully: reads fall back to the cache; plan edits show the
   friendly offline notice (RUNBOOK §5d).
 
-## Design system (keep styling consistent)
-- Background cream `#FAF6EE`; white cards `#FFFFFF` with `24px` radius and soft shadow.
-- Text charcoal `#2E2E33`; muted `#9A9A9A`.
-- Accents: coral `#EF7C7C`, mint `#5FC4BC`, butter `#F6D365`, lavender `#B9A7E0`.
-- Font: Nunito (Google Fonts). Pill-shaped buttons. Floating, rounded bottom tab bar with
-  icon + label; active tab tinted. Emoji as exercise icons. Dark mode is supported, so
-  new colours need a dark-mode value too.
-- A visual style reference is saved at `Design-Reference.png` — open it when working on UI.
-- ⏭️ The **Owl Quest** redesign (ROADMAP.md §11) will update this section in its first
-  phase. Until that phase is approved, keep to the rules above.
+## Design system — "Owl Quest" (keep styling consistent)
+Every colour is a CSS variable in the `:root` block at the top of `styles.css`, with a
+dark-mode value in `:root[data-theme="dark"]`. **Use the variables, never raw colours**,
+and give any new colour a dark-mode value too.
+- **Page:** a lavender "sky" (`--bg-top` `#E2D9F7`) fading into near-white lavender
+  (`--bg` `#F7F4FE`). Dark mode ("night owl"): `#2B2350` fading into `#17142B`.
+- **Cards:** white (`--card`), `24px` radius, with a solid lavender edge underneath
+  (`--shadow-card: 0 4px 0 var(--edge)`) instead of a blurry shadow.
+- **Text:** deep indigo `--text` `#2C2546`; muted `--muted` `#6B6488`.
+- **Accents:** coral `#EF7C7C` (main "do this" buttons), mint `#5FC4BC` (done/success),
+  butter `#F6D365`, lavender `#B9A7E0`, purple `--purple` `#6D55C4` (active tab, strong
+  accent).
+- **Buttons:** pill-shaped and "chunky" — filled buttons have a darker solid edge
+  (`--coral-edge`, `--mint-edge`, `--danger-edge`) and slide down onto it when pressed.
+- **Fonts:** **Baloo 2** (`--font-display`) for headings, titles, buttons and big
+  numbers; **Nunito** (`--font-body`) for sentences, labels and forms. Both come from
+  Google Fonts.
+- Floating, rounded bottom tab bar with icon + label; the active tab is tinted lavender
+  with purple text. Emoji as exercise icons. The owl is the app's mascot.
+- Mock-ups for the rest of the redesign: ROADMAP.md §11. The old pastel reference is
+  still at `Design-Reference.png` for the general feel.
 
 ## Data model
 Shapes used in the app (localStorage cache). The Supabase tables mirror them in
