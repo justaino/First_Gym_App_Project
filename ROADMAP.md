@@ -704,6 +704,9 @@ SQL change, so it goes last and follows the SQL-first rule.
 - **2026-07-28 — Per-exercise workout notes** (a friend's suggestion): a private note on
   each exercise in workout mode, shown next time as a hint. Friends never see notes.
 - **2026-07-28 — Back button on the What's new page** for the installed app.
+- **2026-09-28 — Full exercise names on cards** (after Q1c, owner's request): Edit and
+  Delete became ✏️ / 🗑️ icon buttons and names wrap up to three lines instead of being
+  cut to one ("Bench…").
 
 ## 13. Known issues & ideas backlog
 

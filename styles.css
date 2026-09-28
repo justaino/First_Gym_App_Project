@@ -289,11 +289,12 @@ body {
   background-color: var(--card);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
-  padding: 16px;
+  padding: 14px;
   margin-bottom: 12px;
   display: flex;
   align-items: center;
-  gap: 14px;
+  /* Kept tight so the exercise name gets as much width as possible. */
+  gap: 10px;
 }
 
 /* Phase 10: drag handle on Schedule exercise cards. "touch-action: none" tells
@@ -327,11 +328,11 @@ body {
 }
 
 .exercise__icon {
-  font-size: 28px;
+  font-size: 24px;
   /* A soft tinted circle behind the emoji */
   background-color: rgba(95, 196, 188, 0.15); /* faint mint */
-  width: 52px;
-  height: 52px;
+  width: 46px;
+  height: 46px;
   border-radius: var(--radius-pill);
   display: flex;
   align-items: center;
@@ -347,10 +348,15 @@ body {
 .exercise__name {
   font-weight: 800;
   font-size: 16px;
-  /* If the name is very long, show "..." instead of breaking the layout */
-  white-space: nowrap;
+  line-height: 1.25;
+  /* Long names wrap onto more lines; only a name longer than three lines
+     gets "…" at the end. (It used to be cut to one line, e.g. "Bench…".) */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
   overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere; /* break a single very long word instead of overflowing */
 }
 
 .exercise__detail {
@@ -362,8 +368,33 @@ body {
 
 .exercise__actions {
   display: flex;
-  gap: 6px;
+  gap: 4px;
   flex-shrink: 0;
+}
+
+/* Small round icon buttons on exercise cards (✏️ Edit, 🗑️ Delete). 38px keeps
+   them comfortable to tap while taking far less room than the words did. */
+.icon-action {
+  width: 38px;
+  height: 38px;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  background-color: var(--bg);
+  font-size: 17px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.08s ease, background-color 0.15s ease;
+}
+.icon-action:active {
+  transform: scale(0.92);
+}
+@media (hover: hover) {
+  .icon-action:hover {
+    background-color: var(--border);
+  }
 }
 
 /* ---- Profile rows on the Settings view ---- */
