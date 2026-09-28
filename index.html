@@ -4,7 +4,8 @@
 
   Every screen lives in this one file and JavaScript shows/hides them:
   - The login gate (auth.js), shown until you're signed in.
-  - Five tabs: Today, Schedule, Progress, Friends (friends.js) and Settings.
+  - Four tabs: Today, Schedule, Progress and Friends (friends.js), plus the
+    Settings screen, which opens from the round avatar in the top bar.
   - Pop-ups and full-screen sheets: the exercise form, workout mode, a saved
     workout's details, the install steps and the in-app guide (guide.js).
   - Data is saved to your Supabase account and cached in the browser's
@@ -107,7 +108,9 @@
 
     <!--
       Top header bar. It always shows the app name and which profile is active.
-      The "Switch" button jumps to the Settings tab where profiles are managed.
+      The round avatar (your initial) opens Settings, where profiles, friends
+      settings, backups and the rest live (Owl Quest Q1c: Settings left the
+      bottom tab bar).
     -->
     <header class="topbar">
       <!-- Tapping this title 5 times quickly reveals a hidden credits card
@@ -124,10 +127,12 @@
         >
           🌙
         </button>
-        <button class="profile-chip" id="activeProfileChip" type="button">
-          <!-- Filled in by app.js with the active profile's name -->
-          <span id="activeProfileName">No profile</span>
-          <span class="profile-chip__hint">Switch</span>
+        <!-- Avatar = the way into Settings. app.js fills in the active
+             profile's first initial and a matching label for screen readers. -->
+        <button class="avatar-btn" id="activeProfileChip" type="button" aria-label="Open settings">
+          <span class="avatar-btn__initial" id="activeProfileInitial" aria-hidden="true">?</span>
+          <!-- Shown when there's a release note you haven't read (Phase 16). -->
+          <span class="tab__dot avatar-btn__dot" id="settingsTabDot" hidden></span>
         </button>
       </div>
     </header>
@@ -335,8 +340,8 @@
 
       <!-- ===================== SETTINGS VIEW (profiles) ===================== -->
       <section class="view" id="view-settings" data-view="settings">
-        <h1 class="view__title">Profiles</h1>
-        <p class="view__subtitle">Create a profile and pick which one is active.</p>
+        <h1 class="view__title">Settings</h1>
+        <p class="view__subtitle">Your account, profiles, friends and backups.</p>
 
         <!-- Account (Phase 7): who's signed in + log out. Hidden until logged in. -->
         <div class="card" id="accountCard" hidden>
@@ -486,7 +491,8 @@
           </p>
         </div>
 
-        <!-- Create-a-profile form -->
+        <!-- Profiles: create one, and pick which is active (the list below). -->
+        <h2 class="section-heading">Profiles</h2>
         <div class="card">
           <form id="profileForm" class="form">
             <label class="form__label" for="profileNameInput">New profile name</label>
@@ -839,12 +845,8 @@
         <span class="tab__dot" id="friendsTabDot" hidden></span>
       </button>
 
-      <button class="tab" type="button" data-view="settings">
-        <span class="tab__icon" aria-hidden="true">⚙️</span>
-        <span class="tab__label">Settings</span>
-        <!-- Shown when there's a release note you haven't read (Phase 16). -->
-        <span class="tab__dot" id="settingsTabDot" hidden></span>
-      </button>
+      <!-- No Settings tab since Owl Quest Q1c: it opens from the avatar in the
+           top bar instead, so the four everyday tabs get more room. -->
     </nav>
 
     <!--

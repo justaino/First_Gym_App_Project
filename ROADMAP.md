@@ -667,8 +667,13 @@ dark mode; Claude may merge each step's pull request into `dev` itself.
   line) and a big **Start workout** button; the weekly recap starts as one tappable line
   that opens the full card; night-sky colours for the card in dark mode. Also fixed a
   live bug: elements with `hidden` could still show (the Start button on rest days).
-- ☐ **Q1c — Four tabs:** Settings moves behind a round avatar in the top corner (the
-  What's new dot moves with it); guide text updated.
+- ✅ **Q1c — Four tabs** *(on `dev` 2026-09-28, cache `v52`)*: Settings left the tab
+  bar and opens from a round purple avatar showing the profile's initial (it replaced
+  the name + "Switch" chip, and carries the What's new dot). The avatar gets a lavender
+  ring while you're on Settings. The Settings page is now titled "Settings" (it said
+  "Profiles") with a proper "Profiles" heading above the profile form. Guide updated.
+
+**Phase Q1 is complete.** Next up is Q2 (XP and levels) — owner to confirm.
 
 ### Phase Q2 — XP and levels ☐
 XP computed from saved workouts (starting rules to agree with the owner, e.g. 10 XP per

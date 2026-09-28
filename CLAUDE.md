@@ -144,8 +144,10 @@ and give any new colour a dark-mode value too.
 - **Fonts:** **Baloo 2** (`--font-display`) for headings, titles, buttons and big
   numbers; **Nunito** (`--font-body`) for sentences, labels and forms. Both come from
   Google Fonts.
-- Floating, rounded bottom tab bar with icon + label; the active tab is tinted lavender
-  with purple text. Emoji as exercise icons. The owl is the app's mascot.
+- Floating, rounded bottom tab bar with **four** tabs (Today, Schedule, Progress,
+  Friends), icon + label; the active tab is tinted lavender with purple text. **Settings
+  opens from the round purple avatar** (the profile's initial) in the top bar, which also
+  carries the What's new dot. Emoji as exercise icons. The owl is the app's mascot.
 - Mock-ups for the rest of the redesign: ROADMAP.md §11. The old pastel reference is
   still at `Design-Reference.png` for the general feel.
 

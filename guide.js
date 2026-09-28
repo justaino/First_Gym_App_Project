@@ -28,7 +28,8 @@ const GUIDE_STEPS = [
   {
     title: "Make a profile",
     text:
-      "Settings → type your name → Create. A profile keeps one person's plan " +
+      "Tap the round avatar in the top corner to open Settings, then type " +
+      "your name → Create. A profile keeps one person's plan " +
       "and history together, so you can share the app with someone else and " +
       "not mix up your workouts.",
   },
@@ -126,6 +127,7 @@ const GUIDE_SECTIONS = [
     title: "Settings & your data",
     summary: "Profiles, units, backup",
     items: [
+      "Settings opens from the round avatar with your initial, in the top corner. A little coral dot on it means there's something new on the What's new page.",
       "Your workouts are saved to your account, so logging in on another device brings everything with you.",
       "Weekly goal sets the target for the ring on Progress.",
       "Weight unit switches every label between kg and lb. It only changes the label, so your saved numbers are never converted.",
