@@ -25,6 +25,8 @@
   --butter: #f6d365; /* highlights, gold */
   --lavender: #b9a7e0; /* highlights */
   --purple: #6d55c4; /* strong accent: active tab, links on lavender */
+  --purple-edge: #4e3a9e; /* edge under the purple avatar */
+  --avatar-text: #ffffff; /* the initial on the purple avatar */
 
   /* The darker "edge" colours that sit under chunky buttons and cards, so they
      look like they're raised and can be pressed down. */
@@ -70,6 +72,8 @@
   --text: #f1eefb; /* light text */
   --muted: #b1a8d0; /* lighter lavender-grey for contrast on dark */
   --purple: #c9b8ff; /* the strong accent needs to be light on a dark page */
+  --purple-edge: #8e84b8;
+  --avatar-text: #231d42; /* dark initial on the light purple avatar */
 
   --edge: #120f24; /* dark edge under cards */
 
@@ -132,28 +136,45 @@ body {
   font-size: 18px;
 }
 
-/* The little pill that shows the active profile name */
-.profile-chip {
+/* The round avatar (your initial) that opens Settings — Owl Quest Q1c.
+   Same size as the 🌙 button next to it, filled purple, with the chunky edge. */
+.avatar-btn {
+  position: relative; /* anchor for the What's new dot */
+  width: 40px;
+  height: 40px;
   border: none;
+  border-radius: 50%;
   cursor: pointer;
-  font-family: inherit;
-  font-weight: 700;
-  font-size: 14px;
-  color: var(--text);
-
-  background-color: var(--card);
-  box-shadow: var(--shadow-card);
-  border-radius: var(--radius-pill);
-  padding: 8px 14px;
-
+  background-color: var(--purple);
+  color: var(--avatar-text);
+  box-shadow: 0 3px 0 var(--purple-edge);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 18px;
+  line-height: 1;
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
 }
-
-.profile-chip__hint {
-  color: var(--coral);
-  font-size: 12px;
+.avatar-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--purple-edge);
+}
+/* While you're on Settings, a lavender ring shows that's where you are
+   (the job the tab's tint used to do). */
+.avatar-btn--active {
+  outline: 3px solid var(--lavender);
+  outline-offset: 2px;
+}
+/* The unread What's new dot sits on the avatar's top-right edge. The ring
+   matches the page behind it rather than the tab bar. (Written as
+   ".avatar-btn .avatar-btn__dot" so it beats the general .tab__dot position
+   rule further down the file.) */
+.avatar-btn .avatar-btn__dot {
+  top: -2px;
+  right: -2px;
+  box-shadow: 0 0 0 2px var(--bg-top);
 }
 
 /* ---- The main app column ---- */
@@ -618,9 +639,9 @@ body {
   align-items: center;
   gap: 4px;
 
-  /* Phase 12 added a 5th tab (Friends), so these are a little slimmer than
-     before to keep all five on one row. */
-  padding: 8px 8px;
+  /* Four tabs since Owl Quest Q1c (Settings moved to the avatar), so each
+     one gets a roomier tap area again. */
+  padding: 8px 14px;
   border-radius: 18px;
 
   color: var(--muted);
@@ -2283,8 +2304,7 @@ body {
   box-shadow: 0 4px 0 var(--edge), var(--shadow-soft);
 }
 
-/* The round dark-mode toggle and the profile chip get the chunky edge too. */
-.icon-btn,
-.profile-chip {
+/* The round dark-mode toggle gets the chunky edge too. */
+.icon-btn {
   box-shadow: 0 3px 0 var(--edge);
 }

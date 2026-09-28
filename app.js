@@ -747,10 +747,25 @@ function renderProfiles() {
 }
 
 // Update the little active-profile pill in the top bar.
+// The round avatar in the top bar (Owl Quest Q1c): the active profile's first
+// initial, or "?" with no profile. Tapping it opens Settings.
 function renderActiveProfileChip() {
-  const nameSpan = document.getElementById("activeProfileName");
+  const avatar = document.getElementById("activeProfileChip");
+  const initial = document.getElementById("activeProfileInitial");
   const activeProfile = getActiveProfile();
-  nameSpan.textContent = activeProfile ? activeProfile.name : "No profile";
+
+  if (activeProfile && activeProfile.name.trim() !== "") {
+    // Array.from splits by character properly, so a name that starts with an
+    // emoji or accented letter keeps its whole first character.
+    initial.textContent = Array.from(activeProfile.name.trim())[0].toUpperCase();
+    avatar.setAttribute(
+      "aria-label",
+      "Settings (" + activeProfile.name + "'s profile)"
+    );
+  } else {
+    initial.textContent = "?";
+    avatar.setAttribute("aria-label", "Settings (no profile yet)");
+  }
 }
 
 // A small helper that builds a friendly "nothing here yet" card.
@@ -2319,7 +2334,7 @@ function renderProgress() {
 
 /* ---- "There's an update" dot (Phase 16) ----
    whats-new.js holds the release notes. If its newest entry is dated later
-   than the last one you opened, a dot appears on the Settings tab and on the
+   than the last one you opened, a dot appears on the avatar (top bar) and on the
    What's new button. Opening the page clears it. Per device, like the theme. */
 
 // The date of the newest release note, e.g. "2026-07-25".
@@ -5221,6 +5236,17 @@ function switchView(viewName) {
       tab.removeAttribute("aria-current");
     }
   });
+
+  // Settings has no tab any more (Owl Quest Q1c), so light up the avatar that
+  // opens it instead, and tell screen readers it's the current page.
+  const avatar = document.getElementById("activeProfileChip");
+  const onSettings = viewName === "settings";
+  avatar.classList.toggle("avatar-btn--active", onSettings);
+  if (onSettings) {
+    avatar.setAttribute("aria-current", "page");
+  } else {
+    avatar.removeAttribute("aria-current");
+  }
 
   // Phase 12: opening the Friends tab refreshes it, so the "went today" ticks
   // and nudge buttons are up to date each time you look.

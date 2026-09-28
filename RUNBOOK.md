@@ -441,7 +441,8 @@ previous Mon–Sun window.
 
 ## 5j. Friends + nudges (Phase 12)
 
-A 5th tab (🤝 **Friends**). Everything here lives in the **cloud**, not
+The 🤝 **Friends** tab (added as a 5th tab; one of four since Settings moved to the
+avatar in Owl Quest Q1c). Everything here lives in the **cloud**, not
 localStorage, and needs you to be logged in and online.
 
 ### Two levels of friend (important)
@@ -634,7 +635,8 @@ both ways now"*, never *"changed close_friends to mutual"*. If a change is
 invisible to them, leave it out — that's what the change log in §9 is for.
 
 **The unread dot:** the app loads `whats-new.js` too, compares the newest `date`
-against `gym:whatsNewSeen`, and shows a coral dot on the **Settings tab** and on
+against `gym:whatsNewSeen`, and shows a coral dot on the **avatar** (top bar — it
+opens Settings since Owl Quest Q1c) and on
 the What's new button when there's something newer. Opening the page clears it.
 Dates are plain `YYYY-MM-DD` text, so a straight string comparison sorts them.
 
@@ -712,6 +714,24 @@ Newest first. Add a line here whenever behaviour changes.
 
 > Entries below marked "on `dev`, awaiting owner test" were written at build time.
 > Everything up to 2026-07-28 has since been tested and released to `main`.
+
+- **2026-09-28** — **Owl Quest Q1c — four tabs, Settings behind the avatar (merged to
+  `dev`):**
+  - `index.html`: the Settings `.tab` is gone. The top bar's name chip became
+    `.avatar-btn` — same id (`#activeProfileChip`, still wired to
+    `switchView("settings")` in `init()`), now holding `#activeProfileInitial` and the
+    What's new dot `#settingsTabDot` (id kept, so `renderWhatsNewDot()` needed no
+    change). Settings view title "Profiles" → "Settings", plus a "Profiles" section
+    heading above the create-profile form.
+  - `app.js`: `renderActiveProfileChip()` shows the first character of the profile name
+    (via `Array.from`, so emoji/accents survive) or "?", and sets an aria-label.
+    `switchView()` toggles `.avatar-btn--active` + `aria-current` on the avatar when on
+    Settings.
+  - `styles.css`: `.profile-chip` rules replaced by `.avatar-btn` (purple, chunky edge,
+    lavender outline when active). New tokens `--purple-edge`, `--avatar-text`. The dot
+    uses `.avatar-btn .avatar-btn__dot` to beat the later `.tab__dot` position rule. Tabs
+    get `padding: 8px 14px` now there are four.
+  - Guide (step 1 + Settings section) and What's new updated. Cache `v52`.
 
 - **2026-09-28** — **Owl Quest Q1b — Today screen (merged to `dev`):**
   - `index.html`: the `.hero` card now has three parts — `.hero__top` (mascot +
