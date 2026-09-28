@@ -39,6 +39,11 @@
   --hero-from: rgba(246, 211, 101, 0.55);
   --hero-to: rgba(239, 124, 124, 0.4);
 
+  /* Owl Quest Q2: the level bar on the Today card — a see-through white track
+     (so the sunrise shows through) with a purple fill. */
+  --xp-track: rgba(255, 255, 255, 0.65);
+  --xp-fill: #6d55c4;
+
   /* "Ink" buttons: dark on light pages, light on dark ones. Used for the big
      Start workout button, which sits on the colourful Today card where a coral
      button would blend in. */
@@ -79,6 +84,9 @@
 
   --hero-from: #3d3170; /* night sky... */
   --hero-to: #5e3b78; /* ...turning plum */
+
+  --xp-track: rgba(18, 15, 36, 0.5); /* a dark groove in the night sky */
+  --xp-fill: #c9b8ff; /* light lilac, easy to see on the dark card */
 
   --ink: #f1eefb;
   --ink-text: #231d42;
@@ -1189,6 +1197,49 @@ body {
   font-weight: 700;
   color: var(--text);
   opacity: 0.72; /* charcoal at lower opacity keeps good contrast on the gradient */
+}
+
+/* ---- Owl Quest Q2: the level bar ("Lv 4 · Owlet   340 / 800 XP") ----
+   A label row on top, then a pill-shaped track that fills up with purple. */
+.level-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.level-bar__labels {
+  display: flex;
+  flex-wrap: wrap; /* on a very narrow phone the XP drops onto its own line */
+  justify-content: space-between;
+  align-items: baseline;
+  column-gap: 10px;
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+.level-bar__name {
+  font-size: 17px;
+}
+.level-bar__xp {
+  font-size: 14px;
+  white-space: nowrap; /* keep "340 / 800 XP" on one line */
+  opacity: 0.8;
+}
+.level-bar__track {
+  height: 12px;
+  border-radius: var(--radius-pill);
+  background: var(--xp-track);
+  overflow: hidden; /* keeps the fill inside the rounded ends */
+}
+.level-bar__fill {
+  height: 100%;
+  width: 0; /* xp.js sets the real width, e.g. "42%" */
+  border-radius: var(--radius-pill);
+  background: var(--xp-fill);
+  transition: width 0.6s ease; /* slides along when you earn XP */
+}
+@media (prefers-reduced-motion: reduce) {
+  .level-bar__fill {
+    transition: none;
+  }
 }
 
 /* Today's plan: "3 exercises · 9 sets" in bold, then the exercise emoji. */

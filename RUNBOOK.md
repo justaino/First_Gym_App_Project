@@ -24,6 +24,7 @@ devices (see §5d — the cloud is the source of truth, localStorage is the cach
 | `supabase.js` / `auth.js` | The cloud connection and the login gate (Phase 7). |
 | `friends.js` | The Friends tab: requests, buddies, nudges, close friends (Phase 12). |
 | `guide.js` | The in-app guide. All its wording is in two lists at the top (Phase 13). |
+| `xp.js` | XP and levels, worked out from saved workouts. The rules are at the top (Owl Quest Q2). |
 | `whats-new.js` / `whats-new.html` | The release notes and the page that shows them (Phase 16). |
 | `sw.js` | Service worker — caches the app shell. Bump `CACHE_VERSION` on every app change. |
 
@@ -643,6 +644,40 @@ Dates are plain `YYYY-MM-DD` text, so a straight string comparison sorts them.
 > The page is in the service worker's `APP_SHELL`, so it works offline like the
 > rest of the app. If you add another page, add it there too.
 
+## 5n. XP and levels (Owl Quest Q2)
+
+A level bar on the Today card: "Lv 4 · Owlet   340 / 800 XP". Everything is in
+`xp.js`.
+
+**XP is calculated, never stored.** Each time Today draws, `computeTotalXp()` adds up
+the active profile's **finished** workouts from `gym:sessions`. Nothing new goes into
+localStorage or Supabase, so past workouts count straight away and every device agrees.
+The flip side: editing or deleting an old workout changes your XP (a level can go down).
+
+| Earns | XP | Rule |
+|---|---|---|
+| A ticked set | 10 | `entrySetsDone()`, so unticked sets never count |
+| A finished workout | 50 | `isCompletedSession()`; an in-progress workout earns nothing yet |
+| A personal record | 25 | Workouts oldest first; beating the best weight so far for that exercise. The first time doing an exercise isn't a record (same rule as the PR confetti) |
+
+**Levels:** going from level L to L+1 costs L × 200 XP, so reaching level L needs
+100 × L × (L − 1) XP in total. 30 levels; the max (Athena's Owl) is **87,000 XP**, about
+500 workouts. Names change in bands (`LEVEL_NAMES`): Egg, Hatchling (2), Owlet (4),
+Fledgling (7), Night Owl (10), Barn Owl (13), Snowy Owl (16), Great Horned Owl (19),
+Eagle Owl (22), Wise Owl (25), Elder Owl (28), Athena's Owl (30). At the max the bar is
+full and says "🏆 Max · 91,250 XP".
+
+### ✏️ Changing the numbers or names
+Edit the constants at the top of `xp.js` (`XP_PER_SET`, `XP_PER_WORKOUT`,
+`XP_PER_RECORD`, `XP_LEVEL_STEP`, `MAX_LEVEL`, `LEVEL_NAMES`) and nothing else. Because
+XP is recalculated each time, a change applies to everyone's whole history at once.
+Bump `CACHE_VERSION` and update the guide line in the Today section.
+
+### Checking the maths (console)
+- `computeTotalXp()` → `{ total, sets, workouts, records, fromSets, fromWorkouts, fromRecords }`
+- `levelForXp(5000)` → `{ level, name, xpIntoLevel, xpForLevel, isMax }`
+- `xpNeededForLevel(10)` → `9000`
+
 ---
 
 ## 6. Backup & restore (import / export)
@@ -714,6 +749,21 @@ Newest first. Add a line here whenever behaviour changes.
 
 > Entries below marked "on `dev`, awaiting owner test" were written at build time.
 > Everything up to 2026-07-28 has since been tested and released to `main`.
+
+- **2026-09-28** — **Owl Quest Q2a — XP and levels (on `dev`, awaiting owner test):**
+  - New file `xp.js` (added to `index.html` after `app.js`, and to `APP_SHELL`). Rules at
+    the top: 10 XP per ticked set, 50 per finished workout, 25 per personal record; 30
+    levels where level L → L+1 costs L × 200 XP (max 87,000). `computeTotalXp()`,
+    `countPersonalRecords()`, `xpNeededForLevel()`, `levelName()`, `levelForXp()`,
+    `renderLevelBar()`. Nothing is stored and there are no database changes (see §5n).
+  - `index.html`: `#levelBar` (labels + a `role="progressbar"` track) inside the Today
+    card, between the greeting and today's plan. `renderToday()` calls
+    `renderLevelBar()`, which hides the bar when there's no profile.
+  - `styles.css`: `.level-bar*` rules; new tokens `--xp-track` / `--xp-fill` (see-through
+    white + purple in light mode, dark groove + lilac in dark mode). The fill slides
+    (off with reduced motion). Labels wrap on very narrow phones.
+  - Guide (Today section), What's new ("Level up your owl"), `CLAUDE.md` file table
+    updated. Removed the stale untracked `AGENTS.md`. Cache `v54`.
 
 - **2026-09-28** — **Full exercise names on cards (merged to `dev`):** on a phone the
   text "Edit" / "Delete" buttons squeezed names down to "Bench…". In

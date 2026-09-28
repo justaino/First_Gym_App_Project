@@ -675,10 +675,17 @@ dark mode; Claude may merge each step's pull request into `dev` itself.
 
 **Phase Q1 is complete.** Next up is Q2 (XP and levels) — owner to confirm.
 
-### Phase Q2 — XP and levels ☐
-XP computed from saved workouts (starting rules to agree with the owner, e.g. 10 XP per
-done set, 50 XP per finished workout, a bonus for a personal record). Levels with names
-("Night Owl"…). A level bar on Today. No database changes.
+### Phase Q2 — XP and levels (split into two steps)
+**Owner's decisions (2026-09-28):** 10 XP per ticked set, 50 per finished workout, 25
+per personal record. **30 levels**, each costing more than the last (level L → L+1 costs
+L × 200 XP), so the max takes years (87,000 XP ≈ 500 workouts). Owl names change every
+few levels, from Egg to Athena's Owl. Code goes in a new `xp.js`.
+
+- ✅ **Q2a — Level bar** *(on `dev` 2026-09-28, cache `v54`, awaiting owner test)*: a
+  level + XP bar in the Today card, worked out from saved workouts (nothing stored, no
+  database changes). Rules and names in RUNBOOK §5n.
+- ☐ **Q2b — XP after a workout**: a "+170 XP" message when you finish, and confetti
+  with a "Level up!" card when a workout takes you up a level.
 
 ### Phase Q3 — The week path ☐
 The stepping-stone path on Today: done days, today (highlighted), and planned days.

@@ -36,6 +36,7 @@ JavaScript frameworks). Build accordingly: explain things simply and comment the
 | `app.js` | Main behaviour: storage, sync, rendering, workouts, progress, settings |
 | `auth.js` / `supabase.js` | Login gate / Supabase connection |
 | `friends.js` | Friends tab: requests, buddies, nudges, close friends, usernames |
+| `xp.js` | XP and levels (computed from saved workouts, never stored) |
 | `exercise-library.js` | Data only: built-in exercise suggestions |
 | `guide.js` | In-app guide (wording in lists at the top) |
 | `whats-new.js` / `whats-new.html` | Release notes for friends, and the page that shows them |

@@ -58,6 +58,7 @@ const GUIDE_SECTIONS = [
     summary: "Start a workout, see your week",
     items: [
       "The card at the top shows today's plan: how many exercises and sets, with their icons. On a rest day it just says so.",
+      "The bar in that card is your owl level. Every ticked set earns 10 XP, every finished workout 50 XP, and every personal record 25 XP. There are 30 levels, from Egg all the way to Athena's Owl, and each one takes a bit longer than the last.",
       "▶ Start workout (in that card) opens training mode. If you close it half way, the button says Resume, and nothing is lost.",
       "Today's exercises are listed underneath the card.",
       "Recent workouts lists your last few sessions. Edit one to fix a mistake, including its date.",

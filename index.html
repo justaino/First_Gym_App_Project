@@ -227,6 +227,27 @@
             </div>
           </div>
 
+          <!-- Owl Quest Q2: your level and XP bar, e.g. "Lv 4 · Owlet   340 / 800 XP".
+               xp.js (renderLevelBar) works it out from your saved workouts and
+               fills it in. Hidden until there's a profile. -->
+          <div class="level-bar" id="levelBar" hidden>
+            <div class="level-bar__labels">
+              <span class="level-bar__name" id="levelBarName"></span>
+              <span class="level-bar__xp" id="levelBarXp"></span>
+            </div>
+            <div
+              class="level-bar__track"
+              id="levelBarTrack"
+              role="progressbar"
+              aria-label="Level progress"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow="0"
+            >
+              <div class="level-bar__fill" id="levelBarFill"></div>
+            </div>
+          </div>
+
           <!-- Today's plan, e.g. "3 exercises · 9 sets" with the exercise emoji
                underneath, or a rest-day message. Hidden until there's a profile. -->
           <div class="hero__plan" id="heroPlan" hidden>
@@ -889,6 +910,9 @@
 
     <!-- Our app logic -->
     <script src="app.js"></script>
+
+    <!-- XP and levels (Owl Quest Q2). Uses app.js's helpers, so it comes after it. -->
+    <script src="xp.js"></script>
 
     <!-- The Friends tab (Phase 12). Loaded after app.js because it uses its
          helpers (showToast, formatDate, showSessionDetail...). -->

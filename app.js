@@ -644,6 +644,10 @@ function renderToday() {
   // and you haven't dismissed it yet — otherwise it clears the space.
   renderTodayRecap();
 
+  // Owl Quest Q2: the level + XP bar in the Today card (see xp.js). It hides
+  // itself when there's no profile.
+  renderLevelBar();
+
   if (!activeProfile) {
     plan.hidden = true;
     startBtn.hidden = true;

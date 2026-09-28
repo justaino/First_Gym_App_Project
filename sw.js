@@ -16,7 +16,7 @@
 */
 
 // 🔼 Bump this whenever you change app files and want everyone to get the update.
-const CACHE_VERSION = "v53";
+const CACHE_VERSION = "v54";
 const CACHE_NAME = "athenas-arena-cache-" + CACHE_VERSION;
 
 // The core files that make up the app ("the app shell"). Relative paths so this
@@ -26,6 +26,7 @@ const APP_SHELL = [
   "./index.html",
   "./styles.css",
   "./app.js",
+  "./xp.js", // XP and levels (Owl Quest Q2)
   "./exercise-library.js", // the built-in exercise suggestions list (Phase 8)
   "./friends.js", // the Friends tab (Phase 12)
   "./guide.js", // the in-app guide (Phase 13)
