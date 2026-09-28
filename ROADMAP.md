@@ -25,6 +25,11 @@ pill buttons, friendly emoji icons, floating bottom tab bar).
 - Runs by opening `index.html` with the **Live Server** VS Code extension.
 - This is a learning project — code should be well-commented and built in small steps.
 
+> **Update (Phase 7, June 2026):** the "localStorage only" rule was deliberately relaxed.
+> Data now lives in **Supabase** (accounts + cloud sync) with localStorage as an offline
+> cache, and the Supabase library is the one approved external script (kept in
+> `vendor/`). Everything else above still holds. `CLAUDE.md` has the current rules.
+
 > These rules are also in `CLAUDE.md` so Claude Code follows them automatically.
 
 ---
@@ -59,6 +64,10 @@ Session  = { id, profileId, date, entries: [{ exerciseId, setsDone, weight }] } 
 
 localStorage keys (suggested): `gym:profiles`, `gym:activeProfileId`,
 `gym:exercises`, `gym:sessions`.
+
+> These were the starting shapes. They have since grown (per-set reps and weights,
+> `sortOrder`, per-exercise workout notes) and are mirrored in Supabase tables. The
+> current shapes are in `CLAUDE.md` → "Data model", and every key is listed in RUNBOOK §3.
 
 ---
 
@@ -142,8 +151,9 @@ AI-generated plans, Apple Health / wearable data, social feeds, and video demos.
 need a server and a different skill set — note them, but don't let them block the phases
 above.
 
-> **Cross-device sync and real hosting** were originally listed here, but are now planned
-> as Phase 5 and Phase 6 in **section 8** below.
+> **Cross-device sync and real hosting** were originally listed here. They were built as
+> Phase 5 (hosting) and Phase 7 (accounts + sync) in **section 8**, and a light social
+> layer followed as Phases 12–15 in **section 9**.
 
 ---
 
@@ -176,10 +186,10 @@ above.
 > **Recommended order:** Phase 5 (done) → **Phase 6 Insights** (high value, low risk, no
 > new infrastructure) → **Phase 7 sync** when you actually want cross-device data.
 
-### Phase 5 — Real hosting + installable app (PWA) ☐
+### Phase 5 — Real hosting + installable app (PWA) ✅ *(live 2026-06-25)*
 **Goal:** the app lives at a public URL and can be installed on a phone's home screen.
-Data is still **localStorage**, so it stays per-device (no sync yet) and privacy is
-unchanged — this phase is purely "make it a real, installable app."
+Data was still **localStorage** at this point (per-device, no sync) — this phase was
+purely "make it a real, installable app." Sync came later in Phase 7.
 - ✅ Hosting on a static host — **GitHub Pages** (repo is public), live at
       `https://justaino.github.io/First_Gym_App_Project/` (replaced the old Netlify site)
 - ✅ Add a web app **manifest** (app name "Justaino", theme colour, `display: standalone`)
@@ -187,33 +197,34 @@ unchanged — this phase is purely "make it a real, installable app."
 - ✅ Add a **service worker** (`sw.js`) that caches the app shell so it works offline
 - ✅ Add an in-app **"Install app" button** (real prompt on Android/desktop; how-to
       steps on iOS, which has no install API)
-- ☐ Test **"Add to Home Screen"** + offline on a real phone
+- ☐ Test **"Add to Home Screen"** + offline on a real phone *(never ticked off — tick it
+      if you've done this)*
 
 **Done when:** I can open the public URL on my phone, install it to the home screen, and
 use it offline — each device still keeps its own separate data.
 
-### Phase 6 — Insights (stays within the original constraints) ☐
+### Phase 6 — Insights (stays within the original constraints) ✅ *(built 2026-06-25)*
 **Goal:** turn the saved workout data into motivating insights, shown on the Progress
 tab. Pure client-side — plain JS computed over `gym:sessions`/`gym:exercises`, no backend,
 data stays per-device. Build **one insight/card at a time**. The specific insights are the
-owner's to choose; candidates below (✅ = picked for the first build).
+owner's to choose; candidates below (✅ = built, ☐ = still just an idea).
 
 *Consistency / "showing up":*
-- ☐ Current streak (consecutive weeks or days trained) + longest-ever streak
-- ☐ Days shown up (this week / this month / all-time)
-- ☐ Calendar heatmap of recent training days
+- ✅ Current streak (consecutive weeks trained) · ☐ longest-ever streak
+- ✅ Days shown up (days this month)
+- ✅ Calendar heatmap of recent training days (last 12 weeks)
 - ☐ Favourite training day ("you train most on Wednesdays")
 
 *Strength & progress:*
-- ☐ Personal-records board (heaviest weight per exercise + the date) — reuses the PR
+- ✅ Personal-records board (heaviest weight per exercise + the date) — reuses the PR
       logic already written for the easter egg
-- ☐ Total volume (sets × reps × weight) trended over time
-- ☐ Trend callouts (e.g. "Squat +10kg since you started")
+- ✅ Total volume (sets × reps × weight): this month vs last month
+- ✅ Trend callouts (e.g. "Squat +10kg since you started")
 - ☐ Estimated 1-rep-max per lift (optional / more advanced)
 
 *Totals & goals:*
-- ☐ Lifetime totals (workouts / sets / reps / total weight moved)
-- ☐ Weekly goal (e.g. 3 workouts) with a progress ring
+- ✅ Lifetime totals (workouts / sets / reps / total weight moved)
+- ✅ Weekly goal (e.g. 3 workouts) with a progress ring
 
 **Suggested first build (Phase 6a):** a single "Insights" card on Progress with **current
 streak + days shown up + lifetime totals + PR board** — all from data/logic we already have.
@@ -303,7 +314,7 @@ clearing the browser or switching phones.
          cloud rows + local cache then logs out (does NOT delete the auth login itself — that
          needs admin access, so it's a "email the owner" step); and a `Documentation/Privacy.md`.
          Cache bumped to `v22`.
-      2. ✅ **Tester docs** (built, awaiting owner review): `Documentation/WhatsNew_Accounts_2026-06-26.md`
+      2. ✅ **Tester docs** (built, awaiting owner review): `Documentation/WhatsNew_Accounts_2026-06-26.md` *(since deleted — replaced by the in-app What's new page)*
          covers signing up, cross-device sync, the first-login migration, offline behaviour,
          and the privacy/delete controls (+ a note that password reset isn't built yet).
       3. ✅ **Release (2026-06-26):** owner tested everything, then we bumped `CACHE_VERSION`
@@ -325,7 +336,7 @@ logging back in, everything is restored.
 > **Decisions made:**
 > - A visual redesign was considered (5 mockup variants) and **parked for now** — no
 >   styling changes in these phases. New UI must simply match the current design system
->   (section 3).
+>   (section 3). *(Revisited 2026-09-28: the owner chose **Owl Quest** — see §11.)*
 > - Friend requests are **in-app only** (no real emails sent — that would need an Edge
 >   Function + a third-party email service; maybe later).
 > - Phases 8, 9, and 11 are pure client-side. Phases 10 and 12 touch Supabase (small SQL
@@ -410,7 +421,7 @@ Progress + Insights; confirm the setting survives a refresh and stays per-device
 workout mode follows the new order. **Test:** reorder on phone by touch; go offline →
 friendly message, order unchanged.
 
-### Phase 11 — Weekly recap ✅ *(built 2026-07-24 — on `dev`, cache `v32`, awaiting owner test)*
+### Phase 11 — Weekly recap ✅ *(shipped to `main` 2026-07-25)*
 **Goal:** a motivating "your week" summary. Pure client-side.
 - ✅ A "Last week" recap card on the **Progress** tab, placed under the existing "This
   week" card: workouts done vs weekly goal, total sets, total volume (reps × weight, in
@@ -432,7 +443,7 @@ friendly message, order unchanged.
 appears once per week and stays dismissed. **Test:** fake the week key to simulate a new
 week; empty-history case.
 
-### Phase 12 — Friends + nudges ☐
+### Phase 12 — Friends + nudges ✅ *(shipped to `main` 2026-07-25)*
 **Goal:** add friends, see if they trained today, peek at their workouts, and nudge them.
 In-app only — no emails. Data refreshes on app open / tab visit (no push notifications;
 that's out of scope for a PWA on iOS).
@@ -489,7 +500,7 @@ that's out of scope for a PWA on iOS).
 - ✅ **12d — Settings + polish (built 2026-07-25 — cache `v35`, awaiting owner test):**
   "Share my workouts with friends" toggle (writes `share_workouts`); friends data uses the
   existing offline handling (reads say "reconnect to see friends"; writes use the friendly
-  offline block); empty states; a short `Documentation/WhatsNew_Friends_2026-07-25.md` for
+  offline block); empty states; a short `Documentation/WhatsNew_Friends_2026-07-25.md` *(since deleted)* for
   testers. "Delete my data" now also removes the user's directory row, friendships, nudges
   and close-friend rows.
 - ✅ **12e — Collapsible buddies + loading states (added 2026-07-25 at the owner's
@@ -513,7 +524,7 @@ must fail soft when offline.
 
 ## 10. Guide & usernames — Phases 13–14 (planned 2026-07-25)
 
-### Phase 13 — In-app guide ✅ *(built 2026-07-25 — `guide.js`, cache `v36`, awaiting owner test)*
+### Phase 13 — In-app guide ✅ *(shipped to `main` 2026-07-25)*
 **Goal:** a tester opening the app cold can work out what everything does. Replaces
 `Documentation/USER-GUIDE.md` (decided — one copy, or they drift).
 
@@ -539,7 +550,7 @@ must fail soft when offline.
 **Done when:** a friend who has never seen the app can get from nothing to a finished
 workout using only the guide. **Test:** read it on a phone; check both themes.
 
-### Phase 14 — Usernames ✅ *(14a, 14c, 14d done 2026-07-25 — cache `v42`, awaiting owner test; 14b withdrawn)*
+### Phase 14 — Usernames ✅ *(14a, 14c, 14d shipped to `main` 2026-07-25; 14b withdrawn)*
 **Goal:** send a friend request by `@username` instead of an email address.
 
 - ✅ **14a — SQL (owner ran 2026-07-25):** add `username` to
@@ -579,7 +590,7 @@ felt wrong on it.
 someone could probe for which accounts exist. They still can't see anything without an
 accepted request. Rate-limiting the lookup is the fix if it ever matters.
 
-### Phase 15 — Mutual close friends ✅ *(built 2026-07-25 — cache `v43`, awaiting owner test)*
+### Phase 15 — Mutual close friends ✅ *(shipped to `main` 2026-07-25)*
 **Goal:** asked for by the owner after testing Phase 14 — close friendship should be
 something you agree to, not something one person decides alone.
 
@@ -599,7 +610,7 @@ opens your own side immediately (for a brand-new friend, both open on acceptance
 can't share with someone who hasn't accepted you). Existing one-way grants were left
 untouched by the migration.
 
-### Phase 16 — What's new page ✅ *(built 2026-07-25 — cache `v45`, awaiting owner test)*
+### Phase 16 — What's new page ✅ *(shipped to `main` 2026-07-25)*
 **Goal:** somewhere the owner's friends can see what's changed, without digging through
 `Documentation/`. Asked for after Phase 15.
 
@@ -619,3 +630,68 @@ untouched by the migration.
 
 **Done when:** a friend can open it from the app and understand what changed, and adding
 the next release is one object at the top of one file.
+
+---
+
+## 11. Owl Quest redesign — Phases Q1–Q6 (planned 2026-09-28)
+
+> **Decision (2026-09-28):** after reviewing five design directions, the owner picked
+> **Owl Quest**: the owl becomes a coach, the week is a path of stepping stones, sets
+> earn XP, and friends share quests. Mock-ups: "Five directions for Athena's Arena"
+> artifact (option 2).
+>
+> **Key idea:** XP, levels and badges are **worked out from workouts already saved**, not
+> stored separately. That means no database changes for Q1–Q5, and everyone's past
+> workouts count from day one.
+>
+> **Standing rules:** same as section 9 — work reaches `dev` through a pull request, one
+> phase at a time, the owner tests on `dev` before anything is released to `main`, bump
+> `CACHE_VERSION`, update the What's new page, the guide and the RUNBOOK change log.
+
+### Phase Q1 — New look ☐
+Lavender-to-white background, the rounder **Baloo 2** font, chunky buttons with a solid
+"pressable" shadow. Today puts **Start workout** first and shrinks the weekly recap to one
+tappable line. Four tabs (Today, Plan, Progress, Friends) with Settings behind an avatar
+in the top corner. Update the design system in `CLAUDE.md` and section 3 here.
+No new logic, no database changes.
+
+### Phase Q2 — XP and levels ☐
+XP computed from saved workouts (starting rules to agree with the owner, e.g. 10 XP per
+done set, 50 XP per finished workout, a bonus for a personal record). Levels with names
+("Night Owl"…). A level bar on Today. No database changes.
+
+### Phase Q3 — The week path ☐
+The stepping-stone path on Today: done days, today (highlighted), and planned days.
+
+### Phase Q4 — Workout screen ☐
+One exercise at a time, tap a star per set, a rest timer that floats on screen, and the
+owl giving the "last time" hint as a speech bubble. Everything that saves today keeps
+saving the same way.
+
+### Phase Q5 — Badges ("feathers") ☐
+A badge wall computed from history (first workout, streaks, weight clubs, records…) and a
+"next feather" goal. The existing charts stay available lower down. Decide whether the
+Progress tab is renamed "Badges".
+
+### Phase Q6 — Team quests with friends ☐
+Shared goals with a friend (e.g. "both train 3 times this week"). Probably needs a small
+SQL change, so it goes last and follows the SQL-first rule.
+
+---
+
+## 12. Also shipped outside a phase
+
+- **2026-07-28 — Per-exercise workout notes** (a friend's suggestion): a private note on
+  each exercise in workout mode, shown next time as a hint. Friends never see notes.
+- **2026-07-28 — Back button on the What's new page** for the installed app.
+
+## 13. Known issues & ideas backlog
+
+- **Backup import doesn't reach the cloud.** Import only writes to this device's cache,
+  so the next login sync can overwrite imported profiles and exercises. Fix before
+  relying on backups to restore data.
+- **Offline plan edits are blocked**, not queued (Phase 7g). A write queue would let
+  people edit their plan with no signal.
+- **Password reset** was deferred in Phase 7h and hasn't been built.
+- Phase 6 leftovers: longest-ever streak, favourite training day, estimated 1-rep max.
+- `app.js` is over 5,000 lines; splitting it into a few files would make changes safer.

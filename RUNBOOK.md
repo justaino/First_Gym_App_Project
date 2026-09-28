@@ -45,9 +45,23 @@ minute or two. (This replaced an earlier Netlify site.)
 
 To stop: click "Port: 5500" in the VS Code status bar, or close the tab.
 
-> Note: the hosted site and your local site are **different origins**, so each
-> keeps its own separate localStorage data. Use the backup export/import to move
-> data between them.
+> ⚠️ **Local testing uses the real database.** The hosted site and your local site
+> are different origins, so each keeps its own localStorage *cache* — but both talk
+> to the **same Supabase project**. Log in locally and you see (and change) your
+> real data. There is no separate test database, so use a spare account for
+> anything destructive.
+
+**Branches:** `main` = the live site (GitHub Pages only redeploys when `main`
+changes). `dev` = testing. Claude Code cloud sessions work on a `claude/…` branch
+and open a **pull request into `dev`**. To test the latest `dev` locally:
+
+```bash
+git fetch origin
+git checkout dev
+git pull
+```
+
+Then open `index.html` with Live Server as above.
 
 ---
 
@@ -63,14 +77,20 @@ All keys start with `gym:`.
 | `gym:sessions` | Saved + in-progress workouts (the history). |
 | `gym:theme` | `"light"` or `"dark"`. |
 | `gym:unit` | `"kg"` or `"lb"` — the weight label shown throughout the app (display only; per device, not synced). |
-
-> Exercise **order within a day** (Phase 10) is NOT a separate key — it lives on
-> each exercise as `sortOrder` (in `gym:exercises`) and as `sort_order` in the
-> Supabase `exercises` table. See §5h.
+| `gym:weeklyGoal` | Each profile's weekly workout goal, `{ profileId: n }` (per device, not synced). See §5c. |
+| `gym:syncedUserId` | Which logged-in account the local cache belongs to, so one person's data is never uploaded into another's account. See §5d. |
 | `gym:celebratedMilestones` | Easter-egg bookkeeping: which workout-count milestones each profile has already celebrated, so the trophy only plays once. |
 | `gym:whatsNewSeen` | Phase 16: the date of the newest release note you've opened. Older than the newest entry = the "update" dot shows. |
 | `gym:buddiesOpen` | Phase 12e: whether the Today "Gym buddies" card is folded open. |
 | `gym:recapSeen:<profileId>:<monday>` | Phase 11: you've dismissed the "week in review" card on Today for that profile that week. One key per profile per week; old ones are tidied away automatically (per device, not synced). |
+
+> Exercise **order within a day** (Phase 10) is NOT a separate key — it lives on
+> each exercise as `sortOrder` (in `gym:exercises`) and as `sort_order` in the
+> Supabase `exercises` table. See §5h.
+>
+> `gym:profiles`, `gym:exercises` and `gym:sessions` are a **cache** of your cloud
+> data (§5d). Editing them in DevTools only changes this device, and the next login
+> sync can overwrite them.
 
 ---
 
@@ -102,7 +122,9 @@ localStorage.getItem("gym:celebratedMilestones")
 // Reset just the milestone tracker (handy for testing the trophy)
 localStorage.removeItem("gym:celebratedMilestones")
 
-// ⚠️ Wipe EVERYTHING the app has saved (all profiles/workouts) — careful!
+// Wipe this device's cache and settings. Your cloud data is NOT touched —
+// log in again and it syncs back down. (To delete cloud data, use
+// Settings → Privacy & data → Delete my data.)
 localStorage.clear()
 ```
 
@@ -150,7 +172,8 @@ The **Insights** card at the top of Progress is computed live from
 **goal ring**, **week streak**, **days this month**, **lifetime totals**, a
 **personal-records board**, a **12-week heatmap** (tap a square for a bubble with
 that day's info), a **volume this-month-vs-last** line, and **"since you started"**
-per-exercise weight trends (up/down). All per-device, like the rest of the data.
+per-exercise weight trends (up/down). Everything is worked out on the device from
+your synced workouts, so it matches on every phone (except the weekly goal below).
 
 - **Weekly goal:** stored per profile under `gym:weeklyGoal` (`{ profileId: n }`),
   default 3; edited in **Settings → Weekly goal**.
@@ -545,15 +568,13 @@ as a display name. The display name is the friendly one your buddies see
 - **Rules:** lower case, 3–20 characters, letters, numbers and underscores. The
   database enforces the format and uniqueness (`user_directory.username`).
 - **Where it comes from:**
-  - Typed on the **sign-up form** (optional). The app can only check the *shape*
-    there, not whether it's free — `is_username_available()` deliberately
-    refuses callers who aren't logged in, and at sign-up you aren't yet. So the
-    choice is parked in `gym:desiredUsername` and claimed a moment later when
-    your directory row is created. If someone beat you to it you get a
-    generated handle and an alert telling you to change it in Settings.
-  - **Generated** if you skip the box, or if your account predates usernames —
-    `ensureMyDirectoryRow()` fills in any row that has none, so the SQL backfill
-    never has to be repeated.
+  - **Generated** at first login (e.g. `mintyowl42`) — `ensureMyDirectoryRow()`
+    fills in any row that has none, so the SQL backfill never has to be repeated.
+    (A username box on the sign-up form was tried in 14b and withdrawn: the
+    database can't check availability for someone who isn't logged in yet.)
+  - **Changed** in **Settings → Friends → Username**, with a live "is it free?"
+    check (14c).
+  - **Used** in the add-friend box: `@name`, `name` or an email all work (14d).
 - **Reserved handles** (`admin`, `athena`, `support`, `justaino`, …) live in
   **two places on purpose**: `RESERVED_USERNAMES` in `friends.js` (what the app
   refuses) and the list inside `is_username_available()` (what the database
@@ -571,9 +592,6 @@ as a display name. The display name is the friendly one your buddies see
   lookups) and `SQL-Phase14-ReservedHandles.sql` (the owner's handles, plus the
   fix that lets you re-save your own reserved name).
 
-> ⚠️ **Still to come:** 14c makes the handle editable in Settings, and 14d lets
-> you add a friend by handle as well as by email. Until then a generated handle
-> can only be changed in the SQL editor.
 
 ---
 
@@ -635,6 +653,13 @@ Found in **Settings → Backup**.
   **replace** matching ones (by id) and new ones are **added**; profiles not in
   the file are left untouched.
 
+> ⚠️ **Known issue — import doesn't reach the cloud.** Import only writes to this
+> device's localStorage cache; it doesn't upload to Supabase. Because profiles and
+> exercises are **cloud-wins** on login (§5d), the next login sync can replace
+> what you imported. Imported workouts may survive (sessions merge) but aren't
+> guaranteed. Don't rely on import to restore lost data until this is fixed
+> (listed in ROADMAP.md §13).
+
 **Key point:** deleting things (an exercise, a workout) removes them permanently
 from storage. They can only come back by **importing a backup you exported
 before the deletion**. So export a backup before any big cleanup.
@@ -684,6 +709,26 @@ its first weighted workout won't fire a PR (there's nothing to beat yet).
 ## 9. Change log
 
 Newest first. Add a line here whenever behaviour changes.
+
+> Entries below marked "on `dev`, awaiting owner test" were written at build time.
+> Everything up to 2026-07-28 has since been tested and released to `main`.
+
+- **2026-09-28** — **Documentation refresh (on a `claude/…` branch → pull request into
+  `dev`):** brought the docs in line with the app as it is now. `CLAUDE.md` rewritten for
+  Supabase (it still said "localStorage only, no backend"), the current file list, the
+  `claude/…` → `dev` → `main` pull-request workflow, the current data shapes, and a
+  reminder that local testing hits the real database. `README.md` rewritten (it still
+  described Phase 1). `ROADMAP.md`: phases 5, 6 and 11–16 marked as shipped, Phase 6's
+  built insights ticked, and new sections for the **Owl Quest** redesign plan (§11),
+  unplanned additions (§12) and a known-issues backlog (§13). `ROADMAP-v2.md` marked
+  complete, Netlify note corrected. This runbook: local-testing warning + branch steps
+  (§2), missing `gym:weeklyGoal`/`gym:syncedUserId` keys and the broken key table fixed
+  (§3), `localStorage.clear()` note (§5), usernames section updated for 14c/14d (§5l),
+  known import-doesn't-sync issue (§6). `Documentation/Privacy.md` + `Privacy.pdf`
+  updated for friends (what buddies and close friends can see). Deleted the old What's
+  New / user-guide markdown and PDFs from `Documentation/` (replaced by the in-app pages
+  in Phases 13 and 16; still in git history). Stale code comments fixed in `index.html`,
+  `auth.js` and `app.js` (comments only, no behaviour change). The Settings → Privacy & data card no longer says "Only you can see your data" (not true since close friends) and its delete text now mentions friends details. What's new entry added for the privacy wording. Cache `v49`.
 
 - **2026-07-28** — **Back button on the What's new page (SHIPPED 2026-07-28):** the page
   is opened with `target="_blank"`, which is fine in a browser but traps you when the app

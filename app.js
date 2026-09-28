@@ -2,11 +2,13 @@
   app.js — all the behaviour for Athena's Arena.
 
   What this file does, in plain English:
-  - Saves and loads data from the browser's localStorage (so it survives refresh).
-  - Manages PROFILES: create one, list them, choose which is active.
-  - Manages EXERCISES for the active profile: add, edit, delete.
+  - Saves and loads data: Supabase (the cloud) is the real copy, and the
+    browser's localStorage is a cache so the app still opens offline.
+  - Manages PROFILES, EXERCISES and WORKOUTS (sessions): add, edit, delete.
+  - Runs workout mode, the rest timer, progress/insights and backups.
   - Draws ("renders") the screens whenever the data changes.
-  - Switches between the four tabs (Today / Schedule / Progress / Settings).
+  - Switches between the tabs (Today / Schedule / Progress / Friends / Settings).
+    The Friends tab's own code lives in friends.js.
 
   The code is organised top-to-bottom in sections. Read it in order and it should
   make sense. Functions have descriptive names so you can follow what each does.
@@ -5304,7 +5306,7 @@ function init() {
   // The app always opens on the Today tab (set as the active view in index.html).
   renderAll();
 
-  console.log("Athena's Arena loaded. Phase 4 ready ✅");
+  console.log("Athena's Arena loaded ✅");
 }
 
 // Wait until the page's HTML is ready, then start the app.
