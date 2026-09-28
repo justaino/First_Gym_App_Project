@@ -715,6 +715,17 @@ Newest first. Add a line here whenever behaviour changes.
 > Entries below marked "on `dev`, awaiting owner test" were written at build time.
 > Everything up to 2026-07-28 has since been tested and released to `main`.
 
+- **2026-09-28** — **Full exercise names on cards (merged to `dev`):** on a phone the
+  text "Edit" / "Delete" buttons squeezed names down to "Bench…". In
+  `createExerciseCard()` (`app.js`) they're now `.icon-action` round buttons showing ✏️ /
+  🗑️, each with an `aria-label` ("Edit Bench Press") and a `title` tooltip; the click
+  handlers and the delete confirm are unchanged. `styles.css`: `.exercise__name` now
+  wraps up to 3 lines (`-webkit-line-clamp: 3`, `overflow-wrap: anywhere`) instead of
+  one-line ellipsis — this also applies everywhere else that class is used (PR board,
+  recap, history detail, friends' workouts). The card is a little tighter (padding 14,
+  gap 10, emoji circle 46px, buttons 38px). Guide (Schedule) + What's new updated.
+  Cache `v53`.
+
 - **2026-09-28** — **Owl Quest Q1c — four tabs, Settings behind the avatar (merged to
   `dev`):**
   - `index.html`: the Settings `.tab` is gone. The top bar's name chip became

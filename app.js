@@ -338,20 +338,27 @@ function createExerciseCard(exercise, draggable) {
   info.appendChild(name);
   info.appendChild(detail);
 
-  // Edit + Delete buttons.
+  // Edit + Delete buttons. They're small round icon buttons (✏️ / 🗑️) rather
+  // than the words "Edit" and "Delete", which took so much room that names got
+  // cut to "Bench…". The aria-label says the full action for screen readers,
+  // and the title shows it as a tooltip on a computer.
   const actions = document.createElement("div");
   actions.className = "exercise__actions";
 
   const editBtn = document.createElement("button");
-  editBtn.className = "btn btn--ghost btn--small";
+  editBtn.className = "icon-action";
   editBtn.type = "button";
-  editBtn.textContent = "Edit";
+  editBtn.textContent = "✏️";
+  editBtn.setAttribute("aria-label", "Edit " + exercise.name);
+  editBtn.title = "Edit";
   editBtn.addEventListener("click", () => openExerciseModalForEdit(exercise.id));
 
   const deleteBtn = document.createElement("button");
-  deleteBtn.className = "btn btn--ghost btn--small";
+  deleteBtn.className = "icon-action";
   deleteBtn.type = "button";
-  deleteBtn.textContent = "Delete";
+  deleteBtn.textContent = "🗑️";
+  deleteBtn.setAttribute("aria-label", "Delete " + exercise.name);
+  deleteBtn.title = "Delete";
   deleteBtn.addEventListener("click", () => deleteExercise(exercise.id));
 
   actions.appendChild(editBtn);

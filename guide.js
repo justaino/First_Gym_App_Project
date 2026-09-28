@@ -74,7 +74,7 @@ const GUIDE_SECTIONS = [
       "Typing a name suggests common exercises. Tap one to fill in the rest, or ignore them and type your own.",
       "You can set different reps and a different weight for each set, if you want to work up in weight.",
       "Drag the ⠿ handle on the left of a card to reorder exercises within a day. Workout mode follows the same order.",
-      "Edit or Delete on any card. Deleting an exercise also removes it from your saved workouts.",
+      "✏️ edits an exercise and 🗑️ deletes it (it asks first). Deleting an exercise also removes it from your saved workouts.",
     ],
   },
   {

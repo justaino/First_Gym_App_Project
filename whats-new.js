@@ -41,6 +41,7 @@ const RELEASES = [
       "Today puts first things first: a card with today's plan and a big Start workout button, right at the top.",
       "Last week's recap is now one tidy line. Tap it when you want the full story.",
       "Settings has moved: tap the round avatar with your initial in the top corner. That leaves four roomier tabs at the bottom.",
+      "Exercise names no longer get cut short on your plan. Edit and Delete are now small ✏️ and 🗑️ buttons, so the name gets the room.",
       "Fixed: on a rest day the Start workout button no longer shows up with nothing to start.",
       "The privacy note (Settings → Privacy & data) now explains exactly what friends can see: friends see that you trained, close friends can open your workouts, and nobody ever sees your notes or your email.",
     ],
