@@ -713,6 +713,27 @@ Newest first. Add a line here whenever behaviour changes.
 > Entries below marked "on `dev`, awaiting owner test" were written at build time.
 > Everything up to 2026-07-28 has since been tested and released to `main`.
 
+- **2026-09-28** — **Owl Quest Q1a — colours, font and buttons (merged to `dev`):** the
+  first step of the redesign (ROADMAP §11). All in `styles.css` except where noted:
+  - **Colour tokens** at the top of the file replaced: lavender sky `--bg-top` fading
+    into `--bg` (painted once at the top of `body` as a `no-repeat` gradient), deep indigo
+    `--text`, new `--purple` accent, and new `--edge` / `--coral-edge` / `--mint-edge` /
+    `--danger-edge` for the chunky look. Dark mode is now a night-purple palette.
+  - **Fonts:** new `--font-body` (Nunito) and `--font-display` (Baloo 2). Baloo 2 is
+    applied to a list of heading/number selectors in the new "OWL QUEST THEME" section at
+    the bottom of the file, plus `.btn`. The Google Fonts link in `index.html` and
+    `whats-new.html` now loads both.
+  - **Chunky:** `--shadow-card` is now a solid `0 4px 0 var(--edge)` edge, so every card
+    that used it changed at once. Filled buttons have a darker edge and slide down onto
+    it when pressed (`translateY(3px)` instead of the old `scale(0.97)`).
+  - **Active tab** is lavender-tinted with `--purple` text (was coral).
+  - **Status bar colour:** `theme-color` meta + `manifest.webmanifest` now lavender;
+    `applyTheme()` in `app.js` swaps it to night purple in dark mode
+    (`THEME_BAR_COLOURS`).
+  - Known leftover: the Today greeting card keeps its butter→coral gradient, which looks
+    muddy in dark mode. It's redesigned in Q1b.
+  Cache `v50`.
+
 - **2026-09-28** — **Documentation refresh (on a `claude/…` branch → pull request into
   `dev`):** brought the docs in line with the app as it is now. `CLAUDE.md` rewritten for
   Supabase (it still said "localStorage only, no backend"), the current file list, the
