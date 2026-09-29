@@ -26,6 +26,7 @@ devices (see §5d — the cloud is the source of truth, localStorage is the cach
 | `guide.js` | The in-app guide. All its wording is in two lists at the top (Phase 13). |
 | `xp.js` | XP and levels, worked out from saved workouts. The rules are at the top (Owl Quest Q2). |
 | `week-path.js` | The "This week" stepping-stone path on Today (Owl Quest Q3). |
+| `workout-screen.js` | The live workout screen, one exercise at a time (Owl Quest Q4). |
 | `whats-new.js` / `whats-new.html` | The release notes and the page that shows them (Phase 16). |
 | `sw.js` | Service worker — caches the app shell. Bump `CACHE_VERSION` on every app change. |
 
@@ -726,6 +727,36 @@ Colours are `--stone-*`, `--path-line` and `--on-accent` tokens (light + dark).
 **Testing:** add an exercise to another day in Schedule → a new stone appears. To see a
 missed stone, plan something for a day earlier this week that you didn't train.
 
+## 5p. The live workout screen (Owl Quest Q4)
+
+The workout sheet (`#workoutOverlay`) has **two looks**, set by `setWorkoutMode()` in
+`app.js`:
+- **live** — `startWorkout()` (Today button, Today stone, Schedule's Start). Adds the
+  `sheet--live` class, which hides `#workoutList`, `#workoutSaveNote` and
+  `#workoutDateRow` and shows `#workoutFocus`, drawn by `renderWorkoutFocus()` in
+  `workout-screen.js`.
+- **edit** — `editSession()` (Recent workouts → edit). The original long list
+  (`renderWorkoutItems()`), unchanged.
+
+`redrawWorkout()` redraws whichever look is showing; `toggleWorkoutSet()`,
+`addWorkoutSet()`, `removeWorkoutSet()` and the unit change all call it.
+
+**The live screen, top to bottom** (each piece is one `build…()` function):
+heading ("Exercise 1 of 3") → emoji jump row (✓ on finished exercises) → progress bar
+(sets done of the whole workout) → owl bubble (`owlMessageFor()`: "Nice work! Next up…"
+when the exercise is done, otherwise `buildLastTimeHint()` + "Can you match it?", or
+"First time on this one" — plus `buildLastNoteHint()`) → the next unticked set in big
+boxes → a star per set (`tapStar()` toggles `done`, saves, redraws and pops "+10 XP") →
+"Edit sets" fold (the old `buildWorkoutSetRow()` rows + Add set) → note button
+(`buildWorkoutNote()`) → ‹ Previous / Next › (coral once the exercise is done; "Finish ✓"
+calls `finishWorkout()` on the last) + "Up next" → "Workout details" fold with a date box
+that copies into `#workoutDateInput` and calls `handleWorkoutDateChange()`.
+
+**Memory only:** `focusExerciseIndex` (which exercise is showing) and `focusEditSetsOpen`.
+Starting or resuming opens on `firstUnfinishedExerciseIndex()`. Nothing about the data or
+saving changed: every change still goes through `activeSession` +
+`persistActiveSession()`, and the rest timer / Discard / Finish below are the same.
+
 ---
 
 ## 6. Backup & restore (import / export)
@@ -798,8 +829,23 @@ Newest first. Add a line here whenever behaviour changes.
 > Entries below marked "on `dev`, awaiting owner test" were written at build time.
 > Everything up to 2026-07-28 has since been tested and released to `main`.
 
-- **2026-09-29** — **Fix: workouts left open are closed quietly (on `dev`, awaiting owner
-  test):** the owner tapped the Today stone and got an old Tuesday workout showing two
+- **2026-09-29** — **Owl Quest Q4a — one exercise at a time (on `dev`, awaiting owner
+  test):**
+  - New file `workout-screen.js` (in `index.html` after `week-path.js`, and in
+    `APP_SHELL`): the live screen (see §5p).
+  - `app.js`: `workoutMode`, `setWorkoutMode()`, `redrawWorkout()`. `startWorkout()`
+    now fills the date first, switches to live and opens on the first unfinished
+    exercise; `editSession()` switches to edit. `toggleWorkoutSet()`, `addWorkoutSet()`,
+    `removeWorkoutSet()` and `handleUnitChange()` call `redrawWorkout()` instead of
+    `renderWorkoutItems()`.
+  - `index.html`: ids `workoutSaveNote` and `workoutDateRow`, and the new
+    `#workoutFocus` container.
+  - `styles.css`: the `.sheet--live` show/hide rules and `.focus-*`, `.owl-coach*`
+    styles; new tokens `--star-done-bg`, `--star-done-edge`.
+  - Guide (step 3 + Workout mode section), What's new ("One exercise at a time"),
+    ROADMAP (Q4 split into Q4a/Q4b), `CLAUDE.md` file table. Cache `v58`.
+
+- **2026-09-29** — **Fix: workouts left open are closed quietly (committed to `dev`):** the owner tapped the Today stone and got an old Tuesday workout showing two
   "(deleted exercise)" rows. Cause: `findInProgressSession(day)` matched by day **name**
   only, so a workout left open in an earlier week was resumed; its exercises had since
   been deleted (the entry clean-up in `deleteExercise()` only runs on the device that

@@ -702,10 +702,20 @@ RUNBOOK §5o.
 
 **Phase Q3 is complete.** Next up is Q4 (workout screen).
 
-### Phase Q4 — Workout screen ☐
-One exercise at a time, tap a star per set, a rest timer that floats on screen, and the
-owl giving the "last time" hint as a speech bubble. Everything that saves today keeps
-saving the same way.
+### Phase Q4 — Workout screen (split into two steps)
+**Owner's decisions (2026-09-29):** the rest timer does **not** start by itself when you
+tick a set; no automatic jump to the next exercise (Next › lights up instead); editing a
+saved workout keeps the old full-list editor; stars ⭐ for sets.
+
+- ✅ **Q4a — One exercise at a time** *(on `dev` 2026-09-29, cache `v58`, awaiting owner
+  test)*: new `workout-screen.js`. Live workouts show one exercise: a row of exercise
+  emoji to jump between, a progress bar for the whole workout, the owl's speech bubble
+  (last time + last note), the next set's reps/weight in big boxes, a star per set
+  ("+10 XP" pops on a tick), "Edit sets" (the old table, folded), the note button,
+  ‹ Previous / Next › (Finish ✓ on the last one) and a "Workout details" fold with the
+  date. Same data, same saving. Details in RUNBOOK §5p.
+- ☐ **Q4b — Floating rest timer**: the timer becomes a pill that floats at the bottom of
+  the screen ("⏱ 1:24 · +15s · Skip"), started by hand (60 / 90 / 120s).
 
 ### Phase Q5 — Badges ("feathers") ☐
 A badge wall computed from history (first workout, streaks, weight clubs, records…) and a

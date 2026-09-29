@@ -38,6 +38,7 @@ JavaScript frameworks). Build accordingly: explain things simply and comment the
 | `friends.js` | Friends tab: requests, buddies, nudges, close friends, usernames |
 | `xp.js` | XP and levels (computed from saved workouts, never stored) |
 | `week-path.js` | The "This week" stepping-stone path on Today (computed, never stored) |
+| `workout-screen.js` | The live workout screen: one exercise at a time, stars, the owl coach |
 | `exercise-library.js` | Data only: built-in exercise suggestions |
 | `guide.js` | In-app guide (wording in lists at the top) |
 | `whats-new.js` / `whats-new.html` | Release notes for friends, and the page that shows them |

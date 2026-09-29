@@ -782,17 +782,24 @@
         </header>
 
         <!-- Saved-as-you-go note -->
-        <p class="sheet__note">Progress saves automatically as you go.</p>
+        <p class="sheet__note" id="workoutSaveNote">Progress saves automatically as you go.</p>
 
         <!-- Workout date. Changing it also updates the day label (e.g. moving a
              workout to a Friday makes it a "Friday workout"). -->
-        <label class="workout-date">
+        <label class="workout-date" id="workoutDateRow">
           <span class="workout-date__label">Date</span>
           <input class="input" type="date" id="workoutDateInput" />
         </label>
 
-        <!-- app.js fills this with the day's exercises and their per-set rows -->
+        <!-- EDIT look (fixing a saved workout): app.js fills this with every
+             exercise and its per-set rows. Hidden in the live look. -->
         <div id="workoutList"></div>
+
+        <!-- LIVE look (Owl Quest Q4, training right now): workout-screen.js
+             draws one exercise at a time here, with stars and the owl. The
+             date box and "saves automatically" line above are hidden in this
+             look; the same things sit in a "Workout details" fold instead. -->
+        <div id="workoutFocus"></div>
 
         <!-- Rest timer -->
         <div class="card timer">
@@ -930,6 +937,9 @@
 
     <!-- The week path on Today (Owl Quest Q3). Also uses app.js's helpers. -->
     <script src="week-path.js"></script>
+
+    <!-- The live workout screen (Owl Quest Q4). Also uses app.js's helpers. -->
+    <script src="workout-screen.js"></script>
 
     <!-- The Friends tab (Phase 12). Loaded after app.js because it uses its
          helpers (showToast, formatDate, showSessionDetail...). -->

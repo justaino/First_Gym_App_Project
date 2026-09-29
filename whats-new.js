@@ -31,6 +31,20 @@
 const RELEASES = [
   {
     date: "2026-09-29",
+    title: "One exercise at a time",
+    intro:
+      "Training mode has been rebuilt so it's easier to use with one hand " +
+      "and a sweaty thumb.",
+    items: [
+      "When you start a workout you now see one exercise at a time, with the next set's reps and weight in big boxes.",
+      "Tap a ⭐ when a set is done and watch the +10 XP float up. Tap it again if you tapped by mistake.",
+      "The owl is your coach now: it tells you what you lifted last time and reminds you of the note you left yourself.",
+      "Next › lights up when an exercise is done, and the row of emoji at the top lets you jump to any exercise if a machine is busy.",
+      "Need to add a set or fix a number? Edit sets has the full table. Editing an old workout still shows everything on one page.",
+    ],
+  },
+  {
+    date: "2026-09-29",
     title: "Your week as a path",
     intro:
       "See your whole week at a glance, right under today's plan.",

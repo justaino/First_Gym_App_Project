@@ -1598,7 +1598,7 @@ function handleUnitChange(event) {
   renderAll();
   // If a workout is open behind Settings, refresh its labels too.
   if (activeSession) {
-    renderWorkoutItems();
+    redrawWorkout();
   }
 }
 
@@ -3679,6 +3679,32 @@ function setupExerciseSuggestions() {
 // localStorage), or null when the workout sheet is closed.
 let activeSession = null;
 
+// Owl Quest Q4: the workout sheet has two looks.
+//   "live" — training right now: one exercise at a time, with stars and the
+//            owl (drawn by workout-screen.js).
+//   "edit" — fixing a saved workout from history: every exercise in one long
+//            list (renderWorkoutItems below), which is easier for corrections.
+let workoutMode = "edit";
+
+// Switch the sheet between its two looks. The "sheet--live" class hides the
+// long-list parts in live mode (see styles.css).
+function setWorkoutMode(mode) {
+  workoutMode = mode;
+  document
+    .getElementById("workoutOverlay")
+    .classList.toggle("sheet--live", mode === "live");
+}
+
+// Redraw whichever look is showing. Everything that changes a set (tick, add,
+// remove) calls this, so both looks stay up to date.
+function redrawWorkout() {
+  if (workoutMode === "live") {
+    renderWorkoutFocus();
+  } else {
+    renderWorkoutItems();
+  }
+}
+
 // --- Session helpers (also used by history & progress) ---
 
 // Is this a finished session? Old sessions (no status) count as completed.
@@ -4057,8 +4083,13 @@ function startWorkout(day) {
 
   document.getElementById("workoutTitle").textContent = day + " workout";
   resetTimerDisplay();
-  renderWorkoutItems();
-  populateWorkoutDate();
+  // Live training: open on the first exercise that still has sets to do (so
+  // resuming picks up where you left off). See workout-screen.js.
+  populateWorkoutDate(); // before drawing: the live screen copies the date
+  setWorkoutMode("live");
+  focusExerciseIndex = firstUnfinishedExerciseIndex(session);
+  focusEditSetsOpen = false;
+  redrawWorkout();
   document.getElementById("workoutOverlay").hidden = false;
 }
 
@@ -4295,7 +4326,7 @@ function toggleWorkoutSet(entryIndex, setIndex) {
   const set = activeSession.entries[entryIndex].sets[setIndex];
   set.done = !set.done;
   persistActiveSession();
-  renderWorkoutItems();
+  redrawWorkout();
 }
 
 // Add a set for today, seeded from the last set's values (and save).
@@ -4308,7 +4339,7 @@ function addWorkoutSet(entryIndex) {
     done: false,
   });
   persistActiveSession();
-  renderWorkoutItems();
+  redrawWorkout();
 }
 
 // Remove a set for today (keep at least one), then save.
@@ -4322,7 +4353,7 @@ function removeWorkoutSet(entryIndex, setIndex) {
   }
   sets.splice(setIndex, 1);
   persistActiveSession();
-  renderWorkoutItems();
+  redrawWorkout();
 }
 
 // Finish: mark the in-progress session completed, then close.
@@ -4466,7 +4497,8 @@ function editSession(sessionId) {
   document.getElementById("workoutTitle").textContent =
     (session.day || "Workout") + " workout";
   resetTimerDisplay();
-  renderWorkoutItems();
+  setWorkoutMode("edit"); // fixing a saved workout: the full list
+  redrawWorkout();
   populateWorkoutDate();
   document.getElementById("workoutOverlay").hidden = false;
 }

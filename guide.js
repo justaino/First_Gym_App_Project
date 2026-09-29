@@ -43,9 +43,10 @@ const GUIDE_STEPS = [
   {
     title: "Train",
     text:
-      "Today → ▶ Start workout. Tick each set as you finish it and type in " +
-      "the weight you used. Tap Finish at the end and it's saved to your " +
-      "history. That's the whole loop.",
+      "Today → ▶ Start workout. You see one exercise at a time: tap a ⭐ " +
+      "as you finish each set and type in the weight you used, then Next ›. " +
+      "Tap Finish at the end and it's saved to your history. That's the " +
+      "whole loop.",
   },
 ];
 
@@ -84,11 +85,14 @@ const GUIDE_SECTIONS = [
     title: "Workout mode",
     summary: "What happens while you train",
     items: [
-      "Tick a set only when you've actually done it. Everything else in the app counts ticked sets and ignores the rest.",
-      "Under each exercise you'll see what you lifted last time, so you know what to beat.",
+      "You see one exercise at a time. The big boxes are the next set's reps and weight: change them if you did something different, then tap a ⭐ when the set is done. Tap a gold star again to undo it.",
+      "Tap a star only when you've actually done the set. Everything else in the app counts ticked sets and ignores the rest.",
+      "The owl tells you what you lifted last time, so you know what to beat, and shows the last note you left for that exercise.",
+      "‹ Previous and Next › move between exercises, and the row of emoji at the top jumps straight to one (handy if a machine is busy). Finished ones get a ✓.",
+      "Edit sets opens the full table for the exercise on screen, to add or remove a set or fix a number. Workout details has the date.",
+      "Editing an old workout from Recent workouts still shows everything on one page, which is easier for fixing mistakes.",
       "The rest timer has 60s / 90s / 120s buttons and beeps when it's up. It keeps counting correctly even if you lock your phone or switch apps.",
       "📝 Add note under an exercise is somewhere to leave yourself a message, like \"next week try 2.5kg more\". It saves as you type and stays with that day's workout.",
-      "The last note you left for an exercise shows under it while you train, so the message reaches you when it's useful.",
       "Notes are yours alone. Even close friends who can see your workouts never see them.",
       "Progress saves as you go. Close is safe; Discard throws the session away.",
       "Beat your heaviest weight on an exercise and you'll get confetti and a 🏅 card when you finish.",

@@ -59,6 +59,10 @@
   --path-line: #c9bdec; /* the dotted line between stones */
   --on-accent: #ffffff; /* text on coral / mint (the same in both modes) */
 
+  /* Owl Quest Q4: the live workout screen's stars. */
+  --star-done-bg: #fff6d6; /* a ticked set: warm butter tile */
+  --star-done-edge: #e8cc6a;
+
   /* "Ink" buttons: dark on light pages, light on dark ones. Used for the big
      Start workout button, which sits on the colourful Today card where a coral
      button would blend in. */
@@ -115,6 +119,9 @@
   --stone-missed-text: #7f76a8;
   --stone-glow: rgba(239, 124, 124, 0.35);
   --path-line: #6a5ca8;
+
+  --star-done-bg: #4a3f1c; /* a warm glow on the night sky */
+  --star-done-edge: #b8912b;
 
   --ink: #f1eefb;
   --ink-text: #231d42;
@@ -2616,4 +2623,282 @@ body {
 /* The round dark-mode toggle gets the chunky edge too. */
 .icon-btn {
   box-shadow: 0 3px 0 var(--edge);
+}
+
+
+/* =========================================================================
+   OWL QUEST Q4 — the live workout screen (drawn by workout-screen.js)
+   The sheet has two looks. "sheet--live" (training now) shows #workoutFocus
+   and hides the long list; without it (editing a saved workout) it's the
+   other way round.
+   ========================================================================= */
+.sheet--live #workoutList,
+.sheet--live #workoutSaveNote,
+.sheet--live #workoutDateRow {
+  display: none;
+}
+.sheet:not(.sheet--live) #workoutFocus {
+  display: none;
+}
+#workoutFocus {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+/* "🏋️ Bench Press / Exercise 1 of 3" */
+.focus-heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.focus-heading__icon {
+  width: 58px;
+  height: 58px;
+  font-size: 30px;
+}
+.focus-heading__name {
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.15;
+  overflow-wrap: anywhere; /* long names wrap instead of overflowing */
+}
+.focus-heading__count {
+  font-weight: 700;
+  color: var(--muted);
+}
+
+/* The row of exercise emoji to jump between. */
+.focus-jump {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.focus-jump__btn {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 50%;
+  font-size: 20px;
+  cursor: pointer;
+  background: var(--card);
+  box-shadow: 0 3px 0 var(--edge);
+}
+.focus-jump__btn--current {
+  outline: 3px solid var(--purple);
+  outline-offset: 2px;
+}
+/* A small mint ✓ on finished exercises. */
+.focus-jump__btn--done::after {
+  content: "✓";
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  font-weight: 800;
+  background: var(--mint);
+  color: var(--on-accent);
+}
+
+/* Progress through the whole workout: a mint bar and "4 of 9 sets". */
+.focus-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.focus-progress__track {
+  flex: 1;
+  height: 12px;
+  border-radius: var(--radius-pill);
+  background: var(--border);
+  overflow: hidden;
+}
+.focus-progress__fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--mint);
+  transition: width 0.4s ease;
+}
+.focus-progress__label {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* The owl coach: a big owl with a speech bubble pointing at it. */
+.owl-coach {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+.owl-coach__owl {
+  font-size: 48px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.owl-coach__bubble {
+  flex: 1;
+  background: var(--card);
+  border-radius: 18px 18px 18px 4px; /* the flat corner "points" at the owl */
+  padding: 10px 14px;
+  box-shadow: var(--shadow-card);
+  font-weight: 700;
+  line-height: 1.35;
+}
+.owl-coach__note {
+  margin-top: 6px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* The next set, big: "Set 2 of 3" and two large number boxes. */
+.focus-set {
+  text-align: center;
+}
+.focus-set__title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 800;
+}
+.focus-set__boxes {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 8px;
+}
+.focus-set__box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.focus-set__input {
+  width: 110px;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 800;
+  padding: 6px 8px;
+}
+.focus-set__unit {
+  font-weight: 700;
+  color: var(--muted);
+}
+.focus-set__hint {
+  margin-top: 8px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* One star tile per set. Grey until ticked, then gold on a butter tile. */
+.focus-stars {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+.focus-star {
+  position: relative; /* for the "+10 XP" pop */
+  width: 60px;
+  height: 60px;
+  border: none;
+  border-radius: 18px;
+  font-size: 28px;
+  cursor: pointer;
+  background: var(--card);
+  box-shadow: 0 4px 0 var(--edge);
+  filter: grayscale(1);
+  opacity: 0.55;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+.focus-star:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--edge);
+}
+.focus-star--next {
+  opacity: 0.8;
+  outline: 3px solid var(--lavender);
+  outline-offset: 2px;
+}
+.focus-star--done {
+  filter: none;
+  opacity: 1;
+  background: var(--star-done-bg);
+  box-shadow: 0 4px 0 var(--star-done-edge);
+}
+.focus-star--done:active {
+  box-shadow: 0 1px 0 var(--star-done-edge);
+}
+/* "+10 XP" that floats up off a star you just ticked (same animation as the
+   level bar's bubble, see .level-bar__gain). */
+.focus-star__xp {
+  position: absolute;
+  left: 50%;
+  top: -26px;
+  margin-left: -32px;
+  width: 64px;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--purple);
+  pointer-events: none;
+  animation: xp-gain-float 1.4s ease-out forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .focus-star__xp {
+    animation-name: xp-gain-fade;
+  }
+}
+
+/* "Edit sets" and "Workout details": folded sections. */
+.focus-edit {
+  background: var(--card);
+  border-radius: 18px;
+  padding: 10px 14px;
+  box-shadow: 0 3px 0 var(--edge);
+}
+.focus-edit__summary {
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--muted);
+}
+.focus-edit[open] .focus-edit__summary {
+  margin-bottom: 10px;
+}
+.focus-details .workout-date {
+  margin-bottom: 6px;
+}
+
+/* ‹ Previous / Next › — two equal buttons side by side. */
+.focus-nav {
+  display: flex;
+  gap: 12px;
+}
+.focus-nav .btn {
+  flex: 1;
+}
+/* The ghost buttons here get a card background so they look tappable. */
+.focus-nav .btn--ghost {
+  background: var(--card);
+  box-shadow: 0 4px 0 var(--edge);
+  color: var(--text);
+}
+.focus-nav .btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.focus-upnext {
+  margin-top: 10px;
+  text-align: center;
+  font-weight: 700;
+  color: var(--muted);
 }
