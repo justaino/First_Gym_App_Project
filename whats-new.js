@@ -31,6 +31,18 @@
 const RELEASES = [
   {
     date: "2026-09-29",
+    title: "Calmer, clearer stats",
+    intro: "The numbers under your feathers have had a tidy-up.",
+    items: [
+      "This month shows your workouts and sets so far, compared with the same point last month, plus your week streak and your best ever.",
+      "Week by week shows your last 12 weeks against your weekly goal. Tap a column to see that week.",
+      "Records puts each exercise's best weight next to how far you've come since your first session.",
+      "Exercise progress: pick an exercise and see your best set every session as a line. Tap it to open that workout.",
+      "Gone: the reps and kg moved totals, the grid of squares and the bar charts. Last week's recap still shows on Today.",
+    ],
+  },
+  {
+    date: "2026-09-29",
     title: "Collect feathers",
     intro:
       "The Progress tab is now called Badges, and it has something new to " +

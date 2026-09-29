@@ -319,15 +319,10 @@
 
         <!-- badges.js fills this with the "Your feathers" card (Owl Quest Q5a) -->
         <div id="feathers"></div>
-        <!-- app.js fills this with the "Insights" card (streak, totals, PRs) -->
-        <div id="insights"></div>
-
-        <!-- app.js fills this with the "This week" summary card -->
-        <div id="weekSummary"></div>
-
-        <!-- Per-exercise progress (heading hidden until there's history) -->
-        <h2 class="section-heading" id="byExerciseHeading" hidden>By exercise</h2>
-        <div id="exerciseProgressList"></div>
+        <!-- stats.js fills this: This month, Week by week, Records and Exercise
+             progress (they replaced the Insights card, This week / Last week
+             and the per-exercise bar charts, after Owl Quest Q5). -->
+        <div id="stats"></div>
       </section>
 
       <!-- ===================== FRIENDS VIEW (Phase 12) ===================== -->
@@ -493,11 +488,11 @@
           </label>
         </div>
 
-        <!-- Weekly goal (Insights): drives the goal ring on the Progress tab. -->
+        <!-- Weekly goal: drives the goal line on Badges → Week by week (stats.js). -->
         <h2 class="section-heading">Weekly goal</h2>
         <div class="card">
           <label class="form__label" for="weeklyGoalInput">
-            Workouts per week (shown as a ring on Badges)
+            Workouts per week (the goal line on Badges → Week by week)
           </label>
           <input
             class="input"
@@ -991,6 +986,9 @@
 
     <!-- Feathers (badges) on the Badges tab (Owl Quest Q5). Uses app.js + xp.js. -->
     <script src="badges.js"></script>
+
+    <!-- The stats under the feathers on Badges. Uses app.js + badges.js. -->
+    <script src="stats.js"></script>
 
     <!-- The Friends tab (Phase 12). Loaded after app.js because it uses its
          helpers (showToast, formatDate, showSessionDetail...). -->

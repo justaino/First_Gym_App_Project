@@ -136,9 +136,13 @@ function computeFeatherStats(profileId) {
 }
 
 // The longest run of weeks in a row with at least one workout. `weekKeys` are
-// the Mondays of the weeks you trained ("2026-09-28"), in any order.
+// the Mondays of the weeks you trained ("2026-09-28"), in any order. Repeats
+// are fine (e.g. one key per workout): they're removed first, because two
+// workouts in the same week must not count as a gap.
 function longestWeekStreak(weekKeys) {
-  const mondays = weekKeys.map((key) => new Date(key).getTime()).sort((a, b) => a - b);
+  const mondays = Array.from(new Set(weekKeys))
+    .map((key) => new Date(key).getTime())
+    .sort((a, b) => a - b);
   const oneWeek = 7 * 24 * 60 * 60 * 1000;
   let longest = 0;
   let run = 0;

@@ -5,7 +5,8 @@
   - Saves and loads data: Supabase (the cloud) is the real copy, and the
     browser's localStorage is a cache so the app still opens offline.
   - Manages PROFILES, EXERCISES and WORKOUTS (sessions): add, edit, delete.
-  - Runs workout mode, the rest timer, progress/insights and backups.
+  - Runs workout mode, the rest timer, the Badges tab (see also badges.js and
+    stats.js) and backups.
   - Draws ("renders") the screens whenever the data changes.
   - Switches between the tabs (Today / Schedule / Progress / Friends / Settings).
     The Friends tab's own code lives in friends.js.
@@ -929,142 +930,8 @@ function formatDate(isoString) {
   });
 }
 
-/* ---- Progress view (Phase 3) ---- */
-
-// Work out midnight on Monday of the current week (start of "this week").
-function getStartOfWeek() {
-  const now = new Date();
-  const jsDay = now.getDay(); // 0 = Sunday ... 6 = Saturday
-  // How many days back to Monday? (Sunday counts as 6 days after Monday.)
-  const daysSinceMonday = jsDay === 0 ? 6 : jsDay - 1;
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - daysSinceMonday);
-  monday.setHours(0, 0, 0, 0);
-  return monday;
-}
-
-// Build a small, interactive bar chart (as an SVG element) from "points".
-// Each point is { date, reps, weight, session }. When any session has a weight,
-// each session shows TWO bars: reps (mint) and weight (lavender). The two
-// colours are scaled to their OWN maximums, so each shows its trend over time.
-// Bars show a tooltip on hover and open that workout's details when clicked.
-function buildBarChartSvg(points) {
-  const width = 240;
-  const height = 60;
-  const groupGap = 6; // gap between sessions
-  const innerGap = 3; // gap between the two bars within a session
-  const namespace = "http://www.w3.org/2000/svg";
-
-  const svg = document.createElementNS(namespace, "svg");
-  svg.setAttribute("viewBox", "0 0 " + width + " " + height);
-  svg.setAttribute("class", "barchart");
-  svg.setAttribute("preserveAspectRatio", "none");
-
-  // Show the weight series only if at least one session recorded a weight.
-  const hasWeight = points.some(
-    (point) => point.weight !== null && point.weight !== undefined
-  );
-
-  // Each colour is normalised to its own max (avoid divide-by-zero with 1).
-  const maxReps = Math.max.apply(null, points.map((p) => p.reps).concat([1]));
-  const maxWeight = Math.max.apply(
-    null,
-    points.map((p) => p.weight || 0).concat([1])
-  );
-
-  const groupWidth =
-    (width - groupGap * (points.length - 1)) / points.length;
-  const barWidth = hasWeight ? (groupWidth - innerGap) / 2 : groupWidth;
-
-  points.forEach((point, index) => {
-    const groupX = index * (groupWidth + groupGap);
-
-    // One tooltip per session, shared by both of its bars.
-    let label = formatDate(point.date) + " · " + point.reps + " reps";
-    if (point.weight !== null && point.weight !== undefined) {
-      label += " · " + formatWeight(point.weight);
-    }
-
-    // Helper to add a single bar.
-    const addBar = (x, value, maxValue, modifierClass) => {
-      const barHeight = Math.max(2, (value / maxValue) * height);
-      const rect = document.createElementNS(namespace, "rect");
-      rect.setAttribute("x", x);
-      rect.setAttribute("y", height - barHeight);
-      rect.setAttribute("width", barWidth);
-      rect.setAttribute("height", barHeight);
-      rect.setAttribute("rx", 3);
-      rect.setAttribute("class", "barchart__bar " + modifierClass);
-
-      const title = document.createElementNS(namespace, "title");
-      title.textContent = label;
-      rect.appendChild(title);
-
-      rect.addEventListener("mouseenter", (event) =>
-        showChartTooltip(label, event.clientX, event.clientY)
-      );
-      rect.addEventListener("mousemove", (event) =>
-        showChartTooltip(label, event.clientX, event.clientY)
-      );
-      rect.addEventListener("mouseleave", hideChartTooltip);
-      rect.addEventListener("click", () => {
-        hideChartTooltip();
-        showSessionDetail(point.session);
-      });
-
-      svg.appendChild(rect);
-    };
-
-    // Reps bar (always). Weight bar second (only when we have weights).
-    addBar(groupX, point.reps, maxReps, "barchart__bar--reps");
-    if (hasWeight) {
-      const weightValue =
-        point.weight !== null && point.weight !== undefined ? point.weight : 0;
-      addBar(
-        groupX + barWidth + innerGap,
-        weightValue,
-        maxWeight,
-        "barchart__bar--weight"
-      );
-    }
-  });
-
-  return svg;
-}
-
-/* ---- Custom chart tooltip (a single floating chip we reuse) ---- */
-
-let chartTooltipEl = null;
-
-// Get (or create once) the tooltip element that floats over the page.
-function getChartTooltip() {
-  if (!chartTooltipEl) {
-    chartTooltipEl = document.createElement("div");
-    chartTooltipEl.className = "chart-tooltip";
-    chartTooltipEl.hidden = true;
-    document.body.appendChild(chartTooltipEl);
-  }
-  return chartTooltipEl;
-}
-
-// Show the tooltip with some text, positioned near the pointer.
-function showChartTooltip(text, x, y) {
-  const tooltip = getChartTooltip();
-  tooltip.textContent = text;
-  tooltip.style.left = x + "px";
-  tooltip.style.top = y + "px";
-  // Default: no tail (the heatmap re-adds it). Keeps chart hovers as plain chips.
-  tooltip.classList.remove("chart-tooltip--bubble");
-  tooltip.hidden = false;
-}
-
-function hideChartTooltip() {
-  if (chartTooltipEl) {
-    chartTooltipEl.hidden = true;
-  }
-}
-
-/* ---- Workout detail pop-up (opened by clicking a chart bar) ---- */
+/* ---- Workout detail pop-up (opened from Recent workouts, the week path, the
+   Exercise progress chart on Badges, and a friend's workouts) ---- */
 
 // Show every exercise from one saved session in a pop-up.
 // `exercisesOverride` (Phase 12) lets the Friends tab pass a FRIEND's exercise
@@ -1155,25 +1022,6 @@ function closeSessionModal() {
   document.getElementById("sessionModal").hidden = true;
 }
 
-// Build one "this week" summary card with two stat tiles.
-function buildWeekSummaryCard(workouts, sets) {
-  const card = document.createElement("div");
-  card.className = "card";
-
-  const title = document.createElement("div");
-  title.className = "history-card__title";
-  title.textContent = "This week";
-  card.appendChild(title);
-
-  const stats = document.createElement("div");
-  stats.className = "stats";
-  stats.appendChild(buildStatTile(workouts, "workouts"));
-  stats.appendChild(buildStatTile(sets, "sets"));
-  card.appendChild(stats);
-
-  return card;
-}
-
 // A single tinted stat tile (big number + label).
 function buildStatTile(number, label) {
   const tile = document.createElement("div");
@@ -1192,90 +1040,10 @@ function buildStatTile(number, label) {
   return tile;
 }
 
-// Build a per-exercise progress card (totals + a small chart).
-function buildExerciseProgressCard(exercise, points, totalSets, lastWeight) {
-  const card = document.createElement("div");
-  card.className = "card";
-
-  // Top row: emoji + name (reuse the styles from the plan cards).
-  const top = document.createElement("div");
-  top.className = "workout-exercise__top";
-
-  const icon = document.createElement("div");
-  icon.className = "exercise__icon";
-  icon.textContent = exercise.icon;
-
-  const info = document.createElement("div");
-  info.className = "exercise__info";
-
-  const name = document.createElement("div");
-  name.className = "exercise__name";
-  name.textContent = exercise.name;
-
-  // Meta line: how many times trained, total sets, and last weight if any.
-  let metaText = points.length + " sessions · " + totalSets + " sets total";
-  if (lastWeight !== null) {
-    metaText += " · last " + lastWeight;
-  }
-  const meta = document.createElement("div");
-  meta.className = "progress-card__meta";
-  meta.textContent = metaText;
-
-  info.appendChild(name);
-  info.appendChild(meta);
-  top.appendChild(icon);
-  top.appendChild(info);
-
-  card.appendChild(top);
-  // Show a chart of the most recent sessions (up to 12 bars).
-  const recentPoints = points.slice(-12);
-  card.appendChild(buildBarChartSvg(recentPoints));
-
-  // If any of those sessions had a weight, show a legend for the two colours.
-  const hasWeight = recentPoints.some(
-    (point) => point.weight !== null && point.weight !== undefined
-  );
-  if (hasWeight) {
-    card.appendChild(buildChartLegend());
-  }
-
-  // A small hint so people know the bars are interactive.
-  const hint = document.createElement("div");
-  hint.className = "chart-hint";
-  hint.textContent = "Tap a bar to see that workout";
-  card.appendChild(hint);
-
-  return card;
-}
-
-// A little legend explaining the two bar colours (reps vs weight).
-function buildChartLegend() {
-  const legend = document.createElement("div");
-  legend.className = "chart-legend";
-
-  const makeItem = (modifier, text) => {
-    const item = document.createElement("span");
-    item.className = "chart-legend__item";
-    const swatch = document.createElement("span");
-    swatch.className = "chart-legend__swatch " + modifier;
-    const labelText = document.createElement("span");
-    labelText.textContent = text;
-    item.appendChild(swatch);
-    item.appendChild(labelText);
-    return item;
-  };
-
-  legend.appendChild(makeItem("chart-legend__swatch--reps", "Reps"));
-  legend.appendChild(
-    makeItem("chart-legend__swatch--weight", "Weight (" + unitLabel() + ")")
-  );
-  return legend;
-}
-
-/* ---- Insights card (Phase 6) ----
-   Motivating stats computed from the saved sessions: a weekly "showing up"
-   streak, days trained this month, lifetime totals, and a personal-records
-   board. All client-side — no new data is stored. */
+/* ---- Week helpers (Phase 6) ----
+   Used by the stats on Badges (stats.js), the week path, feathers and the
+   weekly recap. The Insights card they were written for was replaced by
+   stats.js after Owl Quest Q5. */
 
 // The Monday (local midnight) of the week a date falls in.
 function weekMondayMidnight(date) {
@@ -1313,223 +1081,6 @@ function computeWeekStreak(sessions) {
     cursor.setDate(cursor.getDate() - 7);
   }
   return streak;
-}
-
-// Build the Insights card from a profile's completed sessions.
-function renderInsights(sessions) {
-  const container = document.getElementById("insights");
-  container.innerHTML = "";
-  if (!sessions || sessions.length === 0) {
-    return; // nothing to show yet — the empty states below cover this
-  }
-
-  // --- Crunch the numbers ---
-  const streak = computeWeekStreak(sessions);
-
-  const now = new Date();
-  const daysThisMonth = new Set(
-    sessions
-      .filter((session) => {
-        const d = new Date(session.date);
-        return (
-          d.getFullYear() === now.getFullYear() &&
-          d.getMonth() === now.getMonth()
-        );
-      })
-      .map((session) => dayKeyOf(session.date))
-  ).size;
-
-  let totalSets = 0;
-  let totalReps = 0;
-  let weightMoved = 0; // sum of reps × weight across completed sets
-  const bestByExercise = {}; // exerciseId -> { weight, date }
-
-  sessions.forEach((session) => {
-    session.entries.forEach((entry) => {
-      totalSets += entrySetsDone(entry);
-      totalReps += entryRepsDone(entry);
-
-      // Weight moved only makes sense for the per-set shape (it has reps+weight).
-      if (Array.isArray(entry.sets)) {
-        entry.sets.forEach((set) => {
-          if (set.done && set.weight !== null && set.weight !== undefined) {
-            weightMoved += (Number(set.reps) || 0) * Number(set.weight);
-          }
-        });
-      }
-
-      // Track the heaviest weight ever used for each exercise (a PR).
-      const max = entryMaxWeight(entry);
-      if (max !== null) {
-        const current = bestByExercise[entry.exerciseId];
-        if (!current || max > current.weight) {
-          bestByExercise[entry.exerciseId] = { weight: max, date: session.date };
-        }
-      }
-    });
-  });
-
-  // --- Build the card ---
-  const card = document.createElement("div");
-  card.className = "card";
-
-  const heading = document.createElement("div");
-  heading.className = "history-card__title";
-  heading.textContent = "Insights";
-  card.appendChild(heading);
-
-  // --- "This week" goal ring ---
-  card.appendChild(
-    buildGoalRing(sessions, loadWeeklyGoal(loadActiveProfileId()))
-  );
-
-  // A wrapping grid of stat tiles (reuses the tinted tile look).
-  const stats = document.createElement("div");
-  stats.className = "insights-stats";
-  stats.appendChild(buildStatTile(streak, "week streak 🔥"));
-  stats.appendChild(buildStatTile(daysThisMonth, "days this month"));
-  stats.appendChild(buildStatTile(sessions.length, "workouts"));
-  stats.appendChild(buildStatTile(totalSets, "sets"));
-  stats.appendChild(buildStatTile(totalReps, "reps"));
-  // Only show "weight moved" if any weights were actually recorded.
-  if (weightMoved > 0) {
-    stats.appendChild(
-      buildStatTile(weightMoved.toLocaleString(), unitLabel() + " moved")
-    );
-  }
-  card.appendChild(stats);
-
-  // --- Volume trend (this month vs last) — only when there's weighted volume ---
-  const volumeTrend = buildVolumeTrend(sessions);
-  if (volumeTrend) {
-    card.appendChild(volumeTrend);
-  }
-
-  // --- Calendar heatmap of the last 12 weeks ---
-  card.appendChild(buildHeatmap(sessions));
-
-  // --- Personal-records board (only exercises that still exist) ---
-  const prList = Object.keys(bestByExercise)
-    .map((id) => ({ exercise: findExerciseById(id), best: bestByExercise[id] }))
-    .filter((item) => item.exercise)
-    .sort((a, b) => b.best.weight - a.best.weight);
-
-  if (prList.length > 0) {
-    const prHeading = document.createElement("div");
-    prHeading.className = "pr-board__heading";
-    prHeading.textContent = "Personal records 🏅";
-    card.appendChild(prHeading);
-
-    prList.forEach((item) => {
-      const row = document.createElement("div");
-      row.className = "pr-row";
-
-      const icon = document.createElement("div");
-      icon.className = "exercise__icon";
-      icon.textContent = item.exercise.icon;
-
-      const info = document.createElement("div");
-      info.className = "exercise__info";
-      const name = document.createElement("div");
-      name.className = "exercise__name";
-      name.textContent = item.exercise.name;
-      const date = document.createElement("div");
-      date.className = "pr-row__date";
-      date.textContent = formatDate(item.best.date);
-      info.appendChild(name);
-      info.appendChild(date);
-
-      const best = document.createElement("div");
-      best.className = "pr-row__best";
-      best.textContent = formatWeight(item.best.weight);
-
-      row.appendChild(icon);
-      row.appendChild(info);
-      row.appendChild(best);
-      card.appendChild(row);
-    });
-  }
-
-  // --- "Since you started" trend callouts (weight gains/drops per exercise) ---
-  const trend = buildTrendCallouts(sessions);
-  if (trend) {
-    card.appendChild(trend);
-  }
-
-  container.appendChild(card);
-}
-
-// Build the "Since you started" callouts: for each exercise trained with weights
-// at least twice, compare the first weighted session's heaviest weight to the
-// latest one. Shows the biggest movements (up or down), capped at 3 lines.
-function buildTrendCallouts(sessions) {
-  const sorted = sessions
-    .slice()
-    .sort((a, b) => new Date(a.date) - new Date(b.date));
-  const exercises = getExercisesForActiveProfile();
-  const callouts = [];
-
-  exercises.forEach((exercise) => {
-    const weights = [];
-    sorted.forEach((session) => {
-      const entry = session.entries.find(
-        (item) => item.exerciseId === exercise.id
-      );
-      if (entry) {
-        const max = entryMaxWeight(entry);
-        if (max !== null) {
-          weights.push(max);
-        }
-      }
-    });
-    // Need a starting point and a current point to show a trend.
-    if (weights.length >= 2) {
-      const change = weights[weights.length - 1] - weights[0];
-      if (change !== 0) {
-        callouts.push({ exercise: exercise, change: change });
-      }
-    }
-  });
-
-  if (callouts.length === 0) {
-    return null;
-  }
-
-  // Biggest movements first (up or down), keep the top few.
-  callouts.sort((a, b) => Math.abs(b.change) - Math.abs(a.change));
-  const top = callouts.slice(0, 3);
-
-  const wrap = document.createElement("div");
-
-  const heading = document.createElement("div");
-  heading.className = "pr-board__heading";
-  heading.textContent = "Since you started 📈";
-  wrap.appendChild(heading);
-
-  top.forEach((item) => {
-    const row = document.createElement("div");
-    row.className = "pr-row"; // reuse the personal-records row styling
-
-    const icon = document.createElement("div");
-    icon.className = "exercise__icon";
-    icon.textContent = item.exercise.icon;
-
-    const name = document.createElement("div");
-    name.className = "exercise__name";
-    name.textContent = item.exercise.name;
-
-    const change = document.createElement("div");
-    const up = item.change > 0;
-    change.className = "trend-change " + (up ? "is-up" : "is-down");
-    change.textContent = (up ? "↑ " : "↓ ") + formatWeight(Math.abs(item.change));
-
-    row.appendChild(icon);
-    row.appendChild(name);
-    row.appendChild(change);
-    wrap.appendChild(row);
-  });
-
-  return wrap;
 }
 
 /* ---- Weekly goal (Phase 6) ----
@@ -1604,87 +1155,6 @@ function handleUnitChange(event) {
   }
 }
 
-// Build the "this week" goal ring: an SVG circle that fills toward the goal.
-function buildGoalRing(sessions, goal) {
-  // How many workouts so far this week.
-  const startOfWeek = getStartOfWeek();
-  const count = sessions.filter(
-    (session) => new Date(session.date) >= startOfWeek
-  ).length;
-  const progress = goal > 0 ? Math.min(count / goal, 1) : 0;
-
-  const wrap = document.createElement("div");
-  wrap.className = "goal";
-
-  // Draw the ring as SVG: a faint full-circle track + a coral arc on top.
-  const ns = "http://www.w3.org/2000/svg";
-  const size = 96;
-  const stroke = 10;
-  const radius = (size - stroke) / 2;
-  const circumference = 2 * Math.PI * radius;
-
-  const svg = document.createElementNS(ns, "svg");
-  svg.setAttribute("class", "goal__ring");
-  svg.setAttribute("viewBox", "0 0 " + size + " " + size);
-
-  // Group the two circles so we can rotate them to start at the top (12 o'clock).
-  const g = document.createElementNS(ns, "g");
-  g.setAttribute("transform", "rotate(-90 " + size / 2 + " " + size / 2 + ")");
-
-  const track = document.createElementNS(ns, "circle");
-  track.setAttribute("class", "goal__track");
-  track.setAttribute("cx", size / 2);
-  track.setAttribute("cy", size / 2);
-  track.setAttribute("r", radius);
-  track.setAttribute("fill", "none");
-  track.setAttribute("stroke-width", stroke);
-
-  const arc = document.createElementNS(ns, "circle");
-  arc.setAttribute("class", "goal__arc");
-  arc.setAttribute("cx", size / 2);
-  arc.setAttribute("cy", size / 2);
-  arc.setAttribute("r", radius);
-  arc.setAttribute("fill", "none");
-  arc.setAttribute("stroke-width", stroke);
-  arc.setAttribute("stroke-linecap", "round");
-  arc.setAttribute("stroke-dasharray", circumference);
-  arc.setAttribute("stroke-dashoffset", circumference * (1 - progress));
-
-  g.appendChild(track);
-  g.appendChild(arc);
-  svg.appendChild(g);
-
-  // The count in the middle (not rotated).
-  const text = document.createElementNS(ns, "text");
-  text.setAttribute("class", "goal__text");
-  text.setAttribute("x", size / 2);
-  text.setAttribute("y", size / 2);
-  text.setAttribute("text-anchor", "middle");
-  text.setAttribute("dominant-baseline", "central");
-  text.textContent = count + "/" + goal;
-  svg.appendChild(text);
-
-  wrap.appendChild(svg);
-
-  // The label beside the ring.
-  const info = document.createElement("div");
-  info.className = "goal__info";
-  const title = document.createElement("div");
-  title.className = "goal__title";
-  title.textContent = "This week";
-  const sub = document.createElement("div");
-  sub.className = "goal__sub";
-  sub.textContent =
-    count >= goal
-      ? "Goal smashed! 🎉"
-      : count + " of " + goal + " workouts done";
-  info.appendChild(title);
-  info.appendChild(sub);
-  wrap.appendChild(info);
-
-  return wrap;
-}
-
 // Total "volume" in one session = reps × weight, added up over the sets you
 // actually ticked done. It's a measure of how much total work you did.
 // Only the per-set shape counts: very old sessions stored one weight for the
@@ -1704,183 +1174,19 @@ function sessionVolume(session) {
   return vol;
 }
 
-// Build the "volume this month vs last month" line. Returns null when there's
-// no weighted volume to show (e.g. bodyweight-only history).
-function buildVolumeTrend(sessions) {
-  const now = new Date();
-  const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-
-  let thisMonth = 0;
-  let lastMonth = 0;
-  sessions.forEach((session) => {
-    const d = new Date(session.date);
-    if (
-      d.getFullYear() === now.getFullYear() &&
-      d.getMonth() === now.getMonth()
-    ) {
-      thisMonth += sessionVolume(session);
-    } else if (
-      d.getFullYear() === prevMonth.getFullYear() &&
-      d.getMonth() === prevMonth.getMonth()
-    ) {
-      lastMonth += sessionVolume(session);
-    }
-  });
-
-  // Nothing weighted in either month → don't show the line at all.
-  if (thisMonth === 0 && lastMonth === 0) {
-    return null;
-  }
-
-  const wrap = document.createElement("div");
-  wrap.className = "volume-trend";
-
-  const label = document.createElement("span");
-  label.className = "volume-trend__label";
-  label.textContent = "Volume this month";
-
-  const value = document.createElement("span");
-  value.className = "volume-trend__value";
-  // Volume is reps × weight, so it's shown in whichever unit you've picked.
-  value.textContent = formatWeight(thisMonth.toLocaleString());
-
-  wrap.appendChild(label);
-  wrap.appendChild(value);
-
-  const change = document.createElement("span");
-  change.className = "volume-trend__change";
-  if (lastMonth > 0) {
-    const pct = Math.round(((thisMonth - lastMonth) / lastMonth) * 100);
-    if (pct > 0) {
-      change.classList.add("is-up");
-      change.textContent = "↑ " + pct + "% vs last month";
-    } else if (pct < 0) {
-      change.classList.add("is-down");
-      change.textContent = "↓ " + Math.abs(pct) + "% vs last month";
-    } else {
-      change.textContent = "same as last month";
-    }
-  } else {
-    // No weighted volume last month to compare against.
-    change.textContent = "first month with weights 💪";
-  }
-  wrap.appendChild(change);
-
-  return wrap;
-}
-
-// Tapping a heatmap square shows a little rounded bubble (reusing the chart
-// tooltip) with that day's info, then hides it after a moment. This is the
-// mobile-friendly version of the hover tooltip (phones can't hover).
-let heatmapTooltipTimer = null;
-function showHeatmapTooltip(label, event) {
-  showChartTooltip(label, event.clientX, event.clientY);
-  // Add the speech-bubble tail (only the heatmap uses this variant).
-  getChartTooltip().classList.add("chart-tooltip--bubble");
-  if (heatmapTooltipTimer) {
-    clearTimeout(heatmapTooltipTimer);
-  }
-  heatmapTooltipTimer = setTimeout(hideChartTooltip, 1700);
-}
-
-// Build a GitHub-style heatmap of the last 12 weeks: one little square per day,
-// tinted by how many sets were done that day (darker = more). Helps you see your
-// consistency at a glance ("don't break the chain").
-function buildHeatmap(sessions) {
-  const WEEKS = 12;
-
-  // Total sets done on each calendar day.
-  const setsByDay = {};
-  sessions.forEach((session) => {
-    const key = dayKeyOf(session.date);
-    const sets = session.entries.reduce(
-      (sum, entry) => sum + entrySetsDone(entry),
-      0
-    );
-    setsByDay[key] = (setsByDay[key] || 0) + sets;
-  });
-
-  const wrap = document.createElement("div");
-
-  const heading = document.createElement("div");
-  heading.className = "heatmap-heading";
-  heading.textContent = "Last 12 weeks";
-  wrap.appendChild(heading);
-
-  const grid = document.createElement("div");
-  grid.className = "heatmap";
-
-  // Start from the Monday 11 weeks before this week (12 columns total).
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const startMonday = weekMondayMidnight(today);
-  startMonday.setDate(startMonday.getDate() - (WEEKS - 1) * 7);
-
-  // Fill column-by-column (each column is a week; rows are Mon→Sun).
-  for (let col = 0; col < WEEKS; col = col + 1) {
-    for (let row = 0; row < 7; row = row + 1) {
-      const cellDate = new Date(startMonday);
-      cellDate.setDate(startMonday.getDate() + col * 7 + row);
-
-      const sets = setsByDay[dayKeyOf(cellDate)] || 0;
-      let level = 0;
-      if (sets >= 6) {
-        level = 3;
-      } else if (sets >= 3) {
-        level = 2;
-      } else if (sets >= 1) {
-        level = 1;
-      }
-
-      const label =
-        formatDate(cellDate.toISOString()) +
-        (sets > 0 ? " · " + sets + " sets" : " · rest");
-
-      const cell = document.createElement("div");
-      cell.className = "hm-cell hm-cell--l" + level;
-      // Days after today aren't "missed" — just not here yet; dim them.
-      if (cellDate > today) {
-        cell.classList.add("hm-cell--future");
-      }
-      cell.title = label; // desktop hover
-      // Tap/click shows the same info in a bubble (works on touch screens).
-      cell.addEventListener("click", (event) => showHeatmapTooltip(label, event));
-      grid.appendChild(cell);
-    }
-  }
-  wrap.appendChild(grid);
-
-  // A small "Less → More" legend.
-  const legend = document.createElement("div");
-  legend.className = "heatmap-legend";
-  const less = document.createElement("span");
-  less.textContent = "Less";
-  legend.appendChild(less);
-  [0, 1, 2, 3].forEach((lvl) => {
-    const swatch = document.createElement("span");
-    swatch.className = "hm-cell hm-cell--l" + lvl;
-    legend.appendChild(swatch);
-  });
-  const more = document.createElement("span");
-  more.textContent = "More";
-  legend.appendChild(more);
-  wrap.appendChild(legend);
-
-  return wrap;
-}
-
 /* ---- Weekly recap (Phase 11) ----
-   A friendly summary of LAST week (Monday → Sunday), shown in two places:
-     1. a "Last week" card on Progress, always available;
-     2. the same numbers once at the top of Today on your first visit in a new
-        week, as a dismissible "Your week in review 🎉" card.
+   A friendly summary of LAST week (Monday → Sunday), shown once at the top of
+   Today on your first visit in a new week: a one-line summary that opens the
+   full "Your week in review 🎉" card. (Until the stats redesign after Owl
+   Quest Q5 there was also a "Last week" card on Progress; Week by week on
+   Badges covers that now.)
    Everything is worked out on the fly from your saved workouts — the only thing
    stored is a small "you've seen it" flag per profile per week (per device). */
 
 // The Monday→Sunday window of LAST week, as { start, end }.
 // `start` is last week's Monday at midnight; `end` is THIS week's Monday at
 // midnight and is exclusive, so a workout dated today never counts as "last
-// week". Reuses the same Monday maths as the Insights card.
+// week". Reuses the same Monday maths as the week helpers above.
 function lastWeekRange() {
   const thisMonday = weekMondayMidnight(new Date());
   const lastMonday = new Date(thisMonday);
@@ -2238,12 +1544,6 @@ function describeRecapInOneLine(recap) {
 // Draw the whole Progress view.
 function renderProgress() {
   const subtitle = document.getElementById("progressSubtitle");
-  const summary = document.getElementById("weekSummary");
-  const heading = document.getElementById("byExerciseHeading");
-  const list = document.getElementById("exerciseProgressList");
-  summary.innerHTML = "";
-  list.innerHTML = "";
-  document.getElementById("insights").innerHTML = ""; // cleared; filled below
 
   // Owl Quest Q5a: the "Your feathers" card at the top (badges.js). It clears
   // itself when there's no profile.
@@ -2252,8 +1552,9 @@ function renderProgress() {
   const activeProfile = getActiveProfile();
   if (!activeProfile) {
     subtitle.textContent = "No profile selected";
-    heading.hidden = true;
-    summary.appendChild(
+    const stats = document.getElementById("stats");
+    stats.innerHTML = "";
+    stats.appendChild(
       createEmptyState("👤", "Create a profile in Settings to get started.")
     );
     return;
@@ -2261,96 +1562,16 @@ function renderProgress() {
   subtitle.textContent = activeProfile.name + "'s activity";
 
   const activeId = loadActiveProfileId();
-  // Only finished workouts count towards progress (skip in-progress ones).
+  // Only finished workouts count towards stats (skip in-progress ones).
   const sessions = loadList(STORAGE_KEYS.sessions).filter(
     (session) =>
       session.profileId === activeId && isCompletedSession(session)
   );
 
-  // --- Insights card (streak, days, lifetime totals, personal records) ---
-  renderInsights(sessions);
-
-  // --- "This week" summary ---
-  const startOfWeek = getStartOfWeek();
-  const weekSessions = sessions.filter(
-    (session) => new Date(session.date) >= startOfWeek
-  );
-  const workoutsThisWeek = weekSessions.length;
-  const setsThisWeek = weekSessions.reduce(
-    (sum, session) =>
-      sum +
-      session.entries.reduce((inner, entry) => inner + entrySetsDone(entry), 0),
-    0
-  );
-  summary.appendChild(buildWeekSummaryCard(workoutsThisWeek, setsThisWeek));
-
-  // --- "Last week" recap (Phase 11) ---
-  // Only once there's some history: with no workouts at all, the empty state
-  // further down already says so, and an empty recap would just be noise.
-  if (sessions.length > 0) {
-    summary.appendChild(
-      buildRecapCard(computeLastWeekRecap(sessions), { title: "Last week" })
-    );
-  }
-
-  // --- Per-exercise breakdown ---
-  if (sessions.length === 0) {
-    heading.hidden = true;
-    list.appendChild(
-      createEmptyState("📊", "No workouts yet. Finish one to see your progress.")
-    );
-    return;
-  }
-
-  // Sort oldest → newest so the chart reads left (older) to right (newer).
-  const sortedSessions = sessions
-    .slice()
-    .sort((a, b) => new Date(a.date) - new Date(b.date));
-
-  const exercises = getExercisesForActiveProfile();
-  exercises.forEach((exercise) => {
-    // For each session this exercise appears in, remember one "point" of data.
-    // We keep the whole session so a bar can show its full details when clicked.
-    const points = [];
-    let totalSets = 0;
-    let lastWeight = null;
-
-    sortedSessions.forEach((session) => {
-      const entry = session.entries.find(
-        (item) => item.exerciseId === exercise.id
-      );
-      // Only include sessions where this exercise was actually trained
-      // (at least one set ticked done) — skip ones left untouched.
-      if (entry && entrySetsDone(entry) > 0) {
-        const setsDone = entrySetsDone(entry);
-        const entryWeight = entryLastWeight(entry);
-        points.push({
-          date: session.date,
-          reps: entryRepsDone(entry), // mint bar = total reps done
-          weight: entryMaxWeight(entry), // lavender bar = heaviest weight
-          session: session,
-        });
-        totalSets += setsDone;
-        if (entryWeight !== null) {
-          lastWeight = entryWeight;
-        }
-      }
-    });
-
-    // Only show exercises that have actually been trained.
-    if (points.length > 0) {
-      list.appendChild(
-        buildExerciseProgressCard(exercise, points, totalSets, lastWeight)
-      );
-    }
-  });
-
-  heading.hidden = list.children.length === 0;
-  if (list.children.length === 0) {
-    list.appendChild(
-      createEmptyState("📊", "Finish a workout to see per-exercise progress.")
-    );
-  }
+  // After Owl Quest Q5: This month, Week by week, Records and Exercise
+  // progress, all in stats.js. (They replaced the Insights card, the This
+  // week / Last week cards and the per-exercise bar charts.)
+  renderStats(sessions);
 }
 
 /* ---- "There's an update" dot (Phase 16) ----
@@ -3779,26 +3000,6 @@ function sessionExercisesDone(session) {
 // exercises). Only works for words that pluralise by adding an "s".
 function pluralise(count, word) {
   return count + " " + word + (count === 1 ? "" : "s");
-}
-
-// The last weight recorded in an entry (per-set new shape, or old single weight).
-function entryLastWeight(entry) {
-  if (Array.isArray(entry.sets)) {
-    let weight = null;
-    entry.sets.forEach((set) => {
-      // Only sets the user actually ticked done count as "performed".
-      if (set.done && set.weight !== null && set.weight !== undefined) {
-        weight = set.weight;
-      }
-    });
-    return weight;
-  }
-  // Old shape: a weight only counts if at least one set was done.
-  return (entry.setsDone || 0) > 0 &&
-    entry.weight !== null &&
-    entry.weight !== undefined
-    ? entry.weight
-    : null;
 }
 
 // Total reps actually done in an entry (sum of done sets' reps). Old sessions
@@ -5580,7 +4781,7 @@ function init() {
     const goal = clampNumber(Number(event.target.value), 1, 14);
     event.target.value = goal; // reflect any clamping
     saveWeeklyGoal(activeId, goal);
-    renderProgress(); // redraw the ring with the new goal
+    renderProgress(); // redraw Week by week with the new goal line
   });
 
   // Wire up the just-for-fun easter eggs (typing "athena", title taps, etc.).

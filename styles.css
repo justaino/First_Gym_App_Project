@@ -78,6 +78,12 @@
   --medal-locked: #ece8f6;
   --medal-locked-edge: #d9d2ee;
   --medal-locked-ink: #aaa3c4;
+
+  /* The stats on Badges (stats.js). */
+  --stats-up: #2f8f86; /* "▲ 2 vs Aug" — a deeper mint so the text is readable */
+  --stats-down: #c2474a; /* "▼ 1 vs Aug" */
+  --stats-bar-below: #d9cff5; /* a week below your goal (a lighter purple) */
+  --stats-area: rgba(109, 85, 196, 0.1); /* the soft wash under a line */
   /* Q4a+: the chosen half of the workout view toggle (same tint as the active tab). */
   --view-toggle-current: rgba(185, 167, 224, 0.25);
   /* Q4b: the buttons on the rest timer pill (see-through white on dark ink). */
@@ -157,6 +163,11 @@
   --medal-locked: #2d2654;
   --medal-locked-edge: #1c1738;
   --medal-locked-ink: #6f66a0;
+
+  --stats-up: #6fd3c9;
+  --stats-down: #f08a86;
+  --stats-bar-below: #4a3f80;
+  --stats-area: rgba(201, 184, 255, 0.12);
   --view-toggle-current: rgba(201, 184, 255, 0.18);
   --rest-chip-bg: rgba(35, 29, 66, 0.1); /* the pill is light in dark mode */
 
@@ -1124,107 +1135,6 @@ body {
   margin-top: 2px;
 }
 
-/* A small bar chart drawn with plain SVG (no chart library) */
-.barchart {
-  width: 100%;
-  height: 60px;
-  margin-top: 14px;
-  display: block;
-}
-.barchart__bar {
-  fill: var(--mint);
-  cursor: pointer; /* show it's clickable */
-  transition: fill 0.12s ease;
-}
-/* Two series: reps (mint) and weight (lavender) */
-.barchart__bar--reps {
-  fill: var(--mint);
-}
-.barchart__bar--weight {
-  fill: var(--lavender);
-}
-/* Highlight the bar you're pointing at */
-.barchart__bar:hover {
-  fill: var(--coral);
-}
-
-/* Legend for the two bar colours */
-.chart-legend {
-  display: flex;
-  gap: 16px;
-  margin-top: 10px;
-}
-.chart-legend__item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--muted);
-}
-.chart-legend__swatch {
-  width: 11px;
-  height: 11px;
-  border-radius: 3px;
-}
-.chart-legend__swatch--reps {
-  background-color: var(--mint);
-}
-.chart-legend__swatch--weight {
-  background-color: var(--lavender);
-}
-
-/* Little hint under a chart ("Tap a bar to see that workout") */
-.chart-hint {
-  color: var(--muted);
-  font-weight: 700;
-  font-size: 12px;
-  margin-top: 6px;
-}
-
-/* The floating tooltip that follows the pointer over the chart */
-.chart-tooltip {
-  position: fixed;
-  z-index: 300;
-  /* Using text colour for the background and bg colour for the text means it
-     automatically flips to look right in both light and dark mode. */
-  background-color: var(--text);
-  color: var(--bg);
-  font-weight: 700;
-  font-size: 12px;
-  padding: 6px 10px;
-  border-radius: 10px;
-  white-space: nowrap;
-  pointer-events: none; /* never block the mouse from the bars */
-  /* Sit just above the pointer, centred on it */
-  transform: translate(-50%, -130%);
-}
-.chart-tooltip[hidden] {
-  display: none;
-}
-
-/* Speech-bubble variant (used by the heatmap tap tooltip): a long downward
-   tail pointing at the square. The tail colour matches the bubble background,
-   so it flips correctly in dark mode too. */
-.chart-tooltip--bubble::after {
-  content: "";
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border-left: 7px solid transparent;
-  border-right: 7px solid transparent;
-  border-top: 14px solid var(--text); /* long tail */
-}
-
-/* The little meta line under a progress card's title */
-.progress-card__meta {
-  color: var(--muted);
-  font-weight: 700;
-  font-size: 14px;
-  margin-top: 2px;
-}
-
 /* Explanatory text in the Backup card */
 .backup__text {
   color: var(--muted);
@@ -1773,117 +1683,6 @@ body {
   max-width: 220px;
 }
 
-/* Weekly goal ring (this week's progress toward the goal) */
-.goal {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-top: 14px;
-}
-.goal__ring {
-  width: 96px;
-  height: 96px;
-  flex-shrink: 0;
-}
-.goal__track {
-  stroke: rgba(95, 196, 188, 0.18);
-}
-.goal__arc {
-  stroke: var(--coral);
-  transition: stroke-dashoffset 0.4s ease;
-}
-.goal__text {
-  font-size: 22px;
-  font-weight: 800;
-  fill: var(--text);
-}
-.goal__title {
-  font-weight: 800;
-  font-size: 16px;
-}
-.goal__sub {
-  color: var(--muted);
-  font-weight: 700;
-  font-size: 14px;
-  margin-top: 2px;
-}
-
-/* Volume trend line (this month vs last month) */
-.volume-trend {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 10px;
-  margin-top: 16px;
-}
-.volume-trend__label {
-  color: var(--muted);
-  font-weight: 700;
-  font-size: 14px;
-}
-.volume-trend__value {
-  font-weight: 800;
-  font-size: 18px;
-  color: var(--text);
-}
-.volume-trend__change {
-  font-weight: 800;
-  font-size: 13px;
-  color: var(--muted);
-}
-.volume-trend__change.is-up {
-  color: var(--mint);
-}
-.volume-trend__change.is-down {
-  color: var(--coral);
-}
-
-/* Calendar heatmap (consistency grid) */
-.heatmap-heading {
-  font-weight: 800;
-  font-size: 15px;
-  margin-top: 18px;
-  margin-bottom: 8px;
-}
-.heatmap {
-  display: grid;
-  grid-template-rows: repeat(7, 14px); /* Mon→Sun */
-  grid-auto-flow: column; /* fill each week (column) top-to-bottom */
-  grid-auto-columns: 14px;
-  gap: 3px;
-  overflow-x: auto; /* safety on very narrow screens */
-}
-.hm-cell {
-  border-radius: 3px;
-  background-color: rgba(95, 196, 188, 0.12); /* level 0 (no workout) */
-  cursor: pointer; /* hint that squares are tappable */
-}
-.hm-cell--l1 {
-  background-color: rgba(95, 196, 188, 0.4);
-}
-.hm-cell--l2 {
-  background-color: rgba(95, 196, 188, 0.7);
-}
-.hm-cell--l3 {
-  background-color: rgba(95, 196, 188, 1);
-}
-.hm-cell--future {
-  opacity: 0.3;
-}
-.heatmap-legend {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  margin-top: 10px;
-  color: var(--muted);
-  font-weight: 700;
-  font-size: 12px;
-}
-.heatmap-legend .hm-cell {
-  width: 13px;
-  height: 13px;
-}
-
 .pr-board__heading {
   font-weight: 800;
   font-size: 15px;
@@ -1897,12 +1696,7 @@ body {
   padding: 10px 0;
   border-top: 1px solid var(--border);
 }
-.pr-row__date {
-  color: var(--muted);
-  font-weight: 700;
-  font-size: 12px;
-  margin-top: 2px;
-}
+
 .pr-row__best {
   margin-left: auto;
   font-weight: 800;
@@ -1983,18 +1777,6 @@ body {
 }
 
 /* "Since you started" trend callouts (reuse the .pr-row layout) */
-.trend-change {
-  margin-left: auto;
-  font-weight: 800;
-  font-size: 16px;
-}
-.trend-change.is-up {
-  color: var(--mint);
-}
-.trend-change.is-down {
-  color: var(--coral);
-}
-
 /* ---- iOS "Add to home screen" instructions (in the install modal) ---- */
 .install-steps p {
   font-weight: 700;
@@ -2643,11 +2425,7 @@ body {
 .auth__brand,
 .stat__number,
 .timer__display,
-.goal__text,
-.goal__title,
-.heatmap-heading,
 .pr-board__heading,
-.volume-trend__value,
 .celebrate__title,
 .credits-card__title,
 .guide-hero__title,
@@ -2675,7 +2453,6 @@ body {
 .icon-btn {
   box-shadow: 0 3px 0 var(--edge);
 }
-
 
 /* =========================================================================
    OWL QUEST Q4 — the live workout screen (drawn by workout-screen.js)
@@ -3016,7 +2793,6 @@ body {
   color: var(--muted);
 }
 
-
 /* =========================================================================
    ICONS (icons.js) — Lucide for the tab bar, Phosphor Duotone for buttons.
    Each icon is an SVG inside <span class="ic">, drawn in "currentColor", so it
@@ -3053,7 +2829,6 @@ body {
   height: 20px;
   vertical-align: -0.2em;
 }
-
 
 /* =========================================================================
    OWL QUEST Q5a — "Your feathers" on the Badges tab (drawn by badges.js)
@@ -3206,7 +2981,6 @@ body {
   background: var(--purple);
 }
 
-
 /* ---- Feathers: the short card on Badges + the full page (after Q5b) ---- */
 /* The row of a few earned medallions, a "+3", and "See all ›" on the right. */
 .feathers__row {
@@ -3251,4 +3025,313 @@ body {
   margin-top: 2px;
   font-weight: 700;
   color: var(--muted);
+}
+
+
+/* =========================================================================
+   STATS ON BADGES (stats.js) — This month, Week by week, Records and
+   Exercise progress. Calm and minimal: hairlines instead of boxes, one colour
+   per chart, labels only where they help.
+   ========================================================================= */
+.stats-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.stats-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+.stats-card__title {
+  font-size: 20px;
+  font-weight: 800;
+}
+.stats-card__meta {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* This month: three figures in a row, split by hairlines. */
+.stats-figures {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.stats-figure {
+  padding: 2px 10px;
+  min-width: 0;
+}
+.stats-figure:first-child {
+  padding-left: 0;
+}
+.stats-figure + .stats-figure {
+  border-left: 1px solid var(--border);
+}
+.stats-figure__label,
+.stats-figure__below {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.stats-figure__below {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.stats-figure__value {
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.stats-figure__unit {
+  margin-left: 3px;
+  font-size: 15px;
+  color: var(--muted);
+}
+.stats-up {
+  color: var(--stats-up);
+}
+.stats-down {
+  color: var(--stats-down);
+}
+
+/* Legends: a small key before each label. */
+.stats-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.stats-key {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 6px;
+  border-radius: 3px;
+  vertical-align: -1px;
+}
+.stats-key--hit,
+.stats-key--dot {
+  background: var(--purple);
+}
+.stats-key--dot {
+  border-radius: 50%;
+}
+.stats-key--below {
+  background: var(--stats-bar-below);
+}
+.stats-key--goal,
+.stats-key--line {
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+  vertical-align: 3px;
+  background: var(--coral);
+}
+.stats-key--line {
+  background: var(--purple);
+}
+.stats-hint {
+  margin-top: -6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* The charts (SVG). They stretch to the card's width. */
+.stats-chart {
+  position: relative; /* for the floating label */
+}
+.stats-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.stats-axis {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  fill: var(--muted);
+}
+.stats-value {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 800;
+  fill: var(--text);
+}
+.stats-grid {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+.stats-bar--hit {
+  fill: var(--purple);
+}
+.stats-bar--below {
+  fill: var(--stats-bar-below);
+}
+.stats-stub {
+  stroke: var(--stats-bar-below);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.stats-goal {
+  stroke: var(--coral);
+  stroke-width: 1.5;
+}
+.stats-line {
+  fill: none;
+  stroke: var(--purple);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.stats-area {
+  fill: var(--stats-area);
+}
+.stats-dot {
+  fill: var(--purple);
+  stroke: var(--card); /* a ring in the card colour keeps dots clear of the line */
+  stroke-width: 2;
+}
+.stats-cross {
+  stroke: var(--muted);
+  stroke-width: 1;
+  opacity: 0.45;
+}
+/* The invisible tap areas; a picked week gets a soft lavender tint. */
+.stats-hit {
+  fill: transparent;
+  cursor: pointer;
+}
+.stats-hit--on {
+  fill: var(--view-toggle-current);
+}
+.stats-hit:focus {
+  outline: none;
+}
+.stats-hit:focus-visible {
+  fill: var(--view-toggle-current);
+}
+
+/* The floating label over a chart ("Week of 8 Sep / 4 workouts · 44 sets"). */
+.stats-tip {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: var(--ink);
+  color: var(--ink-text);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+  box-shadow: var(--shadow-soft);
+}
+.stats-tip small {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+/* Records: one row per exercise, split by hairlines. */
+.stats-records {
+  display: flex;
+  flex-direction: column;
+}
+.stats-record {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+}
+.stats-record + .stats-record {
+  border-top: 1px solid var(--border);
+}
+.stats-record__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  font-size: 20px;
+  background: var(--bg);
+}
+.stats-record__text {
+  flex: 1;
+  min-width: 0;
+}
+.stats-record__name {
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+.stats-record__date,
+.stats-record__change {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.stats-record__right {
+  text-align: right;
+}
+.stats-record__best {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.stats-record__change {
+  font-weight: 700;
+  white-space: nowrap;
+}
+.stats-record__change.stats-up {
+  color: var(--stats-up);
+}
+.stats-record__change.stats-down {
+  color: var(--stats-down);
+}
+
+/* Exercise chips: scroll sideways if there are lots. */
+.stats-chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+.stats-chip {
+  flex-shrink: 0;
+  border: none;
+  border-radius: var(--radius-pill);
+  padding: 7px 14px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+.stats-chip[aria-pressed="true"] {
+  background: var(--purple);
+  color: var(--card);
+}
+.stats-open {
+  align-self: flex-start;
+  color: var(--purple);
+}
+.stats-open:disabled {
+  color: var(--muted);
+  cursor: default;
 }

@@ -769,6 +769,11 @@ SQL change, so it goes last and follows the SQL-first rule.
 - **2026-07-28 — Per-exercise workout notes** (a friend's suggestion): a private note on
   each exercise in workout mode, shown next time as a hint. Friends never see notes.
 - **2026-07-28 — Back button on the What's new page** for the installed app.
+- **2026-09-29 — Calmer stats on Badges** (owner's request, after a preview page): This
+  month (vs the same point last month), Week by week (12 columns vs the goal line),
+  Records (best + change since first) and Exercise progress (one line chart, chips to
+  switch). Reps / kg moved, the heatmap, the goal ring and the bar charts were removed.
+  New `stats.js`.
 - **2026-09-29 — Modern icons** (owner's request, before Q5): after a preview page
   comparing emoji, Phosphor Fill, Phosphor Duotone and Lucide, the owner picked **Lucide**
   for the tab bar and badges and **Phosphor Duotone** for buttons ("I love the minimal

@@ -25,6 +25,7 @@ devices (see §5d — the cloud is the source of truth, localStorage is the cach
 | `friends.js` | The Friends tab: requests, buddies, nudges, close friends (Phase 12). |
 | `guide.js` | The in-app guide. All its wording is in two lists at the top (Phase 13). |
 | `badges.js` | Feathers (badges) on the Badges tab (Owl Quest Q5). The list is at the top. |
+| `stats.js` | The stats under the feathers on Badges: This month, Week by week, Records, Exercise progress. |
 | `icons.js` | The app's icons: Lucide (tabs, badges) + Phosphor Duotone (buttons) as SVGs, with their licences. |
 | `xp.js` | XP and levels, worked out from saved workouts. The rules are at the top (Owl Quest Q2). |
 | `week-path.js` | The "This week" stepping-stone path on Today (Owl Quest Q3). |
@@ -168,18 +169,40 @@ Unregister** (and **Clear storage**), then reload.
 
 ---
 
-## 5c. Insights (Progress tab)
+## 5c. Stats on the Badges tab (was "Insights" on Progress)
 
-The **Insights** card at the top of Progress is computed live from
-`gym:sessions` (no new data is stored except the weekly goal). It shows: a weekly
-**goal ring**, **week streak**, **days this month**, **lifetime totals**, a
-**personal-records board**, a **12-week heatmap** (tap a square for a bubble with
-that day's info), a **volume this-month-vs-last** line, and **"since you started"**
-per-exercise weight trends (up/down). Everything is worked out on the device from
-your synced workouts, so it matches on every phone (except the weekly goal below).
+*Rebuilt 2026-09-29 after the owner reviewed a preview.* Under the feathers,
+`renderProgress()` calls `renderStats(sessions)` in **`stats.js`**, which draws four cards
+into `#stats` from the active profile's finished workouts (nothing new is stored except
+the weekly goal). All charts are plain SVG drawn at `CHART_WIDTH` (320) and stretched to
+the card, so they draw correctly even while the tab is hidden.
+
+1. **This month** (`buildThisMonthCard`): workouts and sets this month, each with
+   "▲ n vs Aug" / "▼ n" / "same as Aug" — compared with **the same point last month**
+   (1st to today's date, capped at the end of a shorter month), so early in the month it
+   isn't unfairly red. Plus the week streak (`computeWeekStreak`) and "best N"
+   (`longestWeekStreak` from badges.js).
+2. **Week by week** (`buildWeekByWeekCard`, `drawWeekChart`): the last 12 Monday–Sunday
+   weeks, ending with this week ("This wk"). Columns at/above the weekly goal are
+   `--purple`, below it `--stats-bar-below`; a solid coral goal line. Tap/hover/focus a
+   column for "Week of 8 Sep · 4 workouts · 44 sets".
+3. **Records** (`buildRecordsCard`): exercises that still exist with any weighted set —
+   best weight (heaviest first), the date it was first lifted, and the **latest session
+   minus the first** ("▲ 10 kg", "no change"; only with 2+ sessions).
+4. **Exercise progress** (`buildExerciseProgressSection`, `drawProgressChart`): chips
+   pick an exercise (`statsExerciseId`, memory only). The line is the heaviest ticked
+   weight per session — or, for an exercise with no weights, the most reps in one set —
+   placed by real date, with a dot on each new record and labels on the first/latest
+   values. Tap/drag (or ←/→ when focused) to pick a session; "See this workout" opens
+   `showSessionDetail()`.
+
+**Removed** (owner's request): the goal ring, the six stat tiles (incl. reps and kg
+moved), the volume trend, the 12-week heatmap, the "Since you started" list, the This
+week / Last week cards on this tab (the recap stays on Today) and the per-exercise
+reps/weight bar charts. Their functions and CSS were deleted.
 
 - **Weekly goal:** stored per profile under `gym:weeklyGoal` (`{ profileId: n }`),
-  default 3; edited in **Settings → Weekly goal**.
+  default 3; edited in **Settings → Weekly goal**. It sets the goal line.
 
 ### What counts as "done" (important)
 Only sets the user **ticks done** are recorded. A workout **can't be finished**
@@ -404,12 +427,11 @@ other devices.
 
 ## 5i. Weekly recap (Phase 11)
 
-A friendly summary of **last week** (Monday → Sunday), in two places:
-
-1. **Progress tab → "Last week" card**, just under "This week". Always there
-   (once you have any workout history).
-2. **Today tab → "Your week in review 🎉"**, shown **once per week** on your
-   first visit of a new week, with a ✕ to dismiss it.
+A friendly summary of **last week** (Monday → Sunday), on the **Today tab → "Your week
+in review 🎉"**, shown **once per week** on your first visit of a new week (a one-line
+summary that opens the full card), with a ✕ to dismiss it. *(There used to be an
+always-there "Last week" card on Progress too; it was removed in the stats redesign on
+2026-09-29 — Week by week on Badges shows last week as its second-last column.)*
 
 **What it shows:** workouts vs your weekly goal, total sets, volume moved
 (reps × weight, in your kg/lb setting), your current week streak, and any
@@ -908,8 +930,34 @@ Newest first. Add a line here whenever behaviour changes.
 > Entries below marked "on `dev`, awaiting owner test" were written at build time.
 > Everything up to 2026-07-28 has since been tested and released to `main`.
 
-- **2026-09-29** — **Owl Quest Q5c — shorter feathers card + feathers page (on `dev`,
-  awaiting owner test):** see §5r.
+- **2026-09-29** — **New stats on Badges (on `dev`, awaiting owner test):** see §5c.
+  Built from the preview the owner approved.
+  - New `stats.js` (in `index.html` after `badges.js`, and in `APP_SHELL`):
+    `renderStats()` and the four cards.
+  - `index.html`: `#insights`, `#weekSummary`, `#byExerciseHeading` and
+    `#exerciseProgressList` replaced by `#stats`; Settings' weekly-goal hint mentions the
+    goal line.
+  - `app.js`: `renderProgress()` is now feathers + `renderStats()`. Deleted
+    `getStartOfWeek`, `buildBarChartSvg`, the chart tooltip (`getChartTooltip`,
+    `showChartTooltip`, `hideChartTooltip`), `buildWeekSummaryCard`,
+    `buildExerciseProgressCard`, `buildChartLegend`, `renderInsights`,
+    `buildTrendCallouts`, `buildGoalRing`, `buildVolumeTrend`, `showHeatmapTooltip`,
+    `buildHeatmap`, `entryLastWeight`. Kept: the week helpers, weekly goal,
+    `sessionVolume` and `buildStatTile` (the Today recap uses them).
+  - `badges.js`: `longestWeekStreak()` now removes repeated weeks itself (stats.js passes
+    one key per workout; repeats had been counted as gaps).
+  - `styles.css`: the `.stats-*` section; new tokens `--stats-up`, `--stats-down`,
+    `--stats-bar-below`, `--stats-area`; removed the old chart, goal ring, heatmap,
+    volume and trend rules.
+  - Guide (Badges section), What's new ("Calmer, clearer stats"), `CLAUDE.md`. Cache
+    `v68`.
+  - Fix (owner's report): tapping a chip near the end of the Exercise progress row made
+    it jump out of view, because the redrawn card's chip row started scrolled to the
+    left. The chip handler now carries `scrollLeft` across, calls `keepChipInView()`
+    (scrolls only the row, never the page) and re-focuses the chosen chip. Cache `v69`.
+
+- **2026-09-29** — **Owl Quest Q5c — shorter feathers card + feathers page (staged for
+  its own commit):** see §5r.
   - `badges.js`: `renderFeathers()` now draws the short card; new `renderFeathersPage()`,
     `openFeathersPage()`, `closeFeathersPage()`, `buildFeathersHead()`,
     `FEATHERS_PREVIEW_COUNT`. Heavy Mover → **Rep Counter** (`reps` ≥ 2,000;

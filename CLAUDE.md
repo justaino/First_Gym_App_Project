@@ -39,6 +39,7 @@ JavaScript frameworks). Build accordingly: explain things simply and comment the
 | `xp.js` | XP and levels (computed from saved workouts, never stored) |
 | `week-path.js` | The "This week" stepping-stone path on Today (computed, never stored) |
 | `workout-screen.js` | The live workout screen: one exercise at a time, stars, the owl coach |
+| `stats.js` | The stats under the feathers on Badges (This month, Week by week, Records, Exercise progress) |
 | `badges.js` | Feathers (badges) on the Badges tab — computed from history, never stored |
 | `icons.js` | The app's icons (Lucide + Phosphor Duotone SVGs, with their licences) |
 | `exercise-library.js` | Data only: built-in exercise suggestions |
