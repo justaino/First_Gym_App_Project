@@ -928,9 +928,17 @@ its first weighted workout won't fire a PR (there's nothing to beat yet).
 Newest first. Add a line here whenever behaviour changes.
 
 > Entries below marked "on `dev`, awaiting owner test" were written at build time.
-> Everything up to 2026-07-28 has since been tested and released to `main`.
+> Everything up to 2026-09-29 has since been tested and released to `main`.
 
-- **2026-09-29** — **New stats on Badges (on `dev`, awaiting owner test):** see §5c.
+- **2026-09-29** — **Release to `main`: the Owl Quest redesign so far** (owner said
+  "merge to main"). Brings to the live site: the docs refresh, Q1 (new look, Today card,
+  four tabs), full exercise names, Q2 (XP + levels), Q3 (week path), closing workouts
+  left open, Q4 (one-at-a-time workout screen, list toggle, floating rest timer), the
+  Lucide/Phosphor icons, Q5 (feathers on the Badges tab) and the new Badges stats.
+  What's new: the two entries dated 2026-09-28 were re-dated to the release day. Cache
+  `v70` (main was on `v48`). No database changes in this release.
+
+- **2026-09-29** — **New stats on Badges (released to `main` 2026-09-29):** see §5c.
   Built from the preview the owner approved.
   - New `stats.js` (in `index.html` after `badges.js`, and in `APP_SHELL`):
     `renderStats()` and the four cards.
@@ -956,8 +964,8 @@ Newest first. Add a line here whenever behaviour changes.
     left. The chip handler now carries `scrollLeft` across, calls `keepChipInView()`
     (scrolls only the row, never the page) and re-focuses the chosen chip. Cache `v69`.
 
-- **2026-09-29** — **Owl Quest Q5c — shorter feathers card + feathers page (staged for
-  its own commit):** see §5r.
+- **2026-09-29** — **Owl Quest Q5c — shorter feathers card + feathers page (released to
+  `main` 2026-09-29):** see §5r.
   - `badges.js`: `renderFeathers()` now draws the short card; new `renderFeathersPage()`,
     `openFeathersPage()`, `closeFeathersPage()`, `buildFeathersHead()`,
     `FEATHERS_PREVIEW_COUNT`. Heavy Mover → **Rep Counter** (`reps` ≥ 2,000;
@@ -970,7 +978,7 @@ Newest first. Add a line here whenever behaviour changes.
     `.feathers__see-all`, `.sheet__header--back`, `.back-btn`, `.sheet__subtitle`.
   - Guide + What's new wording. Cache `v67`.
 
-- **2026-09-29** — **Owl Quest Q5b — new feather celebration (committed to `dev`):**
+- **2026-09-29** — **Owl Quest Q5b — new feather celebration (released to `main` 2026-09-29):**
   - `badges.js`: `earnedFeatherIds()`, `detectNewFeathers(beforeIds)`.
   - `app.js` `finishWorkout()`: feathers before/after, then
     `celebrateAfterWorkout(personalRecords, levelUp, newFeathers)` — the arguments
@@ -983,7 +991,7 @@ Newest first. Add a line here whenever behaviour changes.
     and for "delete my data". §3, §5, §7, §8 updated.
   - Guide + What's new lines. Cache `v65`.
 
-- **2026-09-29** — **Owl Quest Q5a — the feathers card (committed to `dev`):**
+- **2026-09-29** — **Owl Quest Q5a — the feathers card (released to `main` 2026-09-29):**
   see §5r.
   - New `badges.js` (in `index.html` after `workout-screen.js`, and in `APP_SHELL`).
   - `index.html`: the tab label and view title are now **Badges** (`data-view` is still
@@ -995,7 +1003,7 @@ Newest first. Add a line here whenever behaviour changes.
   - Guide (the section is now "Badges"), What's new ("Collect feathers"), ROADMAP (Q5
     split), `CLAUDE.md`. Cache `v64`.
 
-- **2026-09-29** — **Modern icons (tested by the owner, staged for its own commit):**
+- **2026-09-29** — **Modern icons (released to `main` 2026-09-29):**
   see §5q.
   - New `icons.js` (19 icons + licences; in `index.html` before `app.js`, and in
     `APP_SHELL`): `ICONS`, `iconSvg(name)`, `fillIconPlaceholders()`.
@@ -1011,7 +1019,7 @@ Newest first. Add a line here whenever behaviour changes.
   - Guide and What's new wording no longer names the old emoji buttons. `CLAUDE.md`
     design system + file table. Cache `v63`.
 
-- **2026-09-29** — **Owl Quest Q4b — floating rest timer (committed to `dev`):**
+- **2026-09-29** — **Owl Quest Q4b — floating rest timer (released to `main` 2026-09-29):**
   - `index.html`: the `.card.timer` became `.rest-pill#restTimer` (icon, `#timerDisplay`
     with `role="timer"`, 60/90/120s buttons, new `#addRestBtn` "+15s", `#stopTimerBtn`
     now labelled "Skip").
@@ -1030,7 +1038,7 @@ Newest first. Add a line here whenever behaviour changes.
     the last exercise — the big Finish below is the only one — and skips the whole row
     when the workout has a single exercise. Cache `v62`.
 
-- **2026-09-29** — **Owl Quest Q4a+ — choose your view (committed to `dev`):**
+- **2026-09-29** — **Owl Quest Q4a+ — choose your view (released to `main` 2026-09-29):**
   owner's request: people should be able to see the whole day without clicking through.
   - `app.js`: new key `STORAGE_KEYS.workoutView` (`gym:workoutView`), `WORKOUT_VIEWS`,
     `loadWorkoutView()`, `saveWorkoutView()`, `isFocusViewShowing()`,
@@ -1042,7 +1050,7 @@ Newest first. Add a line here whenever behaviour changes.
     `.exercise__name--link`; new token `--view-toggle-current` (light + dark).
   - Guide, What's new, §3 key table, §5p. Cache `v59`.
 
-- **2026-09-29** — **Owl Quest Q4a — one exercise at a time (committed to `dev`):**
+- **2026-09-29** — **Owl Quest Q4a — one exercise at a time (released to `main` 2026-09-29):**
   - New file `workout-screen.js` (in `index.html` after `week-path.js`, and in
     `APP_SHELL`): the live screen (see §5p).
   - `app.js`: `workoutMode`, `setWorkoutMode()`, `redrawWorkout()`. `startWorkout()`
@@ -1057,7 +1065,7 @@ Newest first. Add a line here whenever behaviour changes.
   - Guide (step 3 + Workout mode section), What's new ("One exercise at a time"),
     ROADMAP (Q4 split into Q4a/Q4b), `CLAUDE.md` file table. Cache `v58`.
 
-- **2026-09-29** — **Fix: workouts left open are closed quietly (committed to `dev`):** the owner tapped the Today stone and got an old Tuesday workout showing two
+- **2026-09-29** — **Fix: workouts left open are closed quietly (released to `main` 2026-09-29):** the owner tapped the Today stone and got an old Tuesday workout showing two
   "(deleted exercise)" rows. Cause: `findInProgressSession(day)` matched by day **name**
   only, so a workout left open in an earlier week was resumed; its exercises had since
   been deleted (the entry clean-up in `deleteExercise()` only runs on the device that
@@ -1072,7 +1080,7 @@ Newest first. Add a line here whenever behaviour changes.
     the next login pulls it back and closes it again.
   - What's new: a "Fixed:" line on "Your week as a path". Cache `v57`.
 
-- **2026-09-29** — **Owl Quest Q3 — the week path (committed to `dev`):**
+- **2026-09-29** — **Owl Quest Q3 — the week path (released to `main` 2026-09-29):**
   - New file `week-path.js` (in `index.html` after `xp.js`, and in `APP_SHELL`):
     `buildWeekStones()`, `renderWeekPath()`, `buildWeekPathLine()`, `buildWeekStone()`.
   - `index.html`: `#weekPathCard` (title, `#weekPathCount`, `#weekPath`) between the
@@ -1084,7 +1092,7 @@ Newest first. Add a line here whenever behaviour changes.
   - Guide (Today), What's new ("Your week as a path", 2026-09-29), §5o, `CLAUDE.md`
     file table. Cache `v56`.
 
-- **2026-09-28** — **Owl Quest Q2b — XP after a workout (committed to `dev`):**
+- **2026-09-28** — **Owl Quest Q2b — XP after a workout (released to `main` 2026-09-29):**
   - `finishWorkout()` (`app.js`) measures XP before/after saving; the alert now reads
     "Workout saved! 5 sets done · +170 XP 💪". Then `showXpGain()` and
     `celebrateAfterWorkout(personalRecords, milestone, levelUp)`.
@@ -1095,7 +1103,7 @@ Newest first. Add a line here whenever behaviour changes.
     (a plain fade with reduced motion); new token `--xp-fill-text`.
   - Guide + What's new lines added; §5n updated. Cache `v55`.
 
-- **2026-09-28** — **Owl Quest Q2a — XP and levels (committed to `dev`):**
+- **2026-09-28** — **Owl Quest Q2a — XP and levels (released to `main` 2026-09-29):**
   - New file `xp.js` (added to `index.html` after `app.js`, and to `APP_SHELL`). Rules at
     the top: 10 XP per ticked set, 50 per finished workout, 25 per personal record; 30
     levels where level L → L+1 costs L × 200 XP (max 87,000). `computeTotalXp()`,
@@ -1110,7 +1118,7 @@ Newest first. Add a line here whenever behaviour changes.
   - Guide (Today section), What's new ("Level up your owl"), `CLAUDE.md` file table
     updated. Removed the stale untracked `AGENTS.md`. Cache `v54`.
 
-- **2026-09-28** — **Full exercise names on cards (merged to `dev`):** on a phone the
+- **2026-09-28** — **Full exercise names on cards (released to `main` 2026-09-29):** on a phone the
   text "Edit" / "Delete" buttons squeezed names down to "Bench…". In
   `createExerciseCard()` (`app.js`) they're now `.icon-action` round buttons showing ✏️ /
   🗑️, each with an `aria-label` ("Edit Bench Press") and a `title` tooltip; the click
@@ -1121,8 +1129,8 @@ Newest first. Add a line here whenever behaviour changes.
   gap 10, emoji circle 46px, buttons 38px). Guide (Schedule) + What's new updated.
   Cache `v53`.
 
-- **2026-09-28** — **Owl Quest Q1c — four tabs, Settings behind the avatar (merged to
-  `dev`):**
+- **2026-09-28** — **Owl Quest Q1c — four tabs, Settings behind the avatar (released to
+  `main` 2026-09-29):**
   - `index.html`: the Settings `.tab` is gone. The top bar's name chip became
     `.avatar-btn` — same id (`#activeProfileChip`, still wired to
     `switchView("settings")` in `init()`), now holding `#activeProfileInitial` and the
@@ -1139,7 +1147,7 @@ Newest first. Add a line here whenever behaviour changes.
     get `padding: 8px 14px` now there are four.
   - Guide (step 1 + Settings section) and What's new updated. Cache `v52`.
 
-- **2026-09-28** — **Owl Quest Q1b — Today screen (merged to `dev`):**
+- **2026-09-28** — **Owl Quest Q1b — Today screen (released to `main` 2026-09-29):**
   - `index.html`: the `.hero` card now has three parts — `.hero__top` (mascot +
     greeting, unchanged ids so the owl long-press still works), a new `#heroPlan`
     (`#heroPlanTitle` + `#heroPlanIcons`), and `#startTodayBtn`, which moved *inside* the
@@ -1163,7 +1171,7 @@ Newest first. Add a line here whenever behaviour changes.
     of every tab found that button was the only element affected.
   - Guide (Today section) and What's new updated. Cache `v51`.
 
-- **2026-09-28** — **Owl Quest Q1a — colours, font and buttons (merged to `dev`):** the
+- **2026-09-28** — **Owl Quest Q1a — colours, font and buttons (released to `main` 2026-09-29):** the
   first step of the redesign (ROADMAP §11). All in `styles.css` except where noted:
   - **Colour tokens** at the top of the file replaced: lavender sky `--bg-top` fading
     into `--bg` (painted once at the top of `body` as a `no-repeat` gradient), deep indigo
@@ -1239,7 +1247,7 @@ Newest first. Add a line here whenever behaviour changes.
   yours). Cache `v47`.
 
 - **2026-07-25** — **What's new page: styling moved into the page + nicer rows (on `dev`,
-  awaiting owner test):** the folded rows rendered as unstyled OS buttons ("24 JulFriends…")
+  released to `main` 2026-09-29):** the folded rows rendered as unstyled OS buttons ("24 JulFriends…")
   because the service worker was serving a `styles.css` from before Phase 16 — the page was
   new, the stylesheet wasn't. Fixed properly by moving the page's component CSS into a
   `<style>` block in `whats-new.html`, so it can never lag behind the page again;
@@ -1248,7 +1256,7 @@ Newest first. Add a line here whenever behaviour changes.
   on open, a faint mint tint on the open row, and the bullets tucked behind a left rule.
   Cache `v46`.
 
-- **2026-07-25** — **Phase 16 — What's new page (on `dev`, awaiting owner test):** a
+- **2026-07-25** — **Phase 16 — What's new page (released to `main` 2026-09-29):** a
   standalone `whats-new.html`, opened in a new tab from **Settings → 🗞️ What's new**,
   listing releases newest-first: the latest in full with a warm intro, older ones folded
   to a tappable line each. Content lives in `RELEASES` at the top of `whats-new.js`, which
@@ -1257,7 +1265,7 @@ Newest first. Add a line here whenever behaviour changes.
   "everything before July" summary entry, as agreed. Page is in `APP_SHELL` so it works
   offline, and it follows the app's dark-mode setting. See §5m. Cache `v45`.
 
-- **2026-07-25** — **Copy pass: fewer em dashes (on `dev`, awaiting owner test):** the
+- **2026-07-25** — **Copy pass: fewer em dashes (released to `main` 2026-09-29):** the
   owner felt the app's writing leaned on "—" too heavily and it read as machine-written.
   Every user-visible em dash was rewritten as a full stop, comma, colon or joining word,
   across `index.html`, `app.js`, `friends.js`, `guide.js`, `auth.js` and the Friends
@@ -1268,8 +1276,7 @@ Newest first. Add a line here whenever behaviour changes.
   the rest of the app. Code comments and the internal docs were left as they are.
   Cache `v44`.
 
-- **2026-07-25** — **Phase 15 — close friends became mutual (on `dev`, awaiting owner
-  test):** SQL from `Documentation/SQL-Phase15-CloseFriendRequests.sql` (owner ran it):
+- **2026-07-25** — **Phase 15 — close friends became mutual (released to `main` 2026-09-29):** SQL from `Documentation/SQL-Phase15-CloseFriendRequests.sql` (owner ran it):
   a `close_requests` table, a `close_requested` flag on `friendships` so a brand-new
   friend request can carry the intent, and `accept_close_request()` /
   `end_close_friendship()` as `SECURITY DEFINER` — acceptance has to write BOTH grant
@@ -1280,7 +1287,7 @@ Newest first. Add a line here whenever behaviour changes.
   prompts once for both, and ending it now ends both sides. The **one-way share was kept**
   as "Share mine only". Guide updated. See §5j. Cache `v43`.
 
-- **2026-07-25** — **Phase 14d — add a friend by handle (on `dev`, awaiting owner test):**
+- **2026-07-25** — **Phase 14d — add a friend by handle (released to `main` 2026-09-29):**
   the add-friend box now takes **either** a username or an email. A leading `@` is
   stripped, then anything still containing an `@` is treated as an email and anything else
   as a handle (checked against the format rule before the database is asked), so
@@ -1288,7 +1295,7 @@ Newest first. Add a line here whenever behaviour changes.
   requests now show the person's `@handle` under their display name. `addFriendByEmail()`
   became `addFriend()`. The guide's Friends section was updated to match. Cache `v42`.
 
-- **2026-07-25** — **Sign-up: confirm your email (on `dev`, awaiting owner test):** the
+- **2026-07-25** — **Sign-up: confirm your email (released to `main` 2026-09-29):** the
   login panel now has a **sign-up mode**. Pressing "Sign up" reveals a **Confirm email**
   box (and relabels the button "Create account"); pressing it again creates the account,
   refusing if the two addresses don't match (compared case-insensitively). Pressing
@@ -1296,7 +1303,7 @@ Newest first. Add a line here whenever behaviour changes.
   address otherwise locks someone out of both their account and any reset email.
   Cache `v41`.
 
-- **2026-07-25** — **Phase 14c — pick your own username (on `dev`, awaiting owner test):**
+- **2026-07-25** — **Phase 14c — pick your own username (released to `main` 2026-09-29):**
   **Settings → Friends → Username** is now an editable box with a live ✓/✗ availability
   check (debounced ~400ms) and a Save that re-checks server-side. **The sign-up field
   added in 14b was removed**: it showed on the login form too, and it could only check a
@@ -1305,7 +1312,7 @@ Newest first. Add a line here whenever behaviour changes.
   Everyone now gets a generated handle at row creation and renames it here, where the
   check actually works. Cache `v40`.
 
-- **2026-07-25** — **Phase 14a/14b — usernames (on `dev`, awaiting owner test):** the
+- **2026-07-25** — **Phase 14a/14b — usernames (released to `main` 2026-09-29):** the
   database side ran from `Documentation/SQL-Phase14-Usernames.sql` (+ the
   `SQL-Phase14-ReservedHandles.sql` follow-up): a unique, format-checked `username` on
   `user_directory`, everyone backfilled with a readable handle (`mintyowl42`),
@@ -1317,7 +1324,7 @@ Newest first. Add a line here whenever behaviour changes.
   Settings → Friends shows your handle read-only (14c makes it editable). See §5l.
   Cache `v39`.
 
-- **2026-07-25** — **Renamed to Athena's Arena (on `dev`, awaiting owner test):** the top
+- **2026-07-25** — **Renamed to Athena's Arena (released to `main` 2026-09-29):** the top
   bar said "Jonathan's Journey 💪" and the PWA was still called "Justaino". Now everywhere
   the user can see: the top bar (**Athena's Arena 🦉** — flex emoji swapped for the owl),
   the browser tab title, the login panel, the install copy, and the manifest
@@ -1329,7 +1336,7 @@ Newest first. Add a line here whenever behaviour changes.
   (`justaino.github.io/First_Gym_App_Project`) — changing that would break the live link
   your friends have. Cache `v38`.
 
-- **2026-07-25** — **Phase 13 — in-app guide (on `dev`, awaiting owner test):** new
+- **2026-07-25** — **Phase 13 — in-app guide (released to `main` 2026-09-29):** new
   `guide.js` + **Settings → 📖 How to use**, opening a full-screen sheet: three numbered
   starting steps, then a collapsible section per tab and an "Easy to miss" list. Also
   reachable via "New here? Take the tour" on the empty Today/Schedule states
@@ -1338,7 +1345,7 @@ Newest first. Add a line here whenever behaviour changes.
   replaces it, and the README now points there. See §5k. Cache `v36`.
 
 - **2026-07-25** — **Phase 12d + 12e — finishing Friends, and loading states (on `dev`,
-  awaiting owner test):**
+  released to `main` 2026-09-29):**
   - **12d:** Settings → Friends gained the master **"Share my workouts with friends"**
     switch (writes `share_workouts`); **"Delete my data"** now also wipes your directory
     row, friendships, nudges and close-friend list; a tester note went into
@@ -1352,8 +1359,7 @@ Newest first. Add a line here whenever behaviour changes.
     **"Gym buddies"** card became collapsible (`gym:buddiesOpen`), with the count and
     "N went today" kept in the heading. See §5j. Cache `v35`.
 
-- **2026-07-25** — **Phase 12c — nudges you can actually see (on `dev`, awaiting owner
-  test):** unseen nudges now pop a friendly toast when the app opens (several at once
+- **2026-07-25** — **Phase 12c — nudges you can actually see (released to `main` 2026-09-29):** unseen nudges now pop a friendly toast when the app opens (several at once
   collapse into one message), a coral **dot** appears on the 🤝 tab while a request or
   unseen nudge is waiting, a buddy's card shows "👋 Nudged you today", and Today gained a
   **"Gym buddies"** card with each friend's went-today status (hidden when you have no
@@ -1369,7 +1375,7 @@ Newest first. Add a line here whenever behaviour changes.
   policies now call — `Documentation/SQL-Phase12-Fix-CloseFriendReads.sql` (owner ran it).
   No app change.
 
-- **2026-07-24** — **Phase 12a/12b — friends (on `dev`, awaiting owner test):** the
+- **2026-07-24** — **Phase 12a/12b — friends (released to `main` 2026-09-29):** the
   Supabase side was created by `Documentation/SQL-Phase12-Friends.sql` (owner ran it;
   4 tables + 3 functions, all RLS-checked). New **🤝 Friends tab** in `friends.js`: add by
   email, accept/decline requests, buddy list with went-today + weekly count, 👋 nudge
@@ -1381,7 +1387,7 @@ Newest first. Add a line here whenever behaviour changes.
   friend-read policies, `select("*")` would have merged a friend's data into your local
   cache. See §5j. Cache `v33`.
 
-- **2026-07-24** — **Phase 11 — weekly recap (on `dev`, awaiting owner test):** a
+- **2026-07-24** — **Phase 11 — weekly recap (released to `main` 2026-09-29):** a
   **"Last week"** card on Progress (under "This week") showing workouts vs goal, sets,
   volume, week streak and any PRs set last week — plus the same recap once per week as a
   dismissible **"Your week in review 🎉"** card at the top of Today. Pure client-side; the
@@ -1390,28 +1396,27 @@ Newest first. Add a line here whenever behaviour changes.
   Small refactor: `sessionVolume()` lifted out of `buildVolumeTrend` so both features share
   one definition. See §5i. Cache `v32`.
 
-- **2026-07-24** — **Phase 10 — drag-to-reorder exercises (on `dev`, awaiting owner
-  test):** SQL migration added a `sort_order` column to the Supabase `exercises` table;
+- **2026-07-24** — **Phase 10 — drag-to-reorder exercises (released to `main` 2026-09-29):** SQL migration added a `sort_order` column to the Supabase `exercises` table;
   the app now stores `sortOrder` per exercise, sorts every view by it
   (`sortExercisesByOrder`), and adds a ⠿ drag handle on Schedule cards (Pointer Events,
   touch-friendly, reorder within a day only). New exercises land at the end of their day;
   the first drag on a day renumbers it. Cloud-first write with the offline guard. See §5h.
   Cache `v30`.
 
-- **2026-07-19** — **Phase 9b — kg/lb unit setting (on `dev`, awaiting owner test):**
+- **2026-07-19** — **Phase 9b — kg/lb unit setting (released to `main` 2026-09-29):**
   new **Settings → Weight unit** dropdown; every weight in the app now reads through
   `formatWeight()` / `unitLabel()` instead of a bare number or a hard-coded "kg".
   **Display only** — saved weights are never converted, so history and PRs are
   untouched. Saved per device in `gym:unit` (not synced), like the theme. See §5g.
   Cache `v29`.
 
-- **2026-07-19** — **Phase 9 — "last time" hints (on `dev`, awaiting owner test):** in
+- **2026-07-19** — **Phase 9 — "last time" hints (released to `main` 2026-09-29):** in
   workout mode each exercise now shows a small grey `Last time (Mon, Jul 14): 40 kg × 10,
   10, 8` line under its name, computed live from completed sessions (same profile, any
   day, ≥1 ticked set; the current workout is excluded). No history = no line; nothing new
   is stored and no prefills changed. See §5f. Cache `v28`.
 
-- **2026-07-19** — **Phase 8 — exercise suggestions (on `dev`, awaiting owner test):**
+- **2026-07-19** — **Phase 8 — exercise suggestions (released to `main` 2026-09-29):**
   new `exercise-library.js` (~90 common exercises) + a suggestion dropdown under the
   Exercise name field in the add/edit form (up to 5 matches; tap or ↑/↓ + Enter to fill
   in name, icon and — only if untouched — sets/reps). Extended `EMOJI_PRESETS` from 7 to

@@ -293,7 +293,7 @@ clearing the browser or switching phones.
       (cloud-wins for profiles/exercises; a newest-wins **merge** for sessions).
 - ✅ **7f — First-login migration:** folded into the login reconcile — existing local data
       is uploaded when the cloud is empty, with a one-time "your data is saved" notice.
-- ✅ **7g — Offline handling.** Two parts, both done (code-complete, awaiting owner test):
+- ✅ **7g — Offline handling.** Two parts, both done (code-complete, released to `main` 2026-09-29):
       1. ✅ **Vendored the Supabase library locally.** Downloaded `supabase-js@2` (UMD,
          v2.108.2) into `vendor/supabase.js`; `index.html` now loads that local copy instead
          of the CDN; added `./vendor/supabase.js` to `APP_SHELL` in `sw.js`; bumped the cache
@@ -311,7 +311,7 @@ clearing the browser or switching phones.
          enhancement.
 - ✅ **7h — Privacy note + release.** (Decisions: deletion = self-serve "Delete my data"
       button [Option A]; password reset deferred to a later phase; email confirmation is OFF.)
-      1. ✅ **Privacy note + data controls** (built, awaiting owner test): a short privacy line
+      1. ✅ **Privacy note + data controls** (built, released to `main` 2026-09-29): a short privacy line
          on the **login screen**; a **Settings → "Privacy & data"** card explaining what's
          stored (email + workout data) / where (Supabase, third-party) / how to delete it; a
          **"Delete my data"** button (`deleteAllMyData()` in app.js) that wipes all the user's
@@ -481,8 +481,7 @@ that's out of scope for a PWA on iOS).
     A unique index on `(from_user, to_user, (created_at::date))` = max one nudge per
     friend per day, enforced server-side.
   - Explicit `GRANT`s for all of the above.
-- ✅ **12b — Friends tab (built 2026-07-24 — `friends.js`, cache `v33`, awaiting owner
-  test; also added Settings → "Your name to friends" and fixed the cloud pulls to filter
+- ✅ **12b — Friends tab (built 2026-07-24 — `friends.js`, cache `v33`, released to `main` 2026-09-29; also added Settings → "Your name to friends" and fixed the cloud pulls to filter
   by `user_id`, which the new friend-read policies made necessary):** a 5th tab (🤝 Friends). Add-friend form (email → lookup →
   request; friendly "no account with that email" error). Incoming requests with
   Accept / Decline. Buddy list: display name, "Went today ✅" (a completed session dated
@@ -493,7 +492,7 @@ that's out of scope for a PWA on iOS).
   session-detail modal — only if they've made *you* a close friend and still share;
   otherwise the card isn't tappable and says "… shares workout details with close
   friends".
-- ✅ **12c — Today-tab tie-ins (built 2026-07-25 — cache `v34`, awaiting owner test):** a
+- ✅ **12c — Today-tab tie-ins (built 2026-07-25 — cache `v34`, released to `main` 2026-09-29):** a
   small "Gym buddies" card (hidden with no friends) showing each friend's went-today
   status; on app open, unseen nudges show a friendly toast — "👋 Amara nudged you — go get
   that workout!" (several collapse into one message). Added beyond the original spec at
@@ -501,7 +500,7 @@ that's out of scope for a PWA on iOS).
   waiting, and a "👋 Nudged you today" line on the sender's card. Nudges are marked seen
   when the Friends tab is opened (not by the toast) so the dot survives until you've
   actually looked.
-- ✅ **12d — Settings + polish (built 2026-07-25 — cache `v35`, awaiting owner test):**
+- ✅ **12d — Settings + polish (built 2026-07-25 — cache `v35`, released to `main` 2026-09-29):**
   "Share my workouts with friends" toggle (writes `share_workouts`); friends data uses the
   existing offline handling (reads say "reconnect to see friends"; writes use the friendly
   offline block); empty states; a short `Documentation/WhatsNew_Friends_2026-07-25.md` *(since deleted)* for
@@ -717,8 +716,7 @@ saved workout keeps the old full-list editor; stars ⭐ for sets.
   a live workout. List is the page-of-everything view; the choice is remembered per
   device (`gym:workoutView`, default one at a time). In the list, tapping an exercise's
   name opens it in the one-at-a-time view.
-- ✅ **Q4b — Floating rest timer** *(on `dev` 2026-09-29, cache `v60`, awaiting owner
-  test)*: the timer card became a dark "ink" pill (`#restTimer`) stuck to the bottom of
+- ✅ **Q4b — Floating rest timer** *(on `dev` 2026-09-29, cache `v60`, released to `main` 2026-09-29)*: the timer card became a dark "ink" pill (`#restTimer`) stuck to the bottom of
   the sheet with `position: sticky`, in both views. Idle: "⏱ Rest · 60s 90s 120s";
   running: "⏱ 1:24 · +15s · Skip" (coral time); done: "Done! 💪" in mint. Started by
   hand only (owner's decision). Also (owner's feedback): ‹ Previous / Next › are now
@@ -742,13 +740,12 @@ per device), no friend badges (Q6), no heavy-lift clubs (kg/lb is only a label).
   records, 500 sets, 10,000 moved), habits (10 exercises, 5 notes, before 7am, after 9pm)
   — plus level 10. Tap one for how to earn it and your progress; "Next feather" shows the
   closest. Computed from history, nothing stored. Details in RUNBOOK §5r.
-- ✅ **Q5b — New feather celebration** *(on `dev` 2026-09-29, cache `v65`, awaiting owner
-  test)*: finishing a workout that earns a feather shows a "🪶 New feather!" card (or
+- ✅ **Q5b — New feather celebration** *(on `dev` 2026-09-29, cache `v65`, released to `main` 2026-09-29)*: finishing a workout that earns a feather shows a "🪶 New feather!" card (or
   "2 new feathers!") with confetti, after the PR and level-up cards. The 🏆
   workout-milestone trophy and its stored tracker are retired.
 
 - ✅ **Q5c — Shorter feathers card + a feathers page** *(on `dev` 2026-09-29, cache `v67`,
-  awaiting owner test)*: owner's request after the stats preview — 18 medallions made the
+  released to `main` 2026-09-29)*: owner's request after the stats preview — 18 medallions made the
   Badges tab too long. The card now shows the count, up to 4 earned feathers, "See all ›"
   and a **Suggested feather** (a different one each day, from the 3 closest plus any
   "do it once" feathers — it was a fixed "Next feather"); See all opens a full-page sheet

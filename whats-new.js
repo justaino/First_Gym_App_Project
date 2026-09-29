@@ -86,7 +86,7 @@ const RELEASES = [
     ],
   },
   {
-    date: "2026-09-28",
+    date: "2026-09-29",
     title: "Level up your owl",
     intro:
       "Every workout you've ever logged now counts towards your owl's level. " +
@@ -100,7 +100,7 @@ const RELEASES = [
     ],
   },
   {
-    date: "2026-09-28",
+    date: "2026-09-29",
     title: "A fresh new look",
     intro:
       "Athena's owl has redecorated. Same app, same data, just a brighter " +
