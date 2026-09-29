@@ -24,6 +24,7 @@ devices (see §5d — the cloud is the source of truth, localStorage is the cach
 | `supabase.js` / `auth.js` | The cloud connection and the login gate (Phase 7). |
 | `friends.js` | The Friends tab: requests, buddies, nudges, close friends (Phase 12). |
 | `guide.js` | The in-app guide. All its wording is in two lists at the top (Phase 13). |
+| `icons.js` | The app's icons: Lucide (tabs, badges) + Phosphor Duotone (buttons) as SVGs, with their licences. |
 | `xp.js` | XP and levels, worked out from saved workouts. The rules are at the top (Owl Quest Q2). |
 | `week-path.js` | The "This week" stepping-stone path on Today (Owl Quest Q3). |
 | `workout-screen.js` | The live workout screen, one exercise at a time (Owl Quest Q4). |
@@ -728,6 +729,29 @@ Colours are `--stone-*`, `--path-line` and `--on-accent` tokens (light + dark).
 **Testing:** add an exercise to another day in Schedule → a new stone appears. To see a
 missed stone, plan something for a day earlier this week that you didn't train.
 
+## 5q. Icons (icons.js)
+
+Two open-source sets, copied in as SVG text (no library, works offline):
+**Lucide** (ISC) for the tab bar and badges, **Phosphor Duotone** (MIT) for buttons.
+Licence notices are at the top of `icons.js`; the credits card (tap the app title 5×)
+says "Icons by Lucide and Phosphor". Every icon uses `currentColor`, so it follows the
+text colour — a button that shows an icon must set `color` (e.g. `.icon-action`,
+`.icon-btn` use `--text`), or it'll be black in dark mode.
+
+- **In HTML:** `<span data-icon="play"></span>` — `fillIconPlaceholders()` fills these
+  on `DOMContentLoaded` (icons.js loads before app.js).
+- **In JS:** `el.innerHTML = iconSvg("play") + " Start"`. It's called `iconSvg`, not
+  `icon`, because many functions already have a local variable called `icon` (the
+  exercise's emoji circle), which would hide the helper.
+- **Sizing:** `.ic` is 1.2em square by default; tab icons are 24px, round buttons 20px,
+  workout stars 32px (`styles.css`, "ICONS" section at the end).
+- **Names in use:** Lucide `today`, `schedule`, `progress`, `friends`; Phosphor `edit`,
+  `delete`, `moon`, `sun`, `play`, `plus`, `star`, `star-filled` (Phosphor Fill), `list`,
+  `timer`, `install`, `news`, `guide`, `wave`, `close`.
+- **Adding one:** copy the SVG from lucide.dev or phosphoricons.com (Duotone), strip
+  `width` / `height` / `class` from the `<svg>` tag only (not from inner shapes — a
+  Lucide `<rect>` needs its own width/height), add it to `ICONS`, bump `CACHE_VERSION`.
+
 ## 5p. The live workout screen (Owl Quest Q4)
 
 The workout sheet (`#workoutOverlay`) has **two looks**, set by `setWorkoutMode()` in
@@ -848,7 +872,22 @@ Newest first. Add a line here whenever behaviour changes.
 > Entries below marked "on `dev`, awaiting owner test" were written at build time.
 > Everything up to 2026-07-28 has since been tested and released to `main`.
 
-- **2026-09-29** — **Owl Quest Q4b — floating rest timer (on `dev`, awaiting owner test):**
+- **2026-09-29** — **Modern icons (on `dev`, awaiting owner test):** see §5q.
+  - New `icons.js` (19 icons + licences; in `index.html` before `app.js`, and in
+    `APP_SHELL`): `ICONS`, `iconSvg(name)`, `fillIconPlaceholders()`.
+  - `index.html`: `data-icon` placeholders on the four tabs, the theme button, Start
+    workout, Add exercise, Install / What's new / How to use, the view toggle, the rest
+    timer and the credits ✕; credits line "Icons by Lucide and Phosphor".
+  - JS: `createExerciseCard()` edit/delete, Schedule Start/Resume, the Today button,
+    `applyTheme()` sun/moon, both recap ✕ buttons, Add set (both views), remove-set ✕,
+    workout stars (`star` → `star-filled` when done), Friends' Nudge — `textContent`
+    became `innerHTML = iconSvg(...)`.
+  - `styles.css`: `.ic` sizing section; `.icon-action` / `.icon-btn` now set `color`;
+    stars lost their greyscale filter and use new tokens `--star-empty` / `--star-gold`.
+  - Guide and What's new wording no longer names the old emoji buttons. `CLAUDE.md`
+    design system + file table. Cache `v63`.
+
+- **2026-09-29** — **Owl Quest Q4b — floating rest timer (committed to `dev`):**
   - `index.html`: the `.card.timer` became `.rest-pill#restTimer` (icon, `#timerDisplay`
     with `role="timer"`, 60/90/120s buttons, new `#addRestBtn` "+15s", `#stopTimerBtn`
     now labelled "Skip").

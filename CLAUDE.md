@@ -39,6 +39,7 @@ JavaScript frameworks). Build accordingly: explain things simply and comment the
 | `xp.js` | XP and levels (computed from saved workouts, never stored) |
 | `week-path.js` | The "This week" stepping-stone path on Today (computed, never stored) |
 | `workout-screen.js` | The live workout screen: one exercise at a time, stars, the owl coach |
+| `icons.js` | The app's icons (Lucide + Phosphor Duotone SVGs, with their licences) |
 | `exercise-library.js` | Data only: built-in exercise suggestions |
 | `guide.js` | In-app guide (wording in lists at the top) |
 | `whats-new.js` / `whats-new.html` | Release notes for friends, and the page that shows them |
@@ -151,6 +152,10 @@ and give any new colour a dark-mode value too.
   Friends), icon + label; the active tab is tinted lavender with purple text. **Settings
   opens from the round purple avatar** (the profile's initial) in the top bar, which also
   carries the What's new dot. Emoji as exercise icons. The owl is the app's mascot.
+- **Icons (owner's choice, 2026-09-29):** **Lucide** (thin outlines) for the tab bar and
+  badges, **Phosphor Duotone** for buttons — both copied into `icons.js` (never loaded
+  from a CDN) and used via `<span data-icon="name">` or `iconSvg("name")`. Keep emoji
+  for exercise icons, the 🦉 owl, celebration cards and emoji inside sentences.
 - Mock-ups for the rest of the redesign: ROADMAP.md §11. The old pastel reference is
   still at `Design-Reference.png` for the general feel.
 

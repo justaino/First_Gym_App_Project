@@ -36,14 +36,14 @@ const GUIDE_STEPS = [
   {
     title: "Build your week",
     text:
-      "Schedule → ＋ Add exercise. Start typing a name and pick one of the " +
+      "Schedule → Add exercise. Start typing a name and pick one of the " +
       "suggestions: it fills in the emoji, sets and reps for you. Choose " +
       "which day it belongs to, then add a few more.",
   },
   {
     title: "Train",
     text:
-      "Today → ▶ Start workout. You see one exercise at a time: tap a ⭐ " +
+      "Today → Start workout. You see one exercise at a time: tap a star " +
       "as you finish each set and type in the weight you used, then Next ›. " +
       "Tap Finish at the end and it's saved to your history. That's the " +
       "whole loop.",
@@ -61,7 +61,7 @@ const GUIDE_SECTIONS = [
       "The card at the top shows today's plan: how many exercises and sets, with their icons. On a rest day it just says so.",
       "The bar in that card is your owl level. Every ticked set earns 10 XP, every finished workout 50 XP, and every personal record 25 XP. There are 30 levels, from Egg all the way to Athena's Owl, and each one takes a bit longer than the last. When you finish a workout you'll see how much XP it earned, and the owl cheers when you go up a level.",
       "Under that card, This week shows your week as stepping stones, one for each day in your schedule. Yellow with a ✓ means done (tap it to see that workout), the big coral one is today (tap it to start), and paler ones are days you missed. Train on an extra day and it gets a stone too.",
-      "▶ Start workout (in that card) opens training mode. If you close it half way, the button says Resume, and nothing is lost.",
+      "Start workout (in that card) opens training mode. If you close it half way, the button says Resume, and nothing is lost.",
       "Today's exercises are listed underneath the card.",
       "Recent workouts lists your last few sessions. Edit one to fix a mistake, including its date.",
       "Once a week a one-line summary of last week appears under the card. Tap it to see the full recap, or tap ✕ to hide it until next week.",
@@ -73,11 +73,11 @@ const GUIDE_SECTIONS = [
     title: "Schedule",
     summary: "Your weekly plan",
     items: [
-      "＋ Add exercise: name, emoji, sets, reps and which day it's on.",
+      "Add exercise: name, emoji, sets, reps and which day it's on.",
       "Typing a name suggests common exercises. Tap one to fill in the rest, or ignore them and type your own.",
       "You can set different reps and a different weight for each set, if you want to work up in weight.",
       "Drag the ⠿ handle on the left of a card to reorder exercises within a day. Workout mode follows the same order.",
-      "✏️ edits an exercise and 🗑️ deletes it (it asks first). Deleting an exercise also removes it from your saved workouts.",
+      "The pencil button edits an exercise and the bin deletes it (it asks first). Deleting an exercise also removes it from your saved workouts.",
     ],
   },
   {
@@ -85,12 +85,12 @@ const GUIDE_SECTIONS = [
     title: "Workout mode",
     summary: "What happens while you train",
     items: [
-      "You see one exercise at a time. The big boxes are the next set's reps and weight: change them if you did something different, then tap a ⭐ when the set is done. Tap a gold star again to undo it.",
+      "You see one exercise at a time. The big boxes are the next set's reps and weight: change them if you did something different, then tap a star when the set is done and it turns gold. Tap a gold star again to undo it.",
       "Tap a star only when you've actually done the set. Everything else in the app counts ticked sets and ignores the rest.",
       "The owl tells you what you lifted last time, so you know what to beat, and shows the last note you left for that exercise.",
       "‹ Previous and Next › move between exercises, and the row of emoji at the top jumps straight to one (handy if a machine is busy). Finished ones get a ✓.",
       "Edit sets opens the full table for the exercise on screen, to add or remove a set or fix a number. Workout details has the date.",
-      "Prefer to see the whole day at once? Tap ☰ List at the top of a workout. The app remembers your choice on this phone, and ⭐ One at a time switches back. In the list, tap an exercise's name to open just that one.",
+      "Prefer to see the whole day at once? Tap List at the top of a workout. The app remembers your choice on this phone, and One at a time switches back. In the list, tap an exercise's name to open just that one.",
       "Editing an old workout from Recent workouts always shows everything on one page, which is easier for fixing mistakes.",
       "The rest timer is the dark pill that stays at the bottom of the screen while you scroll. Tap 60s, 90s or 120s to start it, +15s for a bit longer, or Skip to stop. It beeps when it's up, and keeps counting correctly even if you lock your phone or switch apps.",
       "📝 Add note under an exercise is somewhere to leave yourself a message, like \"next week try 2.5kg more\". It saves as you type and stays with that day's workout.",
@@ -123,7 +123,7 @@ const GUIDE_SECTIONS = [
       "You can ask when you first add someone (tick the box on the form), or later from their card.",
       "Either of you can end it, and you both stop seeing each other's workouts. You stay ordinary friends.",
       "Share mine only is the quieter option: they see your workouts, you don't see theirs, and nobody has to accept anything.",
-      "👋 Nudge gives a friend a friendly prod. One per friend per day. They'll see it next time they open the app. It isn't a phone notification.",
+      "Nudge gives a friend a friendly prod. One per friend per day. They'll see it next time they open the app. It isn't a phone notification.",
       "A red dot on the tab means a request or a nudge is waiting for you.",
       "Settings → Friends → Share my workouts with friends turns everything off at once, close friends included.",
       "Your own username is in Settings → Friends. You're given one to start with. Change it to whatever you like, as long as nobody else has it.",

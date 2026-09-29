@@ -1035,7 +1035,7 @@ function buildBuddyCard(buddy) {
     nudge.textContent = "Nudged! ✓";
     nudge.disabled = true;
   } else {
-    nudge.textContent = "👋 Nudge";
+    nudge.innerHTML = iconSvg("wave") + " Nudge";
     nudge.addEventListener("click", () => sendNudge(buddy));
   }
   actions.appendChild(nudge);

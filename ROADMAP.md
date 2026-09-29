@@ -745,6 +745,11 @@ SQL change, so it goes last and follows the SQL-first rule.
 - **2026-07-28 — Per-exercise workout notes** (a friend's suggestion): a private note on
   each exercise in workout mode, shown next time as a hint. Friends never see notes.
 - **2026-07-28 — Back button on the What's new page** for the installed app.
+- **2026-09-29 — Modern icons** (owner's request, before Q5): after a preview page
+  comparing emoji, Phosphor Fill, Phosphor Duotone and Lucide, the owner picked **Lucide**
+  for the tab bar and badges and **Phosphor Duotone** for buttons ("I love the minimal
+  feel"). Copied into `icons.js`. Workout stars became outline → gold filled icons.
+  Exercise icons, the owl and celebration cards stay emoji.
 - **2026-09-29 — Workouts left open are closed quietly** (after Q3, owner's request): an
   unfinished workout untouched for 12+ hours is finished if it has ticked sets, or
   removed if not, instead of being resumed the next time that weekday comes round.

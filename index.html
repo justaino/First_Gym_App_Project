@@ -125,7 +125,7 @@
           aria-label="Switch to dark mode"
           aria-pressed="false"
         >
-          🌙
+          <span data-icon="moon"></span>
         </button>
         <!-- Avatar = the way into Settings. app.js fills in the active
              profile's first initial and a matching label for screen readers. -->
@@ -257,7 +257,7 @@
 
           <!-- Starts (or resumes) today's workout. Hidden on rest days. -->
           <button class="btn btn--ink btn--block hero__start" id="startTodayBtn" type="button" hidden>
-            ▶ Start workout
+            <span data-icon="play"></span> Start workout
           </button>
         </div>
 
@@ -303,7 +303,7 @@
 
         <!-- Pill button to open the "add exercise" form -->
         <button class="btn btn--primary btn--block" id="addExerciseBtn" type="button">
-          ＋ Add exercise
+          <span data-icon="plus"></span> Add exercise
         </button>
 
         <!-- app.js fills this with exercises grouped by day -->
@@ -398,7 +398,7 @@
             offline.
           </p>
           <button class="btn btn--primary" id="installBtn" type="button">
-            📲 Install app
+            <span data-icon="install"></span> Install app
           </button>
         </div>
 
@@ -415,7 +415,7 @@
             target="_blank"
             rel="noopener"
           >
-            🗞️ What's new
+            <span data-icon="news"></span> What's new
             <!-- app.js shows this when there's an update you haven't opened -->
             <span class="whats-new-link__dot" id="whatsNewDot" hidden></span>
           </a>
@@ -429,7 +429,7 @@
             walks through every tab in plain English.
           </p>
           <button class="btn btn--primary" id="openGuideBtn" type="button">
-            📖 How to use
+            <span data-icon="guide"></span> How to use
           </button>
         </div>
 
@@ -785,8 +785,8 @@
              Only shown for a live workout (not when editing a saved one).
              app.js remembers the choice on this device (gym:workoutView). -->
         <div class="view-toggle" id="workoutViewToggle" role="group" aria-label="Workout view">
-          <button class="view-toggle__btn" type="button" data-view="focus">⭐ One at a time</button>
-          <button class="view-toggle__btn" type="button" data-view="list">☰ List</button>
+          <button class="view-toggle__btn" type="button" data-view="focus"><span data-icon="star"></span> One at a time</button>
+          <button class="view-toggle__btn" type="button" data-view="list"><span data-icon="list"></span> List</button>
         </div>
 
         <!-- Saved-as-you-go note -->
@@ -815,7 +815,7 @@
              it shows the time, +15s and Skip. app.js puts "is-running" or
              "is-done" on #restTimer and styles.css swaps the buttons. -->
         <div class="rest-pill" id="restTimer">
-          <span class="rest-pill__icon" aria-hidden="true">⏱</span>
+          <span class="rest-pill__icon" data-icon="timer" aria-hidden="true"></span>
           <span class="rest-pill__display timer__display" id="timerDisplay" role="timer">Rest</span>
           <div class="rest-pill__buttons">
             <button class="rest-pill__btn rest-pill__idle" type="button" data-seconds="60">60s</button>
@@ -877,22 +877,22 @@
     -->
     <nav class="tabbar" aria-label="Main navigation">
       <button class="tab tab--active" type="button" data-view="today" aria-current="page">
-        <span class="tab__icon" aria-hidden="true">☀️</span>
+        <span class="tab__icon" data-icon="today" aria-hidden="true"></span>
         <span class="tab__label">Today</span>
       </button>
 
       <button class="tab" type="button" data-view="schedule">
-        <span class="tab__icon" aria-hidden="true">📅</span>
+        <span class="tab__icon" data-icon="schedule" aria-hidden="true"></span>
         <span class="tab__label">Schedule</span>
       </button>
 
       <button class="tab" type="button" data-view="progress">
-        <span class="tab__icon" aria-hidden="true">📈</span>
+        <span class="tab__icon" data-icon="progress" aria-hidden="true"></span>
         <span class="tab__label">Progress</span>
       </button>
 
       <button class="tab" type="button" data-view="friends">
-        <span class="tab__icon" aria-hidden="true">🤝</span>
+        <span class="tab__icon" data-icon="friends" aria-hidden="true"></span>
         <span class="tab__label">Friends</span>
         <!-- Little coral dot: friends.js shows it when a request is waiting or
              someone has nudged you. -->
@@ -914,13 +914,15 @@
         type="button"
         aria-label="Close"
       >
-        ✕
+        <span data-icon="close"></span>
       </button>
       <span class="credits-card__owl" aria-hidden="true">🦉</span>
       <p class="credits-card__title">You found a secret!</p>
       <p class="credits-card__text">
         Built with ❤️ for your journey. Keep showing up. 💪
       </p>
+      <!-- Credit for the open-source icon sets (see icons.js for the licences). -->
+      <p class="credits-card__text">Icons by Lucide and Phosphor.</p>
     </div>
 
     <!--
@@ -940,6 +942,10 @@
       that app.js can read the EXERCISE_LIBRARY variable it defines.
     -->
     <script src="exercise-library.js"></script>
+
+    <!-- The app's icons (Lucide + Phosphor, copied in). Loaded before app.js,
+         which uses its icon() helper when drawing buttons. -->
+    <script src="icons.js"></script>
 
     <!-- Our app logic -->
     <script src="app.js"></script>

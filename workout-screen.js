@@ -8,7 +8,7 @@
     ━━━━━━━━━━━━░░░░░░  4 of 9 sets     ← progress through the whole workout
     🦉 "Last time (22 Sep): 10, 10, 8…"  ← the owl's hint (+ your last note)
     Set 2 of 3   [ 10 ] reps [ 40 ] kg  ← the next set to do, big and editable
-    ⭐ ⭐ ☆                               ← tap a star when a set is done
+    ★ ★ ☆                               ← tap a star when a set is done
     ▸ Edit sets   📝 Add note           ← the full set table, folded away
     ‹ Previous          Next ›          ← (no Next on the last one: use Finish)
     Up next: 💪 Overhead Press · 3 sets
@@ -330,7 +330,8 @@ function buildStarRow(entryIndex, entry) {
     if (setIndex === nextToDo) {
       star.classList.add("focus-star--next");
     }
-    star.textContent = "⭐";
+    // A grey outline star until the set is done, then a solid gold one (icons.js).
+    star.innerHTML = iconSvg(set.done ? "star-filled" : "star");
     star.setAttribute("aria-pressed", set.done ? "true" : "false");
     star.setAttribute(
       "aria-label",
@@ -392,7 +393,7 @@ function buildEditSets(entryIndex, entry) {
   const addBtn = document.createElement("button");
   addBtn.type = "button";
   addBtn.className = "btn btn--ghost btn--small wset-add";
-  addBtn.textContent = "＋ Add set";
+  addBtn.innerHTML = iconSvg("plus") + " Add set";
   addBtn.addEventListener("click", () => addWorkoutSet(entryIndex));
   details.appendChild(addBtn);
 

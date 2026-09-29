@@ -62,6 +62,8 @@
   /* Owl Quest Q4: the live workout screen's stars. */
   --star-done-bg: #fff6d6; /* a ticked set: warm butter tile */
   --star-done-edge: #e8cc6a;
+  --star-gold: #e3a21a; /* the filled star on a done set (deep enough on butter) */
+  --star-empty: #b3abcc; /* the outline star on a set still to do */
   /* Q4a+: the chosen half of the workout view toggle (same tint as the active tab). */
   --view-toggle-current: rgba(185, 167, 224, 0.25);
   /* Q4b: the buttons on the rest timer pill (see-through white on dark ink). */
@@ -126,6 +128,8 @@
 
   --star-done-bg: #4a3f1c; /* a warm glow on the night sky */
   --star-done-edge: #b8912b;
+  --star-gold: #f6d365;
+  --star-empty: #7a71a8;
   --view-toggle-current: rgba(201, 184, 255, 0.18);
   --rest-chip-bg: rgba(35, 29, 66, 0.1); /* the pill is light in dark mode */
 
@@ -421,8 +425,9 @@ body {
   flex-shrink: 0;
 }
 
-/* Small round icon buttons on exercise cards (✏️ Edit, 🗑️ Delete). 38px keeps
-   them comfortable to tap while taking far less room than the words did. */
+/* Small round icon buttons on exercise cards (pencil = Edit, bin = Delete). 38px
+   keeps them comfortable to tap while taking far less room than the words did.
+   The icon takes the button's text colour, so it must be set here. */
 .icon-action {
   width: 38px;
   height: 38px;
@@ -430,6 +435,7 @@ body {
   border-radius: 50%;
   cursor: pointer;
   background-color: var(--bg);
+  color: var(--text);
   font-size: 17px;
   line-height: 1;
   display: flex;
@@ -1618,6 +1624,7 @@ button.week-stone--done.week-stone--current:active {
   height: 40px;
   font-size: 18px;
   line-height: 1;
+  color: var(--text); /* the icon takes this colour */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2876,26 +2883,28 @@ body {
   height: 60px;
   border: none;
   border-radius: 18px;
-  font-size: 28px;
+  display: grid;
+  place-items: center;
   cursor: pointer;
   background: var(--card);
+  color: var(--star-empty); /* the icon takes this colour */
   box-shadow: 0 4px 0 var(--edge);
-  filter: grayscale(1);
-  opacity: 0.55;
   transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+.focus-star .ic {
+  width: 32px;
+  height: 32px;
 }
 .focus-star:active {
   transform: translateY(3px);
   box-shadow: 0 1px 0 var(--edge);
 }
 .focus-star--next {
-  opacity: 0.8;
   outline: 3px solid var(--lavender);
   outline-offset: 2px;
 }
 .focus-star--done {
-  filter: none;
-  opacity: 1;
+  color: var(--star-gold);
   background: var(--star-done-bg);
   box-shadow: 0 4px 0 var(--star-done-edge);
 }
@@ -2978,4 +2987,42 @@ body {
   text-align: center;
   font-weight: 700;
   color: var(--muted);
+}
+
+
+/* =========================================================================
+   ICONS (icons.js) — Lucide for the tab bar, Phosphor Duotone for buttons.
+   Each icon is an SVG inside <span class="ic">, drawn in "currentColor", so it
+   follows the text colour (and light/dark mode) of whatever it sits in. By
+   default it's a touch bigger than the text beside it and sits on the same line.
+   ========================================================================= */
+.ic {
+  display: inline-flex;
+  width: 1.2em;
+  height: 1.2em;
+  vertical-align: -0.25em;
+  flex-shrink: 0;
+}
+.ic svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+/* Tab bar icons: a fixed, comfortable size. */
+.tab__icon .ic {
+  width: 24px;
+  height: 24px;
+  vertical-align: 0;
+}
+/* Round icon-only buttons (✏️/🗑️ on cards, the theme button, close buttons). */
+.icon-action .ic,
+.icon-btn .ic {
+  width: 20px;
+  height: 20px;
+  vertical-align: 0;
+}
+.rest-pill__icon .ic {
+  width: 20px;
+  height: 20px;
+  vertical-align: -0.2em;
 }

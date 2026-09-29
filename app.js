@@ -352,7 +352,7 @@ function createExerciseCard(exercise, draggable) {
   const editBtn = document.createElement("button");
   editBtn.className = "icon-action";
   editBtn.type = "button";
-  editBtn.textContent = "✏️";
+  editBtn.innerHTML = iconSvg("edit");
   editBtn.setAttribute("aria-label", "Edit " + exercise.name);
   editBtn.title = "Edit";
   editBtn.addEventListener("click", () => openExerciseModalForEdit(exercise.id));
@@ -360,7 +360,7 @@ function createExerciseCard(exercise, draggable) {
   const deleteBtn = document.createElement("button");
   deleteBtn.className = "icon-action";
   deleteBtn.type = "button";
-  deleteBtn.textContent = "🗑️";
+  deleteBtn.innerHTML = iconSvg("delete");
   deleteBtn.setAttribute("aria-label", "Delete " + exercise.name);
   deleteBtn.title = "Delete";
   deleteBtn.addEventListener("click", () => deleteExercise(exercise.id));
@@ -590,7 +590,8 @@ function renderSchedule() {
     startBtn.className = "btn btn--ghost btn--small";
     startBtn.type = "button";
     // Say "Resume" if there's an in-progress workout for this day.
-    startBtn.textContent = findInProgressSession(day) ? "▶ Resume" : "▶ Start";
+    startBtn.innerHTML =
+      iconSvg("play") + (findInProgressSession(day) ? " Resume" : " Start");
     startBtn.addEventListener("click", () => startWorkout(day));
 
     headingRow.appendChild(heading);
@@ -703,9 +704,9 @@ function renderToday() {
 
   // The big button: labelled Resume if today's workout is already under way.
   startBtn.hidden = false;
-  startBtn.textContent = findInProgressSession(todayName)
-    ? "▶ Resume workout"
-    : "▶ Start workout";
+  startBtn.innerHTML = findInProgressSession(todayName)
+    ? iconSvg("play") + " Resume workout"
+    : iconSvg("play") + " Start workout";
 
   listHeading.hidden = false;
   todaysExercises.forEach((exercise) => {
@@ -1993,7 +1994,7 @@ function buildRecapCard(recap, options) {
     const close = document.createElement("button");
     close.className = "recap__close";
     close.type = "button";
-    close.textContent = "✕";
+    close.innerHTML = iconSvg("close");
     close.setAttribute("aria-label", "Dismiss this week's recap");
     close.addEventListener("click", options.onDismiss);
     head.appendChild(close);
@@ -2206,7 +2207,7 @@ function buildRecapSummaryRow(recap, onDismiss) {
   const close = document.createElement("button");
   close.type = "button";
   close.className = "recap__close";
-  close.textContent = "✕";
+  close.innerHTML = iconSvg("close");
   close.setAttribute("aria-label", "Dismiss this week's recap");
   close.addEventListener("click", onDismiss);
 
@@ -4257,7 +4258,7 @@ function renderWorkoutItems() {
     const addBtn = document.createElement("button");
     addBtn.type = "button";
     addBtn.className = "btn btn--ghost btn--small wset-add";
-    addBtn.textContent = "＋ Add set";
+    addBtn.innerHTML = iconSvg("plus") + " Add set";
     addBtn.addEventListener("click", () => addWorkoutSet(entryIndex));
     card.appendChild(addBtn);
 
@@ -4365,7 +4366,7 @@ function buildWorkoutSetRow(entryIndex, setIndex, set) {
   const removeBtn = document.createElement("button");
   removeBtn.type = "button";
   removeBtn.className = "wset-remove";
-  removeBtn.textContent = "✕";
+  removeBtn.innerHTML = iconSvg("close");
   removeBtn.setAttribute("aria-label", "Remove set " + (setIndex + 1));
   removeBtn.addEventListener("click", () =>
     removeWorkoutSet(entryIndex, setIndex)
@@ -4962,14 +4963,14 @@ function applyTheme(theme) {
   if (theme === "dark") {
     document.documentElement.setAttribute("data-theme", "dark");
     if (toggle) {
-      toggle.textContent = "☀️"; // tapping now switches back to light
+      toggle.innerHTML = iconSvg("sun"); // tapping now switches back to light
       toggle.setAttribute("aria-label", "Switch to light mode");
       toggle.setAttribute("aria-pressed", "true");
     }
   } else {
     document.documentElement.removeAttribute("data-theme");
     if (toggle) {
-      toggle.textContent = "🌙"; // tapping switches to dark
+      toggle.innerHTML = iconSvg("moon"); // tapping switches to dark
       toggle.setAttribute("aria-label", "Switch to dark mode");
       toggle.setAttribute("aria-pressed", "false");
     }
