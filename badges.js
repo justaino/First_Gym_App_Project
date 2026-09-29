@@ -194,7 +194,30 @@ function listFeathers() {
 }
 
 /* =========================================================================
-   3. DRAWING THE "YOUR FEATHERS" CARD
+   3. NEW FEATHERS AFTER A WORKOUT (Owl Quest Q5b)
+   finishWorkout() in app.js asks which feathers you had just BEFORE the
+   workout is saved, then which ones are new just after. Nothing is stored:
+   if deleting a workout loses you a feather, earning it again celebrates again.
+   ========================================================================= */
+
+// The ids of the feathers you've earned right now, e.g. Set {"first-flight"}.
+function earnedFeatherIds() {
+  return new Set(
+    computeFeathers()
+      .filter((item) => item.earned)
+      .map((item) => item.feather.id)
+  );
+}
+
+// The feathers earned now that weren't in `beforeIds` (in list order).
+function detectNewFeathers(beforeIds) {
+  return computeFeathers()
+    .filter((item) => item.earned && !beforeIds.has(item.feather.id))
+    .map((item) => item.feather);
+}
+
+/* =========================================================================
+   4. DRAWING THE "YOUR FEATHERS" CARD
    ========================================================================= */
 
 // Which feather's details are open (memory only; tap it again to close).

@@ -107,6 +107,7 @@ const GUIDE_SECTIONS = [
       "Your feathers are badges you earn by training: your first workout, streaks, records, early starts and more. Earned ones are in colour, the rest are grey.",
       "Tap a feather to see how to earn it and how close you are. Next feather shows the one you're nearest to.",
       "Your past workouts count, so you may have a few already.",
+      "Earn a new feather during a workout and the owl tells you when you finish, with confetti.",
       "The ring at the top shows workouts done this week against your weekly goal (set it in Settings).",
       "Week streak counts how many weeks in a row you've trained at least once.",
       "The 12-week grid is one square per day, and darker means more sets. Tap a square to see that day.",

@@ -735,18 +735,22 @@ saved workout keeps the old full-list editor; stars ⭐ for sets.
 Badge icons are Lucide (see the icon pass in §12). No weekly-goal badges (the goal is
 per device), no friend badges (Q6), no heavy-lift clubs (kg/lb is only a label).
 
-- ✅ **Q5a — The feathers card** *(on `dev` 2026-09-29, cache `v64`, awaiting owner test)*:
+- ✅ **Q5a — The feathers card** *(on `dev` 2026-09-29, cache `v64`)*:
   new `badges.js`. "Your feathers" at the top of the Badges tab: 18 medallions (earned in
   colour, locked in grey) in four groups — showing up (1/7/30/50/100 workouts), streaks
   (3 and 10 weeks in a row, 4 in a week, a Saturday + Sunday), strength (1 and 10
   records, 500 sets, 10,000 moved), habits (10 exercises, 5 notes, before 7am, after 9pm)
   — plus level 10. Tap one for how to earn it and your progress; "Next feather" shows the
   closest. Computed from history, nothing stored. Details in RUNBOOK §5r.
-- ☐ **Q5b — New feather celebration**: finishing a workout that earns a feather shows a
-  "🪶 New feather!" card with confetti (after the PR and level-up cards), replacing the
-  🏆 milestone trophy.
+- ✅ **Q5b — New feather celebration** *(on `dev` 2026-09-29, cache `v65`, awaiting owner
+  test)*: finishing a workout that earns a feather shows a "🪶 New feather!" card (or
+  "2 new feathers!") with confetti, after the PR and level-up cards. The 🏆
+  workout-milestone trophy and its stored tracker are retired.
 
-### Phase Q6 — Team quests with friends ☐
+**Phase Q5 is complete.** Q6 (team quests) is deferred; next is a redesign of the stats
+under the feathers (owner's request, 2026-09-29).
+
+### Phase Q6 — Team quests with friends ☐ *(deferred by the owner, 2026-09-29)*
 Shared goals with a friend (e.g. "both train 3 times this week"). Probably needs a small
 SQL change, so it goes last and follows the SQL-first rule.
 

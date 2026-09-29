@@ -85,7 +85,7 @@ All keys start with `gym:`.
 | `gym:workoutView` | `"focus"` or `"list"` — how a live workout looks (Q4a+; per device, not synced; default `focus`). |
 | `gym:weeklyGoal` | Each profile's weekly workout goal, `{ profileId: n }` (per device, not synced). See §5c. |
 | `gym:syncedUserId` | Which logged-in account the local cache belongs to, so one person's data is never uploaded into another's account. See §5d. |
-| `gym:celebratedMilestones` | Easter-egg bookkeeping: which workout-count milestones each profile has already celebrated, so the trophy only plays once. |
+| `gym:celebratedMilestones` | **Retired (Owl Quest Q5b).** Used to record which workout-count trophies had played; feathers replaced the trophy. The app now deletes this key at startup. |
 | `gym:whatsNewSeen` | Phase 16: the date of the newest release note you've opened. Older than the newest entry = the "update" dot shows. |
 | `gym:buddiesOpen` | Phase 12e: whether the Today "Gym buddies" card is folded open. |
 | `gym:recapSeen:<profileId>:<monday>` | Phase 11: you've dismissed the "week in review" card on Today for that profile that week. One key per profile per week; old ones are tidied away automatically (per device, not synced). |
@@ -122,11 +122,8 @@ storage, **refresh the page** so the app re-reads it.
 // Pretty-print all your saved workouts
 JSON.parse(localStorage.getItem("gym:sessions"))
 
-// See which milestones have been celebrated
-localStorage.getItem("gym:celebratedMilestones")
-
-// Reset just the milestone tracker (handy for testing the trophy)
-localStorage.removeItem("gym:celebratedMilestones")
+// See every feather and your progress (Owl Quest Q5)
+listFeathers()
 
 // Wipe this device's cache and settings. Your cloud data is NOT touched —
 // log in again and it syncs back down. (To delete cloud data, use
@@ -684,14 +681,16 @@ completed and again just after. The difference is what the workout earned: it's 
 the "Workout saved!" alert and popped over the bar by `showXpGain()` (a `.level-bar__gain`
 bubble that floats up and fades, only if the bar is on screen). `detectLevelUp(before,
 after)` returns the new level (or null); `celebrateAfterWorkout()` then plays its cards 3
-seconds apart: PR 🏅 → level up 🦉 ("Top level!" at 30) → milestone 🏆. A level up isn't
+seconds apart: PR 🏅 → level up 🦉 ("Top level!" at 30) → new feathers 🪶 (Q5b). A level up isn't
 remembered anywhere, so if a deleted workout drops you a level, earning it back
 celebrates again.
 
 **Previewing without training** (console, on the Today tab):
 - `showXpGain(170)` shows the bubble.
-- `celebrateAfterWorkout([], null, levelForXp(9000))` shows the "Level up! Level 10 · Night Owl" card.
-- `celebrateAfterWorkout([], null, levelForXp(87000))` shows the "Top level!" card.
+- `celebrateAfterWorkout([], levelForXp(9000), [])` shows the "Level up! Level 10 · Night Owl" card.
+- `celebrateAfterWorkout([], levelForXp(87000), [])` shows the "Top level!" card.
+- `celebrateAfterWorkout([], null, FEATHERS.slice(0, 2))` shows "🪶 2 new feathers!".
+  (The arguments changed in Q5b: records, level up, new feathers.)
 
 ### Checking the maths (console)
 - `computeTotalXp()` → `{ total, sets, workouts, records, fromSets, fromWorkouts, fromRecords }`
@@ -754,6 +753,12 @@ profile's finished workouts every time the tab draws.
   box; tapping it again closes it.
 - **Colours:** `--medal-*` tokens (butter, coral, mint, lavender + edges, `--medal-ink`,
   `--medal-locked*`), light and dark.
+- **After a workout (Q5b):** `finishWorkout()` takes `earnedFeatherIds()` just before
+  marking the session completed and `detectNewFeathers(before)` just after; any new ones
+  get one "🪶 New feather!" / "2 new feathers!" card (names joined with ·), played after
+  the PR and level-up cards by `celebrateAfterWorkout(personalRecords, levelUp,
+  newFeathers)`. Nothing is remembered, so a feather lost by deleting a workout
+  celebrates again when re-earned. This replaced the 🏆 workout-milestone trophy.
 - **Console:** `listFeathers()` prints a table of every feather and your progress;
   `computeFeatherStats()` shows the raw numbers.
 
@@ -858,9 +863,10 @@ before the deletion**. So export a backup before any big cleanup.
 The app cleans up related data so nothing is left orphaned:
 
 - **Delete an exercise** → also removes that exercise from every saved workout,
-  deletes any workout left empty, and reconciles the milestone tracker.
-- **Delete a workout** → reconciles the milestone tracker (so re-earning a
-  milestone re-triggers its trophy).
+  deletes any workout left empty.
+- **Delete a workout** → just removes it. XP, levels and feathers are recalculated from
+  what's left, so nothing else needs tidying (a lost feather celebrates again when
+  re-earned).
 - **Delete a profile** → also removes that profile's exercises and workouts.
 
 ---
@@ -874,17 +880,8 @@ saved workout data.
 |---|---------|--------------|
 | 1 | **PC:** type `athena` (not in a text box). **Mobile/mouse:** long-press the Today-header mascot (sun/moon) for ~1.5s. | An owl 🦉 glides across + a "Wisdom +1" toast. |
 | 3 | Finish a workout where you beat a past weight for an exercise | Confetti + a "New personal record!" card. |
-| 4 | Reach a workout-count milestone (7, 30, 50, 100) | One-time confetti + 🏆 trophy card per milestone. |
+| ~~4~~ | *Retired in Owl Quest Q5b.* The workout-count trophy (7, 30, 50, 100) is now the feathers Week One, Regular, Fifty and Century, celebrated with a 🪶 card. | — |
 | 7 | Tap the app title 5× within 2 seconds | A hidden credits card slides up. |
-
-### Testing the milestone trophy (#4)
-The trophy fires when a profile's **completed**-workout count first reaches a
-milestone. To preview it without doing 7 real workouts:
-
-1. In the console, run `localStorage.removeItem("gym:celebratedMilestones")`.
-2. Temporarily add `1` to the `WORKOUT_MILESTONES` list near the top of `app.js`.
-3. Finish one workout → trophy appears.
-4. Put `WORKOUT_MILESTONES` back to `[7, 30, 50, 100]`.
 
 ### How personal records (#3) are decided
 PRs are matched by an exercise's internal **id**, not its name. Beating a past
@@ -900,7 +897,21 @@ Newest first. Add a line here whenever behaviour changes.
 > Entries below marked "on `dev`, awaiting owner test" were written at build time.
 > Everything up to 2026-07-28 has since been tested and released to `main`.
 
-- **2026-09-29** — **Owl Quest Q5a — the feathers card (on `dev`, awaiting owner test):**
+- **2026-09-29** — **Owl Quest Q5b — new feather celebration (on `dev`, awaiting owner
+  test):**
+  - `badges.js`: `earnedFeatherIds()`, `detectNewFeathers(beforeIds)`.
+  - `app.js` `finishWorkout()`: feathers before/after, then
+    `celebrateAfterWorkout(personalRecords, levelUp, newFeathers)` — the arguments
+    changed (the milestone one is gone). A "🪶 New feather!" card (or "N new feathers!")
+    plays last, with confetti.
+  - **Trophy retired:** removed `WORKOUT_MILESTONES`, `loadCelebratedMap()`,
+    `saveCelebratedMap()`, `reconcileCelebratedMilestones()` (and its two calls when
+    deleting exercises / workouts) and `detectWorkoutMilestone()`. `init()` now deletes
+    the old `gym:celebratedMilestones` key; the key name stays in `STORAGE_KEYS` for that
+    and for "delete my data". §3, §5, §7, §8 updated.
+  - Guide + What's new lines. Cache `v65`.
+
+- **2026-09-29** — **Owl Quest Q5a — the feathers card (committed to `dev`):**
   see §5r.
   - New `badges.js` (in `index.html` after `workout-screen.js`, and in `APP_SHELL`).
   - `index.html`: the tab label and view title are now **Badges** (`data-view` is still

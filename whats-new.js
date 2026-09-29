@@ -39,6 +39,7 @@ const RELEASES = [
       "Earn feathers for showing up, streaks, personal records, early starts, late sessions and more. There are 18 to find.",
       "Your past workouts count, so open Badges and see which ones you've already got.",
       "Tap any feather to see how to earn it and how close you are. Next feather shows the one you're nearest to.",
+      "Earn a feather during a workout and you'll get a little party when you finish. (It replaces the old trophy at 7, 30, 50 and 100 workouts, which are feathers now.)",
       "Your stats, records and charts are all still there, just underneath.",
     ],
   },

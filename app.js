@@ -26,8 +26,9 @@ const STORAGE_KEYS = {
   exercises: "gym:exercises",
   sessions: "gym:sessions", // Phase 2: saved workout history
   theme: "gym:theme", // Phase 4: "light" or "dark"
-  // Easter eggs: remembers which workout-count milestones we've already
-  // celebrated, per profile, so the trophy only ever plays once each.
+  // RETIRED in Owl Quest Q5b: this remembered which workout-count trophies had
+  // played. Feathers (badges.js) replaced the trophy, so the app now only uses
+  // this name to delete the old key (see init() and "delete my data").
   celebratedMilestones: "gym:celebratedMilestones",
   // Insights: each profile's weekly workout goal, as { profileId: number }.
   weeklyGoal: "gym:weeklyGoal",
@@ -54,10 +55,6 @@ const STORAGE_KEYS = {
 // The weight units you can choose between in Settings.
 const UNITS = ["kg", "lb"];
 const DEFAULT_UNIT = "kg";
-
-// Easter egg: a workout milestone shows a one-time trophy celebration when your
-// total completed-workout count first reaches one of these numbers.
-const WORKOUT_MILESTONES = [7, 30, 50, 100];
 
 // Insights: the default weekly workout goal until the owner sets their own.
 const DEFAULT_WEEKLY_GOAL = 3;
@@ -3056,10 +3053,6 @@ async function deleteExercise(id) {
     }
   }
 
-  // Removing workouts may lower a profile's count below a celebrated milestone,
-  // so reconcile the trophy tracker too.
-  reconcileCelebratedMilestones();
-
   renderAll();
 }
 
@@ -4442,6 +4435,8 @@ function finishWorkout() {
   // Owl Quest Q2b: your XP BEFORE this workout counts (it's still "in
   // progress" at this point, so xp.js leaves it out).
   const xpBefore = computeTotalXp().total;
+  // Owl Quest Q5b: the same trick for feathers — which ones you had before.
+  const feathersBefore = earnedFeatherIds();
 
   activeSession.status = "completed";
   persistActiveSession();
@@ -4451,11 +4446,10 @@ function finishWorkout() {
   const xpAfter = computeTotalXp().total;
   const xpGained = xpAfter - xpBefore;
   const levelUp = detectLevelUp(xpBefore, xpAfter);
+  const newFeathers = detectNewFeathers(feathersBefore); // badges.js
 
   // Easter eggs: work out any celebrations BEFORE we clear activeSession.
-  // (detectWorkoutMilestone also records the milestone so it only plays once.)
   const personalRecords = detectPersonalRecords(activeSession);
-  const milestone = detectWorkoutMilestone();
 
   closeWorkoutOverlay();
   activeSession = null;
@@ -4465,9 +4459,9 @@ function finishWorkout() {
   );
 
   // After the alert is dismissed, play any celebrations on a clean screen:
-  // the "+170 XP" pop on the level bar, then PR / level up / trophy cards.
+  // the "+170 XP" pop on the level bar, then PR / level up / feather cards.
   showXpGain(xpGained);
-  celebrateAfterWorkout(personalRecords, milestone, levelUp);
+  celebrateAfterWorkout(personalRecords, levelUp, newFeathers);
 }
 
 // Discard: delete the in-progress session entirely (after a confirm).
@@ -4578,9 +4572,6 @@ async function deleteSession(sessionId) {
     (item) => item.id !== sessionId
   );
   saveList(STORAGE_KEYS.sessions, sessions);
-  // Easter egg upkeep: if this drop took you below a celebrated milestone,
-  // forget it so re-reaching that count triggers the trophy again.
-  reconcileCelebratedMilestones();
   renderAll();
 }
 
@@ -5011,7 +5002,8 @@ function toggleTheme() {
    None of this touches your saved workouts — it only adds little surprises:
      1. Type "athena" anywhere to summon a flying owl + "Wisdom +1" toast.
      3. Confetti + a "New PR!" card when you beat a past weight for an exercise.
-     4. A one-time trophy when your total workouts reaches a milestone (7, 30 …).
+     (4. The workout-milestone trophy was retired in Owl Quest Q5b: feathers,
+         in badges.js, celebrate those counts now.)
      7. Tap the app title 5 times quickly to reveal a hidden credits card.
    ========================================================================= */
 
@@ -5052,7 +5044,7 @@ function showToast(message) {
 }
 
 // Show a big centred celebration card (emoji + title + subtitle) that
-// auto-dismisses. Used for both the "New PR!" and milestone trophies.
+// auto-dismisses. Used for the PR, level-up and new-feather cards.
 function showCelebrationCard(emoji, title, subtitle) {
   const card = document.createElement("div");
   card.className = "celebrate";
@@ -5185,92 +5177,12 @@ function detectPersonalRecords(session) {
   return records;
 }
 
-/* ---- Egg #4: one-time trophy when you hit a workout milestone ---- */
-
-// Read/save the map of { profileId: [milestones already celebrated] }.
-function loadCelebratedMap() {
-  const text = localStorage.getItem(STORAGE_KEYS.celebratedMilestones);
-  if (!text) {
-    return {};
-  }
-  try {
-    return JSON.parse(text);
-  } catch (error) {
-    return {};
-  }
-}
-function saveCelebratedMap(map) {
-  localStorage.setItem(
-    STORAGE_KEYS.celebratedMilestones,
-    JSON.stringify(map)
-  );
-}
-
-// Keep the "already celebrated" list honest: if a profile's completed-workout
-// count has dropped below a milestone we'd celebrated (e.g. you deleted a
-// workout), forget that milestone so reaching it again re-triggers the trophy.
-// Safe to call any time; it only removes milestones above the current count.
-function reconcileCelebratedMilestones() {
-  const map = loadCelebratedMap();
-  let changed = false;
-
-  // For each profile we've recorded milestones for...
-  Object.keys(map).forEach((profileId) => {
-    const completedCount = loadList(STORAGE_KEYS.sessions).filter(
-      (item) => item.profileId === profileId && isCompletedSession(item)
-    ).length;
-
-    // Keep only milestones you've actually still reached.
-    const kept = (map[profileId] || []).filter(
-      (milestone) => milestone <= completedCount
-    );
-    if (kept.length !== (map[profileId] || []).length) {
-      changed = true;
-    }
-    map[profileId] = kept;
-  });
-
-  if (changed) {
-    saveCelebratedMap(map);
-  }
-}
-
-// If the active profile's completed-workout count has just reached a milestone
-// we haven't celebrated yet, record it and return that number. Otherwise null.
-function detectWorkoutMilestone() {
-  const activeId = loadActiveProfileId();
-  if (!activeId) {
-    return null;
-  }
-
-  const completedCount = loadList(STORAGE_KEYS.sessions).filter(
-    (item) => item.profileId === activeId && isCompletedSession(item)
-  ).length;
-
-  // Is this exact count one of our milestones?
-  if (!WORKOUT_MILESTONES.includes(completedCount)) {
-    return null;
-  }
-
-  // Have we already celebrated it for this profile? If so, do nothing.
-  const map = loadCelebratedMap();
-  const already = map[activeId] || [];
-  if (already.includes(completedCount)) {
-    return null;
-  }
-
-  // Remember it so the trophy only ever plays once per profile per milestone.
-  already.push(completedCount);
-  map[activeId] = already;
-  saveCelebratedMap(map);
-
-  return completedCount;
-}
-
 // Play the celebrations after a workout, one after another: a PR first, then
-// a level up (Owl Quest Q2b), then any milestone trophy. `levelUp` is the new
-// level from detectLevelUp() in xp.js, or null if you didn't level up.
-function celebrateAfterWorkout(personalRecords, milestone, levelUp) {
+// a level up (Owl Quest Q2b), then any new feathers (Q5b).
+//   levelUp     — the new level from detectLevelUp() in xp.js, or null
+//   newFeathers — feathers earned by this workout, from detectNewFeathers() in
+//                 badges.js (an empty list if none)
+function celebrateAfterWorkout(personalRecords, levelUp, newFeathers) {
   // Build a list of celebrations to play, in order. Each one is a small
   // function that throws the confetti and shows its card.
   const celebrations = [];
@@ -5297,13 +5209,18 @@ function celebrateAfterWorkout(personalRecords, milestone, levelUp) {
     });
   }
 
-  if (milestone) {
+  // One card for all the new feathers, e.g. "2 new feathers!" and their names.
+  // (This replaced the old 🏆 trophy at 7 / 30 / 50 / 100 workouts, which are
+  // feathers now.)
+  if (newFeathers && newFeathers.length > 0) {
     celebrations.push(() => {
       launchConfetti(120);
       showCelebrationCard(
-        "🏆",
-        milestone + " workouts done!",
-        "What a streak! Keep it up 💪"
+        "🪶",
+        newFeathers.length === 1
+          ? "New feather!"
+          : newFeathers.length + " new feathers!",
+        newFeathers.map((feather) => feather.name).join(" · ")
       );
     });
   }
@@ -5668,6 +5585,10 @@ function init() {
 
   // Wire up the just-for-fun easter eggs (typing "athena", title taps, etc.).
   setupEasterEggs();
+
+  // Owl Quest Q5b retired the workout-milestone trophy; tidy away the key it
+  // used to keep on this device. (Harmless if it isn't there.)
+  localStorage.removeItem(STORAGE_KEYS.celebratedMilestones);
 
   // PWA (Phase 5): register the service worker for offline + installability,
   // and wire up the "Install app" button.
