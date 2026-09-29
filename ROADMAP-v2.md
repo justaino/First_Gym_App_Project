@@ -4,7 +4,10 @@ A second roadmap covering changes requested after the first round of friend
 feedback. Same rules as `ROADMAP.md`: plain HTML/CSS/JS, localStorage only, no
 frameworks. Build **one phase at a time**, test, commit, then move on.
 
-> The original build (phases 0–4) is in `ROADMAP.md` and is complete.
+> ✅ **All four phases here are complete and live** (June 2026). This file is kept as a
+> record. The original build (phases 0–4) and everything since — hosting, accounts and
+> sync, friends, and the Owl Quest redesign plan — are in `ROADMAP.md`. "localStorage
+> only" was true when this was written; Phase 7 later added Supabase sync.
 
 ---
 
@@ -119,5 +122,7 @@ the change reflected in progress; and I can delete a workout from history.
 ## How we'll work
 1. One phase at a time; I review the change before approving.
 2. Test in Live Server against the phase's "Done when".
-3. Commit with a short message, then push (auto-deploys to Netlify).
+3. Commit with a short message, then push. *(At the time this deployed to Netlify. The
+   app is now on GitHub Pages, which only updates when `main` changes — see CLAUDE.md →
+   "Branches & releasing".)*
 4. Tick the ☐ boxes as each phase lands.

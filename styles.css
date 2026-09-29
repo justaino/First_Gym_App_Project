@@ -1,51 +1,183 @@
 /*
-  styles.css — the "cute" pastel design system for Athena's Arena.
+  styles.css — the design system for Athena's Arena.
 
-  Phase 1 styling: top bar, the four views, exercise cards, the add/edit form
-  (in a pop-up modal), profiles, and the floating bottom tab bar.
+  Look: "Owl Quest" (since phase Q1a) — a lavender sky fading to white, chunky
+  "press-me" buttons and cards with a solid bottom edge, and the rounded Baloo 2
+  font for headings, buttons and big numbers (normal text stays in Nunito).
 
-  Tip: the colours below are kept in one place as CSS variables (the :root block)
-  so we can reuse them everywhere and change them in a single spot later.
+  Tip: every colour lives in one place as a CSS variable (the :root block
+  below), and dark mode just swaps those variables. So to change a colour
+  everywhere, change it once here — and give it a dark-mode value too.
 */
 
-/* ---- Design tokens (colours from CLAUDE.md / ROADMAP.md) ---- */
+/* ---- Design tokens (see CLAUDE.md → "Design system") ---- */
 :root {
-  --bg: #faf6ee; /* warm cream page background */
+  /* Page background: a lavender "sky" at the top (--bg-top) that fades into a
+     near-white lavender (--bg) as you scroll down. */
+  --bg-top: #e2d9f7;
+  --bg: #f7f4fe;
   --card: #ffffff; /* white cards */
-  --text: #2e2e33; /* charcoal text */
-  /* Slightly darker than the original #9A9A9A so small grey text meets
-     accessibility contrast guidelines on the cream/white backgrounds. */
-  --muted: #70707a; /* secondary/label text */
+  --text: #2c2546; /* deep indigo-charcoal text */
+  --muted: #6b6488; /* secondary/label text (passes contrast on white + --bg) */
 
-  --coral: #ef7c7c; /* primary / "today" */
-  --mint: #5fc4bc; /* active states / accents */
-  --butter: #f6d365; /* highlights */
+  --coral: #ef7c7c; /* primary buttons / "today" */
+  --mint: #5fc4bc; /* done / success / accents */
+  --butter: #f6d365; /* highlights, gold */
   --lavender: #b9a7e0; /* highlights */
+  --purple: #6d55c4; /* strong accent: active tab, links on lavender */
+  --purple-edge: #4e3a9e; /* edge under the purple avatar */
+  --avatar-text: #ffffff; /* the initial on the purple avatar */
+
+  /* The darker "edge" colours that sit under chunky buttons and cards, so they
+     look like they're raised and can be pressed down. */
+  --coral-edge: #c85c5c;
+  --mint-edge: #3fa39b;
+  --danger-edge: #b33f44;
+  --edge: #e3dcf5; /* soft lavender edge under white cards */
+
+  /* The Today card's background (a warm sunrise in light mode). */
+  --hero-from: rgba(246, 211, 101, 0.55);
+  --hero-to: rgba(239, 124, 124, 0.4);
+
+  /* Owl Quest Q2: the level bar on the Today card — a see-through white track
+     (so the sunrise shows through) with a purple fill. */
+  --xp-track: rgba(255, 255, 255, 0.65);
+  --xp-fill: #6d55c4;
+  --xp-fill-text: #ffffff; /* text on the purple "+170 XP" bubble */
+
+  /* Owl Quest Q3: the week path's stepping stones. */
+  --stone-done: #f6d365; /* butter: a day you trained */
+  --stone-done-edge: #d9ae3a;
+  --stone-done-text: #5c4610;
+  --stone-later: #ebe6f7; /* pale lavender: coming up (and missed, faded) */
+  --stone-later-edge: #d6cdef;
+  --stone-later-text: #7d7598;
+  --stone-missed: #f5f2fc; /* missed: a paler, solid stone (solid so the */
+  --stone-missed-edge: #e7e1f6; /* dotted line doesn't show through it) */
+  --stone-missed-text: #b1aac8;
+  --stone-glow: rgba(239, 124, 124, 0.28); /* the soft ring around today */
+  --path-line: #c9bdec; /* the dotted line between stones */
+  --on-accent: #ffffff; /* text on coral / mint (the same in both modes) */
+
+  /* Owl Quest Q4: the live workout screen's stars. */
+  --star-done-bg: #fff6d6; /* a ticked set: warm butter tile */
+  --star-done-edge: #e8cc6a;
+  --star-gold: #e3a21a; /* the filled star on a done set (deep enough on butter) */
+  --star-empty: #b3abcc; /* the outline star on a set still to do */
+
+  /* Owl Quest Q5a: feather medallions on the Badges tab. */
+  --medal-butter: #f6d365;
+  --medal-butter-edge: #d9ae3a;
+  --medal-coral: #f5a3a3;
+  --medal-coral-edge: #d97676;
+  --medal-mint: #9fe0da;
+  --medal-mint-edge: #5fc4bc;
+  --medal-lavender: #d6caf3;
+  --medal-lavender-edge: #a996dc;
+  --medal-ink: #2c2546; /* the icon on an earned medallion */
+  --medal-locked: #ece8f6;
+  --medal-locked-edge: #d9d2ee;
+  --medal-locked-ink: #aaa3c4;
+
+  /* The stats on Badges (stats.js). */
+  --stats-up: #2f8f86; /* "▲ 2 vs Aug" — a deeper mint so the text is readable */
+  --stats-down: #c2474a; /* "▼ 1 vs Aug" */
+  --stats-bar-below: #d9cff5; /* a week below your goal (a lighter purple) */
+  --stats-area: rgba(109, 85, 196, 0.1); /* the soft wash under a line */
+  /* Q4a+: the chosen half of the workout view toggle (same tint as the active tab). */
+  --view-toggle-current: rgba(185, 167, 224, 0.25);
+  /* Q4b: the buttons on the rest timer pill (see-through white on dark ink). */
+  --rest-chip-bg: rgba(255, 255, 255, 0.14);
+
+  /* "Ink" buttons: dark on light pages, light on dark ones. Used for the big
+     Start workout button, which sits on the colourful Today card where a coral
+     button would blend in. */
+  --ink: #2c2546;
+  --ink-text: #ffffff;
+  --ink-edge: #120d26;
 
   /* Form surfaces — kept as variables so dark mode can swap them. */
   --input-bg: #ffffff; /* text boxes, emoji chips, set dots */
-  --border: #efe9dd; /* their soft cream-grey border */
+  --border: #e6e0f5; /* soft lavender border */
+
+  /* Fonts: Baloo 2 is the fun, chunky one for headings/buttons/numbers;
+     Nunito is kept for sentences because it's easier to read in long text. */
+  --font-body: "Nunito", system-ui, sans-serif;
+  --font-display: "Baloo 2", "Nunito", system-ui, sans-serif;
 
   --radius-card: 24px; /* rounded corners on cards */
   --radius-pill: 999px; /* fully rounded (pill) shape */
-  --shadow-soft: 0 10px 30px rgba(46, 46, 51, 0.08); /* soft diffuse shadow */
-  --shadow-card: 0 6px 18px rgba(46, 46, 51, 0.06); /* lighter shadow for small cards */
+  --shadow-soft: 0 10px 30px rgba(60, 40, 120, 0.12); /* soft diffuse shadow */
+  /* Cards: a solid lavender edge underneath instead of a blurry shadow. */
+  --shadow-card: 0 4px 0 var(--edge);
 }
 
-/* ---- Dark mode palette ----
+/* ---- Dark mode palette ("night owl") ----
    app.js puts data-theme="dark" on the <html> element. Because everything uses
    the variables above, overriding them here re-themes the whole app at once. */
 :root[data-theme="dark"] {
-  --bg: #17171c; /* near-black background */
-  --card: #23232b; /* dark card surface */
-  --text: #f3f2ef; /* light text */
-  --muted: #a3a3ad; /* lighter grey for contrast on dark */
+  --bg-top: #2b2350; /* night sky */
+  --bg: #17142b;
+  --card: #262046; /* dark purple card surface */
+  --text: #f1eefb; /* light text */
+  --muted: #b1a8d0; /* lighter lavender-grey for contrast on dark */
+  --purple: #c9b8ff; /* the strong accent needs to be light on a dark page */
+  --purple-edge: #8e84b8;
+  --avatar-text: #231d42; /* dark initial on the light purple avatar */
 
-  --input-bg: #2b2b34;
-  --border: #3a3a44;
+  --edge: #120f24; /* dark edge under cards */
 
-  --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.45);
-  --shadow-card: 0 6px 18px rgba(0, 0, 0, 0.35);
+  --hero-from: #3d3170; /* night sky... */
+  --hero-to: #5e3b78; /* ...turning plum */
+
+  --xp-track: rgba(18, 15, 36, 0.5); /* a dark groove in the night sky */
+  --xp-fill: #c9b8ff; /* light lilac, easy to see on the dark card */
+  --xp-fill-text: #231d42; /* dark text on the lilac bubble */
+
+  --stone-done: #f6d365; /* butter glows nicely on the night sky */
+  --stone-done-edge: #b8912b;
+  --stone-done-text: #3d2f08;
+  --stone-later: #3d3568;
+  --stone-later-edge: #221c40;
+  --stone-later-text: #c3bbe0;
+  --stone-missed: #2d2654;
+  --stone-missed-edge: #1c1738;
+  --stone-missed-text: #7f76a8;
+  --stone-glow: rgba(239, 124, 124, 0.35);
+  --path-line: #6a5ca8;
+
+  --star-done-bg: #4a3f1c; /* a warm glow on the night sky */
+  --star-done-edge: #b8912b;
+  --star-gold: #f6d365;
+  --star-empty: #7a71a8;
+
+  --medal-butter: #f6d365;
+  --medal-butter-edge: #b8912b;
+  --medal-coral: #ef7c7c;
+  --medal-coral-edge: #b04f4f;
+  --medal-mint: #5fc4bc;
+  --medal-mint-edge: #3a8f88;
+  --medal-lavender: #b9a7e0;
+  --medal-lavender-edge: #7f6cb5;
+  --medal-ink: #231d42;
+  --medal-locked: #2d2654;
+  --medal-locked-edge: #1c1738;
+  --medal-locked-ink: #6f66a0;
+
+  --stats-up: #6fd3c9;
+  --stats-down: #f08a86;
+  --stats-bar-below: #4a3f80;
+  --stats-area: rgba(201, 184, 255, 0.12);
+  --view-toggle-current: rgba(201, 184, 255, 0.18);
+  --rest-chip-bg: rgba(35, 29, 66, 0.1); /* the pill is light in dark mode */
+
+  --ink: #f1eefb;
+  --ink-text: #231d42;
+  --ink-edge: #8e84b8;
+  --input-bg: #302856;
+  --border: #3d3568;
+
+  --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
 /* ---- Reset a few defaults so layout is predictable ---- */
@@ -55,11 +187,24 @@
   padding: 0;
 }
 
+/* Anything with the `hidden` attribute stays hidden, full stop. Without this, a
+   class that sets `display` (like .btn--block's display: block) quietly wins
+   and the "hidden" thing shows anyway — which is how the Start workout button
+   used to appear on rest days. The older ".something[hidden]" rules further
+   down do the same job one element at a time; this covers everything. */
+[hidden] {
+  display: none !important;
+}
+
 /* ---- Page base ---- */
 body {
   background-color: var(--bg);
+  /* The lavender sky at the top, fading into --bg. It's painted once at the
+     top of the page (no-repeat), so long pages just continue in --bg. */
+  background-image: linear-gradient(180deg, var(--bg-top) 0, var(--bg) 420px);
+  background-repeat: no-repeat;
   color: var(--text);
-  font-family: "Nunito", system-ui, sans-serif;
+  font-family: var(--font-body);
   min-height: 100vh;
   /* Centre everything and keep it phone-width on big screens */
   display: flex;
@@ -82,28 +227,45 @@ body {
   font-size: 18px;
 }
 
-/* The little pill that shows the active profile name */
-.profile-chip {
+/* The round avatar (your initial) that opens Settings — Owl Quest Q1c.
+   Same size as the 🌙 button next to it, filled purple, with the chunky edge. */
+.avatar-btn {
+  position: relative; /* anchor for the What's new dot */
+  width: 40px;
+  height: 40px;
   border: none;
+  border-radius: 50%;
   cursor: pointer;
-  font-family: inherit;
-  font-weight: 700;
-  font-size: 14px;
-  color: var(--text);
-
-  background-color: var(--card);
-  box-shadow: var(--shadow-card);
-  border-radius: var(--radius-pill);
-  padding: 8px 14px;
-
+  background-color: var(--purple);
+  color: var(--avatar-text);
+  box-shadow: 0 3px 0 var(--purple-edge);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 18px;
+  line-height: 1;
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
 }
-
-.profile-chip__hint {
-  color: var(--coral);
-  font-size: 12px;
+.avatar-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--purple-edge);
+}
+/* While you're on Settings, a lavender ring shows that's where you are
+   (the job the tab's tint used to do). */
+.avatar-btn--active {
+  outline: 3px solid var(--lavender);
+  outline-offset: 2px;
+}
+/* The unread What's new dot sits on the avatar's top-right edge. The ring
+   matches the page behind it rather than the tab bar. (Written as
+   ".avatar-btn .avatar-btn__dot" so it beats the general .tab__dot position
+   rule further down the file.) */
+.avatar-btn .avatar-btn__dot {
+  top: -2px;
+  right: -2px;
+  box-shadow: 0 0 0 2px var(--bg-top);
 }
 
 /* ---- The main app column ---- */
@@ -144,24 +306,32 @@ body {
   margin-bottom: 16px;
 }
 
-/* ---- Buttons (pill-shaped) ---- */
+/* ---- Buttons (pill-shaped, "chunky") ----
+   Filled buttons have a solid darker edge underneath (a box-shadow with no
+   blur). Pressing one slides it down onto that edge, so it feels like a real
+   button being pushed. */
 .btn {
   border: none;
   cursor: pointer;
-  font-family: inherit;
+  font-family: var(--font-display);
   font-weight: 700;
-  font-size: 15px;
+  font-size: 16px;
+  line-height: 1.2;
   border-radius: var(--radius-pill);
   padding: 12px 20px;
-  transition: transform 0.08s ease, opacity 0.15s ease;
+  transition: transform 0.08s ease, box-shadow 0.08s ease, opacity 0.15s ease;
 }
 .btn:active {
-  transform: scale(0.97); /* tiny press effect */
+  transform: translateY(3px); /* press down onto the edge */
 }
 
 .btn--primary {
   background-color: var(--coral);
   color: #fff;
+  box-shadow: 0 4px 0 var(--coral-edge);
+}
+.btn--primary:active {
+  box-shadow: 0 1px 0 var(--coral-edge); /* edge "squashed" while pressed */
 }
 
 .btn--ghost {
@@ -174,6 +344,10 @@ body {
 .btn--danger {
   background-color: #e5575c;
   color: #fff;
+  box-shadow: 0 4px 0 var(--danger-edge);
+}
+.btn--danger:active {
+  box-shadow: 0 1px 0 var(--danger-edge);
 }
 
 /* A button that fills the row width (used for "Add exercise") */
@@ -206,11 +380,12 @@ body {
   background-color: var(--card);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
-  padding: 16px;
+  padding: 14px;
   margin-bottom: 12px;
   display: flex;
   align-items: center;
-  gap: 14px;
+  /* Kept tight so the exercise name gets as much width as possible. */
+  gap: 10px;
 }
 
 /* Phase 10: drag handle on Schedule exercise cards. "touch-action: none" tells
@@ -244,11 +419,11 @@ body {
 }
 
 .exercise__icon {
-  font-size: 28px;
+  font-size: 24px;
   /* A soft tinted circle behind the emoji */
   background-color: rgba(95, 196, 188, 0.15); /* faint mint */
-  width: 52px;
-  height: 52px;
+  width: 46px;
+  height: 46px;
   border-radius: var(--radius-pill);
   display: flex;
   align-items: center;
@@ -264,10 +439,15 @@ body {
 .exercise__name {
   font-weight: 800;
   font-size: 16px;
-  /* If the name is very long, show "..." instead of breaking the layout */
-  white-space: nowrap;
+  line-height: 1.25;
+  /* Long names wrap onto more lines; only a name longer than three lines
+     gets "…" at the end. (It used to be cut to one line, e.g. "Bench…".) */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
   overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere; /* break a single very long word instead of overflowing */
 }
 
 .exercise__detail {
@@ -279,8 +459,35 @@ body {
 
 .exercise__actions {
   display: flex;
-  gap: 6px;
+  gap: 4px;
   flex-shrink: 0;
+}
+
+/* Small round icon buttons on exercise cards (pencil = Edit, bin = Delete). 38px
+   keeps them comfortable to tap while taking far less room than the words did.
+   The icon takes the button's text colour, so it must be set here. */
+.icon-action {
+  width: 38px;
+  height: 38px;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  background-color: var(--bg);
+  color: var(--text);
+  font-size: 17px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.08s ease, background-color 0.15s ease;
+}
+.icon-action:active {
+  transform: scale(0.92);
+}
+@media (hover: hover) {
+  .icon-action:hover {
+    background-color: var(--border);
+  }
 }
 
 /* ---- Profile rows on the Settings view ---- */
@@ -556,9 +763,9 @@ body {
   align-items: center;
   gap: 4px;
 
-  /* Phase 12 added a 5th tab (Friends), so these are a little slimmer than
-     before to keep all five on one row. */
-  padding: 8px 8px;
+  /* Four tabs since Owl Quest Q1c (Settings moved to the avatar), so each
+     one gets a roomier tap area again. */
+  padding: 8px 14px;
   border-radius: 18px;
 
   color: var(--muted);
@@ -573,10 +780,11 @@ body {
   line-height: 1;
 }
 
-/* The active tab gets a soft tinted "chip" and coloured text. */
+/* The active tab gets a soft lavender "chip" and purple text. (It was coral
+   before Owl Quest; coral is now kept for the main "do this" buttons.) */
 .tab--active {
-  background-color: rgba(239, 124, 124, 0.15); /* faint coral tint */
-  color: var(--coral);
+  background-color: rgba(185, 167, 224, 0.25); /* faint lavender tint */
+  color: var(--purple);
 }
 
 /* =========================================================================
@@ -790,54 +998,65 @@ body {
   color: #fff;
 }
 
-/* ---- Rest timer ---- */
-.timer {
-  text-align: center;
+/* ---- Rest timer (Owl Quest Q4b: a floating pill) ----
+   "position: sticky" keeps it pinned to the bottom of the workout sheet while
+   you scroll, then it settles in its normal place (above Discard / Finish)
+   when you reach the end. It's a dark "ink" pill in light mode and a light one
+   in dark mode (the --ink tokens flip). */
+.rest-pill {
+  position: sticky;
+  bottom: 12px;
+  z-index: 5; /* above the exercise cards as they scroll underneath */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 18px 0 16px;
+  padding: 8px 8px 8px 16px;
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  color: var(--ink-text);
+  box-shadow: 0 4px 0 var(--ink-edge), var(--shadow-soft);
 }
-.timer__display {
-  font-size: 40px;
+.rest-pill__icon {
+  font-size: 18px;
+}
+.rest-pill__display {
+  flex: 1;
+  font-size: 22px;
   font-weight: 800;
-  margin-bottom: 6px;
+  font-variant-numeric: tabular-nums; /* digits don't jiggle as they change */
+  white-space: nowrap;
 }
-/* While counting down, pulse gently in coral */
-.timer__display.is-running {
+/* Counting down: the time turns coral. Finished: mint. */
+.rest-pill.is-running .rest-pill__display {
   color: var(--coral);
-  animation: timer-pulse 1s ease-in-out infinite;
 }
-/* When it reaches zero, flash mint */
-.timer__display.is-done {
+.rest-pill.is-done .rest-pill__display {
   color: var(--mint);
 }
-@keyframes timer-pulse {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.06);
-  }
-}
-
-.timer__buttons {
+.rest-pill__buttons {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: center;
+  gap: 6px;
 }
-.timer-btn {
+.rest-pill__btn {
   border: none;
   cursor: pointer;
-  font-family: inherit;
-  font-weight: 800;
-  font-size: 14px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
   border-radius: var(--radius-pill);
-  padding: 10px 16px;
-  color: var(--text);
-  background-color: rgba(246, 211, 101, 0.3); /* soft butter */
+  padding: 8px 12px;
+  background: var(--rest-chip-bg);
+  color: var(--ink-text);
 }
-.timer-btn--stop {
-  background-color: rgba(154, 154, 154, 0.18); /* soft grey */
-  color: var(--muted);
+.rest-pill__btn--skip {
+  background: var(--coral);
+  color: var(--on-accent);
+}
+/* Idle: only the 60/90/120 buttons. Running: only +15s and Skip. */
+.rest-pill.is-running .rest-pill__idle,
+.rest-pill:not(.is-running) .rest-pill__running {
+  display: none;
 }
 
 /* ---- History card (a saved workout) ---- */
@@ -916,107 +1135,6 @@ body {
   margin-top: 2px;
 }
 
-/* A small bar chart drawn with plain SVG (no chart library) */
-.barchart {
-  width: 100%;
-  height: 60px;
-  margin-top: 14px;
-  display: block;
-}
-.barchart__bar {
-  fill: var(--mint);
-  cursor: pointer; /* show it's clickable */
-  transition: fill 0.12s ease;
-}
-/* Two series: reps (mint) and weight (lavender) */
-.barchart__bar--reps {
-  fill: var(--mint);
-}
-.barchart__bar--weight {
-  fill: var(--lavender);
-}
-/* Highlight the bar you're pointing at */
-.barchart__bar:hover {
-  fill: var(--coral);
-}
-
-/* Legend for the two bar colours */
-.chart-legend {
-  display: flex;
-  gap: 16px;
-  margin-top: 10px;
-}
-.chart-legend__item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--muted);
-}
-.chart-legend__swatch {
-  width: 11px;
-  height: 11px;
-  border-radius: 3px;
-}
-.chart-legend__swatch--reps {
-  background-color: var(--mint);
-}
-.chart-legend__swatch--weight {
-  background-color: var(--lavender);
-}
-
-/* Little hint under a chart ("Tap a bar to see that workout") */
-.chart-hint {
-  color: var(--muted);
-  font-weight: 700;
-  font-size: 12px;
-  margin-top: 6px;
-}
-
-/* The floating tooltip that follows the pointer over the chart */
-.chart-tooltip {
-  position: fixed;
-  z-index: 300;
-  /* Using text colour for the background and bg colour for the text means it
-     automatically flips to look right in both light and dark mode. */
-  background-color: var(--text);
-  color: var(--bg);
-  font-weight: 700;
-  font-size: 12px;
-  padding: 6px 10px;
-  border-radius: 10px;
-  white-space: nowrap;
-  pointer-events: none; /* never block the mouse from the bars */
-  /* Sit just above the pointer, centred on it */
-  transform: translate(-50%, -130%);
-}
-.chart-tooltip[hidden] {
-  display: none;
-}
-
-/* Speech-bubble variant (used by the heatmap tap tooltip): a long downward
-   tail pointing at the square. The tail colour matches the bubble background,
-   so it flips correctly in dark mode too. */
-.chart-tooltip--bubble::after {
-  content: "";
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border-left: 7px solid transparent;
-  border-right: 7px solid transparent;
-  border-top: 14px solid var(--text); /* long tail */
-}
-
-/* The little meta line under a progress card's title */
-.progress-card__meta {
-  color: var(--muted);
-  font-weight: 700;
-  font-size: 14px;
-  margin-top: 2px;
-}
-
 /* Explanatory text in the Backup card */
 .backup__text {
   color: var(--muted);
@@ -1035,25 +1153,29 @@ body {
    PHASE 4 — polish: hero header, animations, and accessibility
    ========================================================================= */
 
-/* ---- Today hero header (mascot + greeting) ---- */
+/* ---- The Today card ("hero") ----
+   Owl Quest Q1b: a stack of three parts — the mascot + greeting row, today's
+   plan, and the big Start workout button. */
 .hero {
   display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 22px;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
   margin-bottom: 18px;
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
-  /* Soft pastel gradient, like the reference's header art */
-  background: linear-gradient(
-    135deg,
-    rgba(246, 211, 101, 0.55),
-    rgba(239, 124, 124, 0.4)
-  );
+  /* Sunrise in light mode, night sky in dark mode (see --hero-from/-to). */
+  background: linear-gradient(135deg, var(--hero-from), var(--hero-to));
+}
+/* The first row: mascot on the left, greeting + date on the right. */
+.hero__top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
 }
 .hero__mascot {
-  width: 76px;
-  height: 76px;
+  width: 64px;
+  height: 64px;
   flex-shrink: 0;
 }
 .hero__mascot svg {
@@ -1070,6 +1192,281 @@ body {
   font-weight: 700;
   color: var(--text);
   opacity: 0.72; /* charcoal at lower opacity keeps good contrast on the gradient */
+}
+
+/* ---- Owl Quest Q2: the level bar ("Lv 4 · Owlet   340 / 800 XP") ----
+   A label row on top, then a pill-shaped track that fills up with purple. */
+.level-bar {
+  position: relative; /* so the "+170 XP" bubble can float above it */
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.level-bar__labels {
+  display: flex;
+  flex-wrap: wrap; /* on a very narrow phone the XP drops onto its own line */
+  justify-content: space-between;
+  align-items: baseline;
+  column-gap: 10px;
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+.level-bar__name {
+  font-size: 17px;
+}
+.level-bar__xp {
+  font-size: 14px;
+  white-space: nowrap; /* keep "340 / 800 XP" on one line */
+  opacity: 0.8;
+}
+.level-bar__track {
+  height: 12px;
+  border-radius: var(--radius-pill);
+  background: var(--xp-track);
+  overflow: hidden; /* keeps the fill inside the rounded ends */
+}
+.level-bar__fill {
+  height: 100%;
+  width: 0; /* xp.js sets the real width, e.g. "42%" */
+  border-radius: var(--radius-pill);
+  background: var(--xp-fill);
+  transition: width 0.6s ease; /* slides along when you earn XP */
+}
+
+/* Q2b: the "+170 XP" bubble that pops up over the bar after a workout.
+   xp.js (showXpGain) adds it and removes it again after the animation. */
+.level-bar__gain {
+  position: absolute;
+  right: 0;
+  top: -30px;
+  padding: 2px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--xp-fill);
+  color: var(--xp-fill-text);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 16px;
+  pointer-events: none; /* never gets in the way of a tap */
+  animation: xp-gain-float 2.2s ease-out forwards;
+}
+/* Pop in, hang there for a moment, then drift up and fade out. */
+@keyframes xp-gain-float {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.8);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(0) scale(1.05);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(-4px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-16px) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .level-bar__fill {
+    transition: none;
+  }
+  /* No movement, just a gentle fade in and out. */
+  .level-bar__gain {
+    animation-name: xp-gain-fade;
+  }
+}
+@keyframes xp-gain-fade {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  15%,
+  70% {
+    opacity: 1;
+  }
+}
+
+/* ---- Owl Quest Q3: the week path ("This week" card under the Today card) ----
+   week-path.js places each stone by its centre (left as a %, top in px) and
+   draws the dotted line behind them as an SVG that stretches to fit. */
+.week-path-card {
+  padding: 16px 16px 10px;
+}
+.week-path-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  padding: 0 4px;
+}
+.week-path-card__title {
+  font-size: 18px;
+  font-weight: 800;
+}
+.week-path-card__count {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--muted);
+}
+.week-path {
+  position: relative; /* the stones are positioned inside this box */
+  /* height is set by week-path.js */
+}
+.week-path__line {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.week-path__line path {
+  fill: none;
+  stroke: var(--path-line);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: 1 11; /* round dots */
+}
+
+/* One stepping stone: a chunky circle with a solid edge underneath, like the
+   buttons. Centred on its point with translate(-50%, -50%). */
+.week-stone {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 46px;
+  height: 46px;
+  border: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 13px;
+  line-height: 1;
+  background: var(--stone-later);
+  color: var(--stone-later-text);
+  box-shadow: 0 4px 0 var(--stone-later-edge);
+}
+button.week-stone {
+  cursor: pointer;
+}
+/* Pressing a stone squashes it onto its edge, like the chunky buttons. */
+button.week-stone:active {
+  transform: translate(-50%, calc(-50% + 3px));
+  box-shadow: 0 1px 0 var(--stone-later-edge);
+}
+
+.week-stone--done {
+  background: var(--stone-done);
+  color: var(--stone-done-text);
+  box-shadow: 0 4px 0 var(--stone-done-edge);
+}
+button.week-stone--done:active {
+  box-shadow: 0 1px 0 var(--stone-done-edge);
+}
+/* The little mint ✓ badge on a done stone. */
+.week-stone__tick {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  background: var(--mint);
+  color: var(--on-accent);
+  box-shadow: 0 2px 0 var(--mint-edge);
+}
+
+/* Today: bigger and coral. */
+.week-stone--today {
+  width: 56px;
+  height: 56px;
+  font-size: 14px;
+  background: var(--coral);
+  color: var(--on-accent);
+  box-shadow: 0 5px 0 var(--coral-edge), 0 0 0 6px var(--stone-glow);
+}
+button.week-stone--today:active {
+  box-shadow: 0 1px 0 var(--coral-edge), 0 0 0 6px var(--stone-glow);
+}
+/* Today, once you've trained: stays butter but keeps the soft coral ring. */
+.week-stone--done.week-stone--current {
+  width: 56px;
+  height: 56px;
+  font-size: 14px;
+  box-shadow: 0 5px 0 var(--stone-done-edge), 0 0 0 6px var(--stone-glow);
+}
+button.week-stone--done.week-stone--current:active {
+  box-shadow: 0 1px 0 var(--stone-done-edge), 0 0 0 6px var(--stone-glow);
+}
+
+/* A planned day that went by without a workout: paler, with no ✓. */
+.week-stone--missed {
+  background: var(--stone-missed);
+  color: var(--stone-missed-text);
+  box-shadow: 0 4px 0 var(--stone-missed-edge);
+}
+
+/* Today on a rest day: small, with a dashed coral outline so you can still
+   see where you are. */
+.week-stone--rest {
+  width: 40px;
+  height: 40px;
+  font-size: 12px;
+  background: var(--card);
+  box-shadow: none;
+  border: 2.5px dashed var(--coral);
+}
+
+/* Today's stone gently breathes, unless the phone asks for less motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .week-stone--today {
+    animation: stone-pulse 1.8s ease-in-out infinite;
+  }
+}
+@keyframes stone-pulse {
+  50% {
+    transform: translate(-50%, -50%) scale(1.07);
+  }
+}
+
+/* Today's plan: "3 exercises · 9 sets" in bold, then the exercise emoji. */
+.hero__plan {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.hero__plan-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 19px;
+  line-height: 1.25;
+}
+.hero__plan-icons {
+  font-size: 22px;
+  letter-spacing: 2px;
+}
+/* The Start button already sits inside a card, so it needs no gap below it. */
+.hero__start {
+  margin-bottom: 0;
+  font-size: 18px;
+  padding: 14px 20px;
+}
+
+/* A dark "ink" button (light in dark mode) — see --ink in the tokens. */
+.btn--ink {
+  background-color: var(--ink);
+  color: var(--ink-text);
+  box-shadow: 0 4px 0 var(--ink-edge);
+}
+.btn--ink:active {
+  box-shadow: 0 1px 0 var(--ink-edge);
 }
 
 /* ---- Small animations ---- */
@@ -1164,6 +1561,7 @@ body {
   height: 40px;
   font-size: 18px;
   line-height: 1;
+  color: var(--text); /* the icon takes this colour */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1285,117 +1683,6 @@ body {
   max-width: 220px;
 }
 
-/* Weekly goal ring (this week's progress toward the goal) */
-.goal {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-top: 14px;
-}
-.goal__ring {
-  width: 96px;
-  height: 96px;
-  flex-shrink: 0;
-}
-.goal__track {
-  stroke: rgba(95, 196, 188, 0.18);
-}
-.goal__arc {
-  stroke: var(--coral);
-  transition: stroke-dashoffset 0.4s ease;
-}
-.goal__text {
-  font-size: 22px;
-  font-weight: 800;
-  fill: var(--text);
-}
-.goal__title {
-  font-weight: 800;
-  font-size: 16px;
-}
-.goal__sub {
-  color: var(--muted);
-  font-weight: 700;
-  font-size: 14px;
-  margin-top: 2px;
-}
-
-/* Volume trend line (this month vs last month) */
-.volume-trend {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 10px;
-  margin-top: 16px;
-}
-.volume-trend__label {
-  color: var(--muted);
-  font-weight: 700;
-  font-size: 14px;
-}
-.volume-trend__value {
-  font-weight: 800;
-  font-size: 18px;
-  color: var(--text);
-}
-.volume-trend__change {
-  font-weight: 800;
-  font-size: 13px;
-  color: var(--muted);
-}
-.volume-trend__change.is-up {
-  color: var(--mint);
-}
-.volume-trend__change.is-down {
-  color: var(--coral);
-}
-
-/* Calendar heatmap (consistency grid) */
-.heatmap-heading {
-  font-weight: 800;
-  font-size: 15px;
-  margin-top: 18px;
-  margin-bottom: 8px;
-}
-.heatmap {
-  display: grid;
-  grid-template-rows: repeat(7, 14px); /* Mon→Sun */
-  grid-auto-flow: column; /* fill each week (column) top-to-bottom */
-  grid-auto-columns: 14px;
-  gap: 3px;
-  overflow-x: auto; /* safety on very narrow screens */
-}
-.hm-cell {
-  border-radius: 3px;
-  background-color: rgba(95, 196, 188, 0.12); /* level 0 (no workout) */
-  cursor: pointer; /* hint that squares are tappable */
-}
-.hm-cell--l1 {
-  background-color: rgba(95, 196, 188, 0.4);
-}
-.hm-cell--l2 {
-  background-color: rgba(95, 196, 188, 0.7);
-}
-.hm-cell--l3 {
-  background-color: rgba(95, 196, 188, 1);
-}
-.hm-cell--future {
-  opacity: 0.3;
-}
-.heatmap-legend {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  margin-top: 10px;
-  color: var(--muted);
-  font-weight: 700;
-  font-size: 12px;
-}
-.heatmap-legend .hm-cell {
-  width: 13px;
-  height: 13px;
-}
-
 .pr-board__heading {
   font-weight: 800;
   font-size: 15px;
@@ -1409,12 +1696,7 @@ body {
   padding: 10px 0;
   border-top: 1px solid var(--border);
 }
-.pr-row__date {
-  color: var(--muted);
-  font-weight: 700;
-  font-size: 12px;
-  margin-top: 2px;
-}
+
 .pr-row__best {
   margin-left: auto;
   font-weight: 800;
@@ -1455,19 +1737,46 @@ body {
   border: 2px solid rgba(246, 211, 101, 0.55);
 }
 
-/* "Since you started" trend callouts (reuse the .pr-row layout) */
-.trend-change {
-  margin-left: auto;
+/* Owl Quest Q1b: the folded, one-line recap on Today. A pill-shaped row: the
+   summary (a button that opens the full card) and a ✕ to dismiss it. */
+.recap-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 18px;
+  padding: 4px 10px 4px 4px;
+  background-color: var(--card);
+  border: 2px solid rgba(246, 211, 101, 0.55); /* same butter outline */
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-card);
+}
+.recap-row__open {
+  flex: 1;
+  min-width: 0; /* lets long text wrap instead of pushing the ✕ off */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  padding: 8px 10px;
+  font-family: inherit;
   font-weight: 800;
-  font-size: 16px;
+  font-size: 14px;
+  color: var(--text);
 }
-.trend-change.is-up {
-  color: var(--mint);
+.recap-row__text {
+  flex: 1;
 }
-.trend-change.is-down {
-  color: var(--coral);
+.recap-row__chevron {
+  color: var(--muted);
+  font-family: var(--font-display); /* Nunito's › looks like a comma */
+  font-size: 22px;
+  line-height: 1;
 }
 
+/* "Since you started" trend callouts (reuse the .pr-row layout) */
 /* ---- iOS "Add to home screen" instructions (in the install modal) ---- */
 .install-steps p {
   font-weight: 700;
@@ -2097,4 +2406,932 @@ body {
 }
 .friend-workout:active {
   opacity: 0.7;
+}
+
+/* =========================================================================
+   OWL QUEST THEME (phase Q1a) — fonts and the bits the colour tokens can't
+   reach on their own. Colours themselves are all in the :root block at the top.
+   ========================================================================= */
+
+/* Headings, titles and big numbers use the rounder Baloo 2 font. Everything
+   else (sentences, labels, form text) stays in Nunito via the body rule. */
+.topbar__brand,
+.view__title,
+.section-heading,
+.day-group__heading,
+.hero__greeting,
+.modal__title,
+.sheet__title,
+.auth__brand,
+.stat__number,
+.timer__display,
+.pr-board__heading,
+.celebrate__title,
+.credits-card__title,
+.guide-hero__title,
+.guide-step__number,
+.guide-step__title,
+.tab__label {
+  font-family: var(--font-display);
+}
+
+/* Baloo 2 sits a little lower and looser than Nunito, so tighten the line
+   height on the biggest headings so they don't look spaced out. */
+.view__title,
+.hero__greeting,
+.sheet__title,
+.modal__title {
+  line-height: 1.15;
+}
+
+/* The floating tab bar gets the same chunky edge as the cards. */
+.tabbar {
+  box-shadow: 0 4px 0 var(--edge), var(--shadow-soft);
+}
+
+/* The round dark-mode toggle gets the chunky edge too. */
+.icon-btn {
+  box-shadow: 0 3px 0 var(--edge);
+}
+
+/* =========================================================================
+   OWL QUEST Q4 — the live workout screen (drawn by workout-screen.js)
+   The sheet has two looks. "sheet--live" (training now) shows #workoutFocus
+   and hides the long list; without it (editing a saved workout) it's the
+   other way round.
+   ========================================================================= */
+.sheet--focus #workoutList,
+.sheet--focus #workoutSaveNote,
+.sheet--focus #workoutDateRow {
+  display: none;
+}
+.sheet:not(.sheet--focus) #workoutFocus {
+  display: none;
+}
+
+/* Q4a+: the "⭐ One at a time | ☰ List" toggle, only while training. Two
+   halves of one pill; the chosen one is tinted lavender with purple text,
+   like the active tab. */
+.sheet:not(.sheet--live) #workoutViewToggle {
+  display: none;
+}
+.view-toggle {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 16px;
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  box-shadow: 0 3px 0 var(--edge);
+}
+.view-toggle__btn {
+  flex: 1;
+  border: none;
+  border-radius: var(--radius-pill);
+  padding: 8px 10px;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+}
+.view-toggle__btn--current {
+  background: var(--view-toggle-current);
+  color: var(--purple);
+}
+
+/* In the list view while training, an exercise's name is a button that opens
+   it in the one-at-a-time view. Keep it looking like the name, just tappable. */
+.exercise__name--link {
+  border: none;
+  background: none;
+  padding: 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--lavender);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+#workoutFocus {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+/* "🏋️ Bench Press / Exercise 1 of 3" */
+.focus-heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.focus-heading__icon {
+  width: 58px;
+  height: 58px;
+  font-size: 30px;
+}
+.focus-heading__name {
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.15;
+  overflow-wrap: anywhere; /* long names wrap instead of overflowing */
+}
+.focus-heading__count {
+  font-weight: 700;
+  color: var(--muted);
+}
+
+/* The row of exercise emoji to jump between. */
+.focus-jump {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.focus-jump__btn {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 50%;
+  font-size: 20px;
+  cursor: pointer;
+  background: var(--card);
+  box-shadow: 0 3px 0 var(--edge);
+}
+.focus-jump__btn--current {
+  outline: 3px solid var(--purple);
+  outline-offset: 2px;
+}
+/* A small mint ✓ on finished exercises. */
+.focus-jump__btn--done::after {
+  content: "✓";
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  font-weight: 800;
+  background: var(--mint);
+  color: var(--on-accent);
+}
+
+/* Progress through the whole workout: a mint bar and "4 of 9 sets". */
+.focus-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.focus-progress__track {
+  flex: 1;
+  height: 12px;
+  border-radius: var(--radius-pill);
+  background: var(--border);
+  overflow: hidden;
+}
+.focus-progress__fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--mint);
+  transition: width 0.4s ease;
+}
+.focus-progress__label {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* The owl coach: a big owl with a speech bubble pointing at it. */
+.owl-coach {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+.owl-coach__owl {
+  font-size: 48px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.owl-coach__bubble {
+  flex: 1;
+  background: var(--card);
+  border-radius: 18px 18px 18px 4px; /* the flat corner "points" at the owl */
+  padding: 10px 14px;
+  box-shadow: var(--shadow-card);
+  font-weight: 700;
+  line-height: 1.35;
+}
+.owl-coach__note {
+  margin-top: 6px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* The next set, big: "Set 2 of 3" and two large number boxes. */
+.focus-set {
+  text-align: center;
+}
+.focus-set__title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 800;
+}
+.focus-set__boxes {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 8px;
+}
+.focus-set__box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.focus-set__input {
+  width: 110px;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 800;
+  padding: 6px 8px;
+}
+.focus-set__unit {
+  font-weight: 700;
+  color: var(--muted);
+}
+.focus-set__hint {
+  margin-top: 8px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* One star tile per set. Grey until ticked, then gold on a butter tile. */
+.focus-stars {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+.focus-star {
+  position: relative; /* for the "+10 XP" pop */
+  width: 60px;
+  height: 60px;
+  border: none;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  background: var(--card);
+  color: var(--star-empty); /* the icon takes this colour */
+  box-shadow: 0 4px 0 var(--edge);
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+.focus-star .ic {
+  width: 32px;
+  height: 32px;
+}
+.focus-star:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--edge);
+}
+.focus-star--next {
+  outline: 3px solid var(--lavender);
+  outline-offset: 2px;
+}
+.focus-star--done {
+  color: var(--star-gold);
+  background: var(--star-done-bg);
+  box-shadow: 0 4px 0 var(--star-done-edge);
+}
+.focus-star--done:active {
+  box-shadow: 0 1px 0 var(--star-done-edge);
+}
+/* "+10 XP" that floats up off a star you just ticked (same animation as the
+   level bar's bubble, see .level-bar__gain). */
+.focus-star__xp {
+  position: absolute;
+  left: 50%;
+  top: -26px;
+  margin-left: -32px;
+  width: 64px;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--purple);
+  pointer-events: none;
+  animation: xp-gain-float 1.4s ease-out forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .focus-star__xp {
+    animation-name: xp-gain-fade;
+  }
+}
+
+/* "Edit sets" and "Workout details": folded sections. */
+.focus-edit {
+  background: var(--card);
+  border-radius: 18px;
+  padding: 10px 14px;
+  box-shadow: 0 3px 0 var(--edge);
+}
+.focus-edit__summary {
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--muted);
+}
+.focus-edit[open] .focus-edit__summary {
+  margin-bottom: 10px;
+}
+.focus-details .workout-date {
+  margin-bottom: 6px;
+}
+
+/* ‹ Previous / Next › — two compact pills, one at each end of the row, so
+   they don't compete with the big Finish button below. */
+.focus-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.focus-nav .btn {
+  font-size: 15px;
+  padding: 9px 20px;
+}
+/* Next, once the exercise is done: purple, like the active tab and avatar. */
+.btn--next-ready {
+  background-color: var(--purple);
+  color: var(--avatar-text);
+  box-shadow: 0 4px 0 var(--purple-edge);
+}
+.btn--next-ready:active {
+  box-shadow: 0 1px 0 var(--purple-edge);
+}
+/* The ghost buttons here get a card background so they look tappable. */
+.focus-nav .btn--ghost {
+  background: var(--card);
+  box-shadow: 0 4px 0 var(--edge);
+  color: var(--text);
+}
+.focus-nav .btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.focus-upnext {
+  margin-top: 10px;
+  text-align: center;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+/* =========================================================================
+   ICONS (icons.js) — Lucide for the tab bar, Phosphor Duotone for buttons.
+   Each icon is an SVG inside <span class="ic">, drawn in "currentColor", so it
+   follows the text colour (and light/dark mode) of whatever it sits in. By
+   default it's a touch bigger than the text beside it and sits on the same line.
+   ========================================================================= */
+.ic {
+  display: inline-flex;
+  width: 1.2em;
+  height: 1.2em;
+  vertical-align: -0.25em;
+  flex-shrink: 0;
+}
+.ic svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+/* Tab bar icons: a fixed, comfortable size. */
+.tab__icon .ic {
+  width: 24px;
+  height: 24px;
+  vertical-align: 0;
+}
+/* Round icon-only buttons (✏️/🗑️ on cards, the theme button, close buttons). */
+.icon-action .ic,
+.icon-btn .ic {
+  width: 20px;
+  height: 20px;
+  vertical-align: 0;
+}
+.rest-pill__icon .ic {
+  width: 20px;
+  height: 20px;
+  vertical-align: -0.2em;
+}
+
+/* =========================================================================
+   OWL QUEST Q5a — "Your feathers" on the Badges tab (drawn by badges.js)
+   ========================================================================= */
+.feathers {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.feathers__head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.feathers__title {
+  font-size: 20px;
+  font-weight: 800;
+}
+.feathers__count {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--muted);
+}
+
+/* Three medallions per row. */
+.feathers__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px 8px;
+}
+.feather {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 2px;
+  border: none;
+  border-radius: 18px;
+  background: none;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+}
+.feather--locked {
+  color: var(--muted);
+}
+.feather--selected {
+  background: var(--view-toggle-current); /* the same soft lavender tint as the toggle */
+}
+.feather:focus-visible {
+  outline: 3px solid var(--purple);
+  outline-offset: 2px;
+}
+.feather__name {
+  overflow-wrap: anywhere;
+}
+
+/* The round medallion: a coloured disc with a solid edge underneath (like the
+   chunky buttons), a soft white ring inside, and a Lucide icon in the middle. */
+.feather-medal {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: var(--medal-ink);
+}
+.feather-medal .ic {
+  width: 30px;
+  height: 30px;
+  vertical-align: 0;
+}
+.feather-medal--butter {
+  background: var(--medal-butter);
+  box-shadow: 0 4px 0 var(--medal-butter-edge), inset 0 0 0 4px rgba(255, 255, 255, 0.35);
+}
+.feather-medal--coral {
+  background: var(--medal-coral);
+  box-shadow: 0 4px 0 var(--medal-coral-edge), inset 0 0 0 4px rgba(255, 255, 255, 0.35);
+}
+.feather-medal--mint {
+  background: var(--medal-mint);
+  box-shadow: 0 4px 0 var(--medal-mint-edge), inset 0 0 0 4px rgba(255, 255, 255, 0.35);
+}
+.feather-medal--lavender {
+  background: var(--medal-lavender);
+  box-shadow: 0 4px 0 var(--medal-lavender-edge), inset 0 0 0 4px rgba(255, 255, 255, 0.35);
+}
+/* Not earned yet: grey, whatever its colour will be. (Comes after the colours
+   so it wins.) */
+.feather-medal--locked {
+  background: var(--medal-locked);
+  box-shadow: 0 4px 0 var(--medal-locked-edge);
+  color: var(--medal-locked-ink);
+}
+.feather-medal--small {
+  width: 46px;
+  height: 46px;
+}
+.feather-medal--small .ic {
+  width: 22px;
+  height: 22px;
+}
+
+/* The details of the tapped feather, and the "Next feather" row. */
+.feather-detail,
+.feather-next {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: var(--bg);
+  font-weight: 700;
+}
+.feather-detail__text,
+.feather-next__text {
+  flex: 1;
+  min-width: 0;
+}
+.feather-detail__name,
+.feather-next__title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 16px;
+}
+.feather-detail__how,
+.feather-detail__progress,
+.feather-next__progress {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.feather-bar {
+  height: 8px;
+  margin-top: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--border);
+  overflow: hidden;
+}
+.feather-bar__fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--purple);
+}
+
+/* ---- Feathers: the short card on Badges + the full page (after Q5b) ---- */
+/* The row of a few earned medallions, a "+3", and "See all ›" on the right. */
+.feathers__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.feathers__more {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--muted);
+}
+.feathers__none {
+  font-weight: 700;
+  color: var(--muted);
+}
+.feathers__see-all {
+  margin-left: auto; /* push to the right end of the heading row */
+  color: var(--purple);
+  white-space: nowrap;
+}
+
+/* A sheet header with a Back button on the left and the title beside it. */
+.sheet__header--back {
+  justify-content: flex-start;
+  gap: 12px;
+}
+.back-btn {
+  color: var(--text);
+  background: var(--card);
+  box-shadow: 0 3px 0 var(--edge);
+}
+.feather-next__label {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--purple);
+}
+.sheet__subtitle {
+  margin-top: 2px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+
+/* =========================================================================
+   STATS ON BADGES (stats.js) — This month, Week by week, Records and
+   Exercise progress. Calm and minimal: hairlines instead of boxes, one colour
+   per chart, labels only where they help.
+   ========================================================================= */
+.stats-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.stats-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+.stats-card__title {
+  font-size: 20px;
+  font-weight: 800;
+}
+.stats-card__meta {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* This month: three figures in a row, split by hairlines. */
+.stats-figures {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.stats-figure {
+  padding: 2px 10px;
+  min-width: 0;
+}
+.stats-figure:first-child {
+  padding-left: 0;
+}
+.stats-figure + .stats-figure {
+  border-left: 1px solid var(--border);
+}
+.stats-figure__label,
+.stats-figure__below {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.stats-figure__below {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.stats-figure__value {
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.stats-figure__unit {
+  margin-left: 3px;
+  font-size: 15px;
+  color: var(--muted);
+}
+.stats-up {
+  color: var(--stats-up);
+}
+.stats-down {
+  color: var(--stats-down);
+}
+
+/* Legends: a small key before each label. */
+.stats-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.stats-key {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 6px;
+  border-radius: 3px;
+  vertical-align: -1px;
+}
+.stats-key--hit,
+.stats-key--dot {
+  background: var(--purple);
+}
+.stats-key--dot {
+  border-radius: 50%;
+}
+.stats-key--below {
+  background: var(--stats-bar-below);
+}
+.stats-key--goal,
+.stats-key--line {
+  width: 14px;
+  height: 2px;
+  border-radius: 1px;
+  vertical-align: 3px;
+  background: var(--coral);
+}
+.stats-key--line {
+  background: var(--purple);
+}
+.stats-hint {
+  margin-top: -6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* The charts (SVG). They stretch to the card's width. */
+.stats-chart {
+  position: relative; /* for the floating label */
+}
+.stats-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.stats-axis {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  fill: var(--muted);
+}
+.stats-value {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 800;
+  fill: var(--text);
+}
+.stats-grid {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+.stats-bar--hit {
+  fill: var(--purple);
+}
+.stats-bar--below {
+  fill: var(--stats-bar-below);
+}
+.stats-stub {
+  stroke: var(--stats-bar-below);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.stats-goal {
+  stroke: var(--coral);
+  stroke-width: 1.5;
+}
+.stats-line {
+  fill: none;
+  stroke: var(--purple);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.stats-area {
+  fill: var(--stats-area);
+}
+.stats-dot {
+  fill: var(--purple);
+  stroke: var(--card); /* a ring in the card colour keeps dots clear of the line */
+  stroke-width: 2;
+}
+.stats-cross {
+  stroke: var(--muted);
+  stroke-width: 1;
+  opacity: 0.45;
+}
+/* The invisible tap areas; a picked week gets a soft lavender tint. */
+.stats-hit {
+  fill: transparent;
+  cursor: pointer;
+}
+.stats-hit--on {
+  fill: var(--view-toggle-current);
+}
+.stats-hit:focus {
+  outline: none;
+}
+.stats-hit:focus-visible {
+  fill: var(--view-toggle-current);
+}
+
+/* The floating label over a chart ("Week of 8 Sep / 4 workouts · 44 sets"). */
+.stats-tip {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: var(--ink);
+  color: var(--ink-text);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+  box-shadow: var(--shadow-soft);
+}
+.stats-tip small {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+/* Records: one row per exercise, split by hairlines. */
+.stats-records {
+  display: flex;
+  flex-direction: column;
+}
+.stats-record {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+}
+.stats-record + .stats-record {
+  border-top: 1px solid var(--border);
+}
+.stats-record__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  font-size: 20px;
+  background: var(--bg);
+}
+.stats-record__text {
+  flex: 1;
+  min-width: 0;
+}
+.stats-record__name {
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+.stats-record__date,
+.stats-record__change {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.stats-record__right {
+  text-align: right;
+}
+.stats-record__best {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.stats-record__change {
+  font-weight: 700;
+  white-space: nowrap;
+}
+.stats-record__change.stats-up {
+  color: var(--stats-up);
+}
+.stats-record__change.stats-down {
+  color: var(--stats-down);
+}
+
+/* Exercise chips: scroll sideways if there are lots. */
+.stats-chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+.stats-chip {
+  flex-shrink: 0;
+  border: none;
+  border-radius: var(--radius-pill);
+  padding: 7px 14px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+.stats-chip[aria-pressed="true"] {
+  background: var(--purple);
+  color: var(--card);
+}
+.stats-open {
+  align-self: flex-start;
+  color: var(--purple);
+}
+.stats-open:disabled {
+  color: var(--muted);
+  cursor: default;
 }

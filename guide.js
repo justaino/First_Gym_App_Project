@@ -28,23 +28,25 @@ const GUIDE_STEPS = [
   {
     title: "Make a profile",
     text:
-      "Settings → type your name → Create. A profile keeps one person's plan " +
+      "Tap the round avatar in the top corner to open Settings, then type " +
+      "your name → Create. A profile keeps one person's plan " +
       "and history together, so you can share the app with someone else and " +
       "not mix up your workouts.",
   },
   {
     title: "Build your week",
     text:
-      "Schedule → ＋ Add exercise. Start typing a name and pick one of the " +
+      "Schedule → Add exercise. Start typing a name and pick one of the " +
       "suggestions: it fills in the emoji, sets and reps for you. Choose " +
       "which day it belongs to, then add a few more.",
   },
   {
     title: "Train",
     text:
-      "Today → ▶ Start workout. Tick each set as you finish it and type in " +
-      "the weight you used. Tap Finish at the end and it's saved to your " +
-      "history. That's the whole loop.",
+      "Today → Start workout. You see one exercise at a time: tap a star " +
+      "as you finish each set and type in the weight you used, then Next ›. " +
+      "Tap Finish at the end and it's saved to your history. That's the " +
+      "whole loop.",
   },
 ];
 
@@ -56,10 +58,13 @@ const GUIDE_SECTIONS = [
     title: "Today",
     summary: "Start a workout, see your week",
     items: [
-      "Shows the exercises planned for today's day of the week.",
-      "▶ Start workout opens training mode. If you close it half way, the button says Resume, and nothing is lost.",
+      "The card at the top shows today's plan: how many exercises and sets, with their icons. On a rest day it just says so.",
+      "The bar in that card is your owl level. Every ticked set earns 10 XP, every finished workout 50 XP, and every personal record 25 XP. There are 30 levels, from Egg all the way to Athena's Owl, and each one takes a bit longer than the last. When you finish a workout you'll see how much XP it earned, and the owl cheers when you go up a level.",
+      "Under that card, This week shows your week as stepping stones, one for each day in your schedule. Yellow with a ✓ means done (tap it to see that workout), the big coral one is today (tap it to start), and paler ones are days you missed. Train on an extra day and it gets a stone too.",
+      "Start workout (in that card) opens training mode. If you close it half way, the button says Resume, and nothing is lost.",
+      "Today's exercises are listed underneath the card.",
       "Recent workouts lists your last few sessions. Edit one to fix a mistake, including its date.",
-      "Once a week you'll get a Your week in review card summing up last week. Dismiss it and it won't come back until next week.",
+      "Once a week a one-line summary of last week appears under the card. Tap it to see the full recap, or tap ✕ to hide it until next week.",
       "Gym buddies shows which friends have trained today. Tap the heading to fold it away.",
     ],
   },
@@ -68,11 +73,11 @@ const GUIDE_SECTIONS = [
     title: "Schedule",
     summary: "Your weekly plan",
     items: [
-      "＋ Add exercise: name, emoji, sets, reps and which day it's on.",
+      "Add exercise: name, emoji, sets, reps and which day it's on.",
       "Typing a name suggests common exercises. Tap one to fill in the rest, or ignore them and type your own.",
       "You can set different reps and a different weight for each set, if you want to work up in weight.",
       "Drag the ⠿ handle on the left of a card to reorder exercises within a day. Workout mode follows the same order.",
-      "Edit or Delete on any card. Deleting an exercise also removes it from your saved workouts.",
+      "The pencil button edits an exercise and the bin deletes it (it asks first). Deleting an exercise also removes it from your saved workouts.",
     ],
   },
   {
@@ -80,27 +85,33 @@ const GUIDE_SECTIONS = [
     title: "Workout mode",
     summary: "What happens while you train",
     items: [
-      "Tick a set only when you've actually done it. Everything else in the app counts ticked sets and ignores the rest.",
-      "Under each exercise you'll see what you lifted last time, so you know what to beat.",
-      "The rest timer has 60s / 90s / 120s buttons and beeps when it's up. It keeps counting correctly even if you lock your phone or switch apps.",
+      "You see one exercise at a time. The big boxes are the next set's reps and weight: change them if you did something different, then tap a star when the set is done and it turns gold. Tap a gold star again to undo it.",
+      "Tap a star only when you've actually done the set. Everything else in the app counts ticked sets and ignores the rest.",
+      "The owl tells you what you lifted last time, so you know what to beat, and shows the last note you left for that exercise.",
+      "‹ Previous and Next › move between exercises, and the row of emoji at the top jumps straight to one (handy if a machine is busy). Finished ones get a ✓.",
+      "Edit sets opens the full table for the exercise on screen, to add or remove a set or fix a number. Workout details has the date.",
+      "Prefer to see the whole day at once? Tap List at the top of a workout. The app remembers your choice on this phone, and One at a time switches back. In the list, tap an exercise's name to open just that one.",
+      "Editing an old workout from Recent workouts always shows everything on one page, which is easier for fixing mistakes.",
+      "The rest timer is the dark pill that stays at the bottom of the screen while you scroll. Tap 60s, 90s or 120s to start it, +15s for a bit longer, or Skip to stop. It beeps when it's up, and keeps counting correctly even if you lock your phone or switch apps.",
       "📝 Add note under an exercise is somewhere to leave yourself a message, like \"next week try 2.5kg more\". It saves as you type and stays with that day's workout.",
-      "The last note you left for an exercise shows under it while you train, so the message reaches you when it's useful.",
       "Notes are yours alone. Even close friends who can see your workouts never see them.",
       "Progress saves as you go. Close is safe; Discard throws the session away.",
       "Beat your heaviest weight on an exercise and you'll get confetti and a 🏅 card when you finish.",
     ],
   },
   {
-    icon: "📈",
-    title: "Progress",
-    summary: "Streaks, records and charts",
+    icon: "🪶",
+    title: "Badges",
+    summary: "Feathers, streaks, records and charts",
     items: [
-      "The ring at the top shows workouts done this week against your weekly goal (set it in Settings).",
-      "Week streak counts how many weeks in a row you've trained at least once.",
-      "The 12-week grid is one square per day, and darker means more sets. Tap a square to see that day.",
-      "Personal records lists your heaviest weight for every exercise, and when you did it.",
-      "Last week is a summary of the week just gone: workouts, sets, total weight moved and any records.",
-      "Further down, each exercise gets its own chart. Tap a bar to see that whole workout.",
+      "Your feathers are badges you earn by training: your first workout, streaks, records, early starts and more. The card at the top shows a few you've earned and a suggested one to aim for, which changes each day.",
+      "Tap See all for every feather on its own page (Back brings you home). Earned ones are in colour, the rest are grey. Tap one to see how to earn it and how close you are.",
+      "Your past workouts count, so you may have a few already.",
+      "Earn a new feather during a workout and the owl tells you when you finish, with confetti.",
+      "This month shows your workouts and sets so far, compared with the same point last month, plus your week streak (weeks in a row with at least one workout) and your best ever.",
+      "Week by week has a column for each of the last 12 weeks. Solid purple means you hit your weekly goal (the coral line, set in Settings). Tap a column to see that week.",
+      "Records lists your heaviest weight for each exercise and when you lifted it. The green or red number shows how your latest session compares with your first.",
+      "Exercise progress: pick an exercise to see your best set each session as a line, with a dot on every new record. Tap the line, then See this workout.",
     ],
   },
   {
@@ -114,7 +125,7 @@ const GUIDE_SECTIONS = [
       "You can ask when you first add someone (tick the box on the form), or later from their card.",
       "Either of you can end it, and you both stop seeing each other's workouts. You stay ordinary friends.",
       "Share mine only is the quieter option: they see your workouts, you don't see theirs, and nobody has to accept anything.",
-      "👋 Nudge gives a friend a friendly prod. One per friend per day. They'll see it next time they open the app. It isn't a phone notification.",
+      "Nudge gives a friend a friendly prod. One per friend per day. They'll see it next time they open the app. It isn't a phone notification.",
       "A red dot on the tab means a request or a nudge is waiting for you.",
       "Settings → Friends → Share my workouts with friends turns everything off at once, close friends included.",
       "Your own username is in Settings → Friends. You're given one to start with. Change it to whatever you like, as long as nobody else has it.",
@@ -125,8 +136,9 @@ const GUIDE_SECTIONS = [
     title: "Settings & your data",
     summary: "Profiles, units, backup",
     items: [
+      "Settings opens from the round avatar with your initial, in the top corner. A little coral dot on it means there's something new on the What's new page.",
       "Your workouts are saved to your account, so logging in on another device brings everything with you.",
-      "Weekly goal sets the target for the ring on Progress.",
+      "Weekly goal sets the target for the ring on Badges.",
       "Weight unit switches every label between kg and lb. It only changes the label, so your saved numbers are never converted.",
       "The 🌙 button in the top corner switches between light and dark. It's remembered on this device only.",
       "Backup → Export downloads a copy of your data as a file. Import merges one back in. Worth doing before any big clear-out.",

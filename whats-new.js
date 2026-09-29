@@ -30,6 +30,94 @@
 
 const RELEASES = [
   {
+    date: "2026-09-29",
+    title: "Calmer, clearer stats",
+    intro: "The numbers under your feathers have had a tidy-up.",
+    items: [
+      "This month shows your workouts and sets so far, compared with the same point last month, plus your week streak and your best ever.",
+      "Week by week shows your last 12 weeks against your weekly goal. Tap a column to see that week.",
+      "Records puts each exercise's best weight next to how far you've come since your first session.",
+      "Exercise progress: pick an exercise and see your best set every session as a line. Tap it to open that workout.",
+      "Gone: the reps and kg moved totals, the grid of squares and the bar charts. Last week's recap still shows on Today.",
+    ],
+  },
+  {
+    date: "2026-09-29",
+    title: "Collect feathers",
+    intro:
+      "The Progress tab is now called Badges, and it has something new to " +
+      "collect at the top.",
+    items: [
+      "Earn feathers for showing up, streaks, personal records, early starts, late sessions and more. There are 18 to find.",
+      "Your past workouts count, so open Badges and see which ones you've already got.",
+      "The card shows a few of yours and a suggested feather to aim for, a new one each day. Tap See all to see every feather, then tap one to find out how to earn it.",
+      "Earn a feather during a workout and you'll get a little party when you finish. (It replaces the old trophy at 7, 30, 50 and 100 workouts, which are feathers now.)",
+      "Your stats, records and charts are all still there, just underneath.",
+    ],
+  },
+  {
+    date: "2026-09-29",
+    title: "One exercise at a time",
+    intro:
+      "Training mode has been rebuilt so it's easier to use with one hand " +
+      "and a sweaty thumb.",
+    items: [
+      "When you start a workout you now see one exercise at a time, with the next set's reps and weight in big boxes.",
+      "Tap a star when a set is done: it turns gold and +10 XP floats up. Tap it again if you tapped by mistake.",
+      "The owl is your coach now: it tells you what you lifted last time and reminds you of the note you left yourself.",
+      "Next › lights up when an exercise is done, and the row of emoji at the top lets you jump to any exercise if a machine is busy.",
+      "Rather see the whole day on one page? Tap List at the top of your workout. Your phone remembers which you like.",
+      "The rest timer now floats at the bottom of the screen, so it's always in reach. Start it with 60s, 90s or 120s, add +15s if you need a bit longer, or Skip.",
+      "Need to add a set or fix a number? Edit sets has the full table. Editing an old workout still shows everything on one page.",
+    ],
+  },
+  {
+    date: "2026-09-29",
+    title: "Your week as a path",
+    intro:
+      "See your whole week at a glance, right under today's plan.",
+    items: [
+      "A new This week card on Today shows each day in your schedule as a stepping stone, joined by a dotted trail.",
+      "Days you've trained turn yellow with a ✓. Tap one to see that workout.",
+      "Today is the big coral stone. Tap it to start your workout.",
+      "Missed a day? Its stone just goes paler, no guilt trip. And if you train on a day that wasn't planned, it still gets a stone.",
+      "The count in the corner shows how you're doing, like \"2 of 4 done\".",
+      "Fixed: a workout you left open weeks ago no longer pops back up the next time that day comes round. If you'd ticked any sets it's saved to your history; if not, it's tidied away.",
+    ],
+  },
+  {
+    date: "2026-09-29",
+    title: "Level up your owl",
+    intro:
+      "Every workout you've ever logged now counts towards your owl's level. " +
+      "Open Today and see where you're starting from.",
+    items: [
+      "A level bar sits in the card at the top of Today, showing your level, your owl's name and how close you are to the next one.",
+      "You earn XP for training: 10 for every set you tick, 50 for every finished workout and 25 for every personal record.",
+      "Finish a workout and you'll see how much XP it earned. Go up a level and the owl throws a little party.",
+      "Your past workouts count, so you might already be a few levels up.",
+      "There are 30 levels, from Egg to Athena's Owl. The early ones come quickly; the top one takes years.",
+    ],
+  },
+  {
+    date: "2026-09-29",
+    title: "A fresh new look",
+    intro:
+      "Athena's owl has redecorated. Same app, same data, just a brighter " +
+      "place to train.",
+    items: [
+      "New colours: a lavender sky at the top of every screen, and a night-purple dark mode.",
+      "Chunkier buttons that press down when you tap them, and a rounder font for headings and numbers.",
+      "Today puts first things first: a card with today's plan and a big Start workout button, right at the top.",
+      "Last week's recap is now one tidy line. Tap it when you want the full story.",
+      "Cleaner, modern icons on the tabs and buttons. Your exercises keep the emoji you chose.",
+      "Settings has moved: tap the round avatar with your initial in the top corner. That leaves four roomier tabs at the bottom.",
+      "Exercise names no longer get cut short on your plan. Edit and Delete are now small pencil and bin buttons, so the name gets the room.",
+      "Fixed: on a rest day the Start workout button no longer shows up with nothing to start.",
+      "The privacy note (Settings → Privacy & data) now explains exactly what friends can see: friends see that you trained, close friends can open your workouts, and nobody ever sees your notes or your email.",
+    ],
+  },
+  {
     date: "2026-07-28",
     title: "Leave yourself a note",
     intro:

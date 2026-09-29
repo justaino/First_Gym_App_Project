@@ -2,11 +2,14 @@
 <!--
   index.html — the single page for Athena's Arena.
 
-  Phase 1 (the MVP): profiles + exercises.
-  - Create profiles and pick the active one (Settings tab).
-  - Add / edit / delete exercises for the active profile.
-  - See the plan grouped by day (Schedule tab) and today's exercises (Today tab).
-  - Everything is saved in the browser with localStorage, so it survives a refresh.
+  Every screen lives in this one file and JavaScript shows/hides them:
+  - The login gate (auth.js), shown until you're signed in.
+  - Four tabs: Today, Schedule, Badges (was Progress) and Friends (friends.js), plus the
+    Settings screen, which opens from the round avatar in the top bar.
+  - Pop-ups and full-screen sheets: the exercise form, workout mode, a saved
+    workout's details, the install steps and the in-app guide (guide.js).
+  - Data is saved to your Supabase account and cached in the browser's
+    localStorage, so it syncs between devices and still opens offline.
 
   The HTML below is just the *structure* (the boxes). The styling lives in
   styles.css and all the behaviour (buttons, saving, etc.) lives in app.js.
@@ -18,11 +21,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Athena's Arena</title>
 
-    <!-- Load the Nunito font from Google Fonts (a <link> font is allowed). -->
+    <!-- Load the fonts from Google Fonts (a <link> font is allowed):
+         Baloo 2 for headings/buttons/big numbers, Nunito for everything else. -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800&display=swap"
       rel="stylesheet"
     />
 
@@ -36,7 +40,7 @@
     -->
     <link rel="manifest" href="manifest.webmanifest" />
     <!-- Colour the phone's status bar / browser UI to match the app. -->
-    <meta name="theme-color" content="#faf6ee" />
+    <meta name="theme-color" content="#e2d9f7" />
     <!-- Home-screen icon for iPhones/iPads (they use this rather than the manifest). -->
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
     <!-- Let iOS open it full-screen and label it nicely when added to home screen. -->
@@ -104,7 +108,9 @@
 
     <!--
       Top header bar. It always shows the app name and which profile is active.
-      The "Switch" button jumps to the Settings tab where profiles are managed.
+      The round avatar (your initial) opens Settings, where profiles, friends
+      settings, backups and the rest live (Owl Quest Q1c: Settings left the
+      bottom tab bar).
     -->
     <header class="topbar">
       <!-- Tapping this title 5 times quickly reveals a hidden credits card
@@ -119,12 +125,14 @@
           aria-label="Switch to dark mode"
           aria-pressed="false"
         >
-          🌙
+          <span data-icon="moon"></span>
         </button>
-        <button class="profile-chip" id="activeProfileChip" type="button">
-          <!-- Filled in by app.js with the active profile's name -->
-          <span id="activeProfileName">No profile</span>
-          <span class="profile-chip__hint">Switch</span>
+        <!-- Avatar = the way into Settings. app.js fills in the active
+             profile's first initial and a matching label for screen readers. -->
+        <button class="avatar-btn" id="activeProfileChip" type="button" aria-label="Open settings">
+          <span class="avatar-btn__initial" id="activeProfileInitial" aria-hidden="true">?</span>
+          <!-- Shown when there's a release note you haven't read (Phase 16). -->
+          <span class="tab__dot avatar-btn__dot" id="settingsTabDot" hidden></span>
         </button>
       </div>
     </header>
@@ -138,95 +146,145 @@
       <!-- ===================== TODAY VIEW ===================== -->
       <section class="view view--active" id="view-today" data-view="today">
         <!--
-          Friendly hero header with a little mascot. The greeting and date are
-          filled in by app.js. The SVG is drawn inline so there's no image file
+          The Today card ("hero"), Owl Quest phase Q1b. From top to bottom:
+          the mascot + greeting + date, a line about today's plan, and the big
+          Start workout button — so the thing you came to do is the first thing
+          you see. app.js (renderToday) fills in the text and hides the button
+          on rest days. The mascot SVG is drawn inline so there's no image file
           to load, and it's marked aria-hidden because it's decorative.
         -->
         <div class="hero">
-          <!-- Long-pressing this mascot (~1.5s) summons Athena's owl — the
-               touch-friendly version of the "type athena" easter egg. -->
-          <div class="hero__mascot" id="heroMascot" aria-hidden="true">
-            <!-- Sun mascot — shown in light mode. -->
-            <svg
-              class="mascot mascot--sun"
-              viewBox="0 0 100 100"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <!-- Face -->
-              <circle cx="50" cy="50" r="34" fill="#F6D365" />
-              <!-- Headband -->
-              <path d="M18 38 Q50 24 82 38 L82 30 Q50 16 18 30 Z" fill="#EF7C7C" />
-              <!-- Eyes -->
-              <circle cx="39" cy="52" r="4.2" fill="#2E2E33" />
-              <circle cx="61" cy="52" r="4.2" fill="#2E2E33" />
-              <!-- Rosy cheeks -->
-              <circle cx="33" cy="60" r="4.5" fill="#EF7C7C" opacity="0.55" />
-              <circle cx="67" cy="60" r="4.5" fill="#EF7C7C" opacity="0.55" />
-              <!-- Smile -->
-              <path
-                d="M40 62 Q50 71 60 62"
-                fill="none"
-                stroke="#2E2E33"
-                stroke-width="3.5"
-                stroke-linecap="round"
-              />
-              <!-- Little dumbbell arms -->
-              <rect x="10" y="60" width="12" height="6" rx="3" fill="#5FC4BC" />
-              <rect x="78" y="60" width="12" height="6" rx="3" fill="#5FC4BC" />
-            </svg>
+          <div class="hero__top">
+            <!-- Long-pressing this mascot (~1.5s) summons Athena's owl — the
+                 touch-friendly version of the "type athena" easter egg. -->
+            <div class="hero__mascot" id="heroMascot" aria-hidden="true">
+              <!-- Sun mascot — shown in light mode. -->
+              <svg
+                class="mascot mascot--sun"
+                viewBox="0 0 100 100"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <!-- Face -->
+                <circle cx="50" cy="50" r="34" fill="#F6D365" />
+                <!-- Headband -->
+                <path d="M18 38 Q50 24 82 38 L82 30 Q50 16 18 30 Z" fill="#EF7C7C" />
+                <!-- Eyes -->
+                <circle cx="39" cy="52" r="4.2" fill="#2E2E33" />
+                <circle cx="61" cy="52" r="4.2" fill="#2E2E33" />
+                <!-- Rosy cheeks -->
+                <circle cx="33" cy="60" r="4.5" fill="#EF7C7C" opacity="0.55" />
+                <circle cx="67" cy="60" r="4.5" fill="#EF7C7C" opacity="0.55" />
+                <!-- Smile -->
+                <path
+                  d="M40 62 Q50 71 60 62"
+                  fill="none"
+                  stroke="#2E2E33"
+                  stroke-width="3.5"
+                  stroke-linecap="round"
+                />
+                <!-- Little dumbbell arms -->
+                <rect x="10" y="60" width="12" height="6" rx="3" fill="#5FC4BC" />
+                <rect x="78" y="60" width="12" height="6" rx="3" fill="#5FC4BC" />
+              </svg>
 
-            <!-- Moon mascot — shown in dark mode (a smiling moon + stars). -->
-            <svg
-              class="mascot mascot--moon"
-              viewBox="0 0 100 100"
-              xmlns="http://www.w3.org/2000/svg"
+              <!-- Moon mascot — shown in dark mode (a smiling moon + stars). -->
+              <svg
+                class="mascot mascot--moon"
+                viewBox="0 0 100 100"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <!-- Moon disc -->
+                <circle cx="50" cy="50" r="34" fill="#EDEAF6" />
+                <!-- Craters -->
+                <circle cx="64" cy="38" r="5" fill="#D9D4EC" />
+                <circle cx="68" cy="57" r="3.5" fill="#D9D4EC" />
+                <circle cx="39" cy="35" r="3" fill="#D9D4EC" />
+                <!-- Eyes -->
+                <circle cx="42" cy="52" r="4.2" fill="#2E2E33" />
+                <circle cx="58" cy="52" r="4.2" fill="#2E2E33" />
+                <!-- Rosy cheeks -->
+                <circle cx="34" cy="60" r="4.5" fill="#EF7C7C" opacity="0.5" />
+                <circle cx="66" cy="60" r="4.5" fill="#EF7C7C" opacity="0.5" />
+                <!-- Smile -->
+                <path
+                  d="M41 62 Q50 70 59 62"
+                  fill="none"
+                  stroke="#2E2E33"
+                  stroke-width="3.5"
+                  stroke-linecap="round"
+                />
+                <!-- Little dumbbell arms (still a workout buddy at night!) -->
+                <rect x="10" y="60" width="12" height="6" rx="3" fill="#5FC4BC" />
+                <rect x="78" y="60" width="12" height="6" rx="3" fill="#5FC4BC" />
+                <!-- Twinkly stars -->
+                <circle cx="86" cy="22" r="2.6" fill="#F6D365" />
+                <circle cx="16" cy="24" r="2" fill="#B9A7E0" />
+              </svg>
+            </div>
+            <div class="hero__text">
+              <h1 class="hero__greeting" id="heroGreeting">Hi there!</h1>
+              <p class="hero__date" id="heroDate">—</p>
+            </div>
+          </div>
+
+          <!-- Owl Quest Q2: your level and XP bar, e.g. "Lv 4 · Owlet   340 / 800 XP".
+               xp.js (renderLevelBar) works it out from your saved workouts and
+               fills it in. Hidden until there's a profile. -->
+          <div class="level-bar" id="levelBar" hidden>
+            <div class="level-bar__labels">
+              <span class="level-bar__name" id="levelBarName"></span>
+              <span class="level-bar__xp" id="levelBarXp"></span>
+            </div>
+            <div
+              class="level-bar__track"
+              id="levelBarTrack"
+              role="progressbar"
+              aria-label="Level progress"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow="0"
             >
-              <!-- Moon disc -->
-              <circle cx="50" cy="50" r="34" fill="#EDEAF6" />
-              <!-- Craters -->
-              <circle cx="64" cy="38" r="5" fill="#D9D4EC" />
-              <circle cx="68" cy="57" r="3.5" fill="#D9D4EC" />
-              <circle cx="39" cy="35" r="3" fill="#D9D4EC" />
-              <!-- Eyes -->
-              <circle cx="42" cy="52" r="4.2" fill="#2E2E33" />
-              <circle cx="58" cy="52" r="4.2" fill="#2E2E33" />
-              <!-- Rosy cheeks -->
-              <circle cx="34" cy="60" r="4.5" fill="#EF7C7C" opacity="0.5" />
-              <circle cx="66" cy="60" r="4.5" fill="#EF7C7C" opacity="0.5" />
-              <!-- Smile -->
-              <path
-                d="M41 62 Q50 70 59 62"
-                fill="none"
-                stroke="#2E2E33"
-                stroke-width="3.5"
-                stroke-linecap="round"
-              />
-              <!-- Little dumbbell arms (still a workout buddy at night!) -->
-              <rect x="10" y="60" width="12" height="6" rx="3" fill="#5FC4BC" />
-              <rect x="78" y="60" width="12" height="6" rx="3" fill="#5FC4BC" />
-              <!-- Twinkly stars -->
-              <circle cx="86" cy="22" r="2.6" fill="#F6D365" />
-              <circle cx="16" cy="24" r="2" fill="#B9A7E0" />
-            </svg>
+              <div class="level-bar__fill" id="levelBarFill"></div>
+            </div>
           </div>
-          <div class="hero__text">
-            <h1 class="hero__greeting" id="heroGreeting">Hi there!</h1>
-            <p class="hero__date" id="heroDate">—</p>
+
+          <!-- Today's plan, e.g. "3 exercises · 9 sets" with the exercise emoji
+               underneath, or a rest-day message. Hidden until there's a profile. -->
+          <div class="hero__plan" id="heroPlan" hidden>
+            <p class="hero__plan-title" id="heroPlanTitle"></p>
+            <p class="hero__plan-icons" id="heroPlanIcons" aria-hidden="true"></p>
           </div>
+
+          <!-- Starts (or resumes) today's workout. Hidden on rest days. -->
+          <button class="btn btn--ink btn--block hero__start" id="startTodayBtn" type="button" hidden>
+            <span data-icon="play"></span> Start workout
+          </button>
         </div>
 
         <!--
-          Phase 11: the once-a-week "Your week in review 🎉" card. app.js fills
-          this on the first visit of a new week and empties it once dismissed.
+          Owl Quest Q3: the week path. A trail of stepping stones, one per day
+          in your schedule (done, today, coming up, missed). week-path.js
+          (renderWeekPath) fills #weekPath and the "2 of 4 done" count, and
+          hides the card when nothing is planned yet.
+        -->
+        <div class="card week-path-card" id="weekPathCard" hidden>
+          <div class="week-path-card__head">
+            <h2 class="week-path-card__title">This week</h2>
+            <span class="week-path-card__count" id="weekPathCount"></span>
+          </div>
+          <div class="week-path" id="weekPath"></div>
+        </div>
+
+        <!--
+          Phase 11 + Q1b: last week's recap. On the first visit of a new week
+          app.js shows a one-line summary here; tapping it opens the full
+          "Your week in review 🎉" card. Empty once dismissed.
         -->
         <div id="todayRecap"></div>
 
-        <!-- Starts a workout for today. app.js hides this when there's nothing to do. -->
-        <button class="btn btn--primary btn--block" id="startTodayBtn" type="button" hidden>
-          ▶ Start workout
-        </button>
-
-        <!-- app.js fills this with today's exercises (or a friendly empty state) -->
+        <!-- app.js fills this with today's exercises (or a friendly empty state).
+             The heading is hidden when there's nothing planned. -->
+        <h2 class="section-heading" id="todayListHeading" hidden>Today's exercises</h2>
         <div id="todayList"></div>
 
         <!-- Gym buddies (Phase 12c). friends.js fills this with each friend's
@@ -245,7 +303,7 @@
 
         <!-- Pill button to open the "add exercise" form -->
         <button class="btn btn--primary btn--block" id="addExerciseBtn" type="button">
-          ＋ Add exercise
+          <span data-icon="plus"></span> Add exercise
         </button>
 
         <!-- app.js fills this with exercises grouped by day -->
@@ -254,18 +312,17 @@
 
       <!-- ===================== PROGRESS VIEW ===================== -->
       <section class="view" id="view-progress" data-view="progress">
-        <h1 class="view__title">Progress</h1>
+        <!-- Owl Quest Q5a: this tab is called "Badges" now (it was "Progress").
+             Inside, the code still calls it "progress" (data-view, renderProgress). -->
+        <h1 class="view__title">Badges</h1>
         <p class="view__subtitle" id="progressSubtitle">Your activity</p>
 
-        <!-- app.js fills this with the "Insights" card (streak, totals, PRs) -->
-        <div id="insights"></div>
-
-        <!-- app.js fills this with the "This week" summary card -->
-        <div id="weekSummary"></div>
-
-        <!-- Per-exercise progress (heading hidden until there's history) -->
-        <h2 class="section-heading" id="byExerciseHeading" hidden>By exercise</h2>
-        <div id="exerciseProgressList"></div>
+        <!-- badges.js fills this with the "Your feathers" card (Owl Quest Q5a) -->
+        <div id="feathers"></div>
+        <!-- stats.js fills this: This month, Week by week, Records and Exercise
+             progress (they replaced the Insights card, This week / Last week
+             and the per-exercise bar charts, after Owl Quest Q5). -->
+        <div id="stats"></div>
       </section>
 
       <!-- ===================== FRIENDS VIEW (Phase 12) ===================== -->
@@ -317,8 +374,8 @@
 
       <!-- ===================== SETTINGS VIEW (profiles) ===================== -->
       <section class="view" id="view-settings" data-view="settings">
-        <h1 class="view__title">Profiles</h1>
-        <p class="view__subtitle">Create a profile and pick which one is active.</p>
+        <h1 class="view__title">Settings</h1>
+        <p class="view__subtitle">Your account, profiles, friends and backups.</p>
 
         <!-- Account (Phase 7): who's signed in + log out. Hidden until logged in. -->
         <div class="card" id="accountCard" hidden>
@@ -340,7 +397,7 @@
             offline.
           </p>
           <button class="btn btn--primary" id="installBtn" type="button">
-            📲 Install app
+            <span data-icon="install"></span> Install app
           </button>
         </div>
 
@@ -357,7 +414,7 @@
             target="_blank"
             rel="noopener"
           >
-            🗞️ What's new
+            <span data-icon="news"></span> What's new
             <!-- app.js shows this when there's an update you haven't opened -->
             <span class="whats-new-link__dot" id="whatsNewDot" hidden></span>
           </a>
@@ -371,7 +428,7 @@
             walks through every tab in plain English.
           </p>
           <button class="btn btn--primary" id="openGuideBtn" type="button">
-            📖 How to use
+            <span data-icon="guide"></span> How to use
           </button>
         </div>
 
@@ -431,11 +488,11 @@
           </label>
         </div>
 
-        <!-- Weekly goal (Insights): drives the goal ring on the Progress tab. -->
+        <!-- Weekly goal: drives the goal line on Badges → Week by week (stats.js). -->
         <h2 class="section-heading">Weekly goal</h2>
         <div class="card">
           <label class="form__label" for="weeklyGoalInput">
-            Workouts per week (shown as a ring on Progress)
+            Workouts per week (the goal line on Badges → Week by week)
           </label>
           <input
             class="input"
@@ -468,7 +525,8 @@
           </p>
         </div>
 
-        <!-- Create-a-profile form -->
+        <!-- Profiles: create one, and pick which is active (the list below). -->
+        <h2 class="section-heading">Profiles</h2>
         <div class="card">
           <form id="profileForm" class="form">
             <label class="form__label" for="profileNameInput">New profile name</label>
@@ -520,7 +578,8 @@
           <p class="backup__text">
             Your email and workout data (profiles, exercises, and history) are
             stored in the cloud with <strong>Supabase</strong>, a third-party
-            service, so they sync across your devices. Only you can see your data.
+            service, so they sync across your devices. Only you can see your
+            workouts, unless you share them with close friends.
           </p>
           <p class="backup__text">
             <a
@@ -533,7 +592,8 @@
           </p>
           <p class="backup__text">
             <strong>Delete my data</strong> permanently removes all your profiles,
-            exercises, and workout history from the cloud and from this device.
+            exercises, workout history and friends details from the cloud and
+            from this device.
             This cannot be undone. Export a backup first if you want to keep a
             copy. (Your login email isn't removed automatically; email me if you'd
             like the account itself deleted too.)
@@ -720,29 +780,48 @@
           </button>
         </header>
 
+        <!-- Owl Quest Q4a+: while training, choose how the workout looks.
+             Only shown for a live workout (not when editing a saved one).
+             app.js remembers the choice on this device (gym:workoutView). -->
+        <div class="view-toggle" id="workoutViewToggle" role="group" aria-label="Workout view">
+          <button class="view-toggle__btn" type="button" data-view="focus"><span data-icon="star"></span> One at a time</button>
+          <button class="view-toggle__btn" type="button" data-view="list"><span data-icon="list"></span> List</button>
+        </div>
+
         <!-- Saved-as-you-go note -->
-        <p class="sheet__note">Progress saves automatically as you go.</p>
+        <p class="sheet__note" id="workoutSaveNote">Progress saves automatically as you go.</p>
 
         <!-- Workout date. Changing it also updates the day label (e.g. moving a
              workout to a Friday makes it a "Friday workout"). -->
-        <label class="workout-date">
+        <label class="workout-date" id="workoutDateRow">
           <span class="workout-date__label">Date</span>
           <input class="input" type="date" id="workoutDateInput" />
         </label>
 
-        <!-- app.js fills this with the day's exercises and their per-set rows -->
+        <!-- EDIT look (fixing a saved workout): app.js fills this with every
+             exercise and its per-set rows. Hidden in the live look. -->
         <div id="workoutList"></div>
 
-        <!-- Rest timer -->
-        <div class="card timer">
-          <div class="timer__display" id="timerDisplay">Rest timer</div>
-          <div class="timer__buttons">
-            <button class="timer-btn" type="button" data-seconds="60">60s</button>
-            <button class="timer-btn" type="button" data-seconds="90">90s</button>
-            <button class="timer-btn" type="button" data-seconds="120">120s</button>
-            <button class="timer-btn timer-btn--stop" type="button" id="stopTimerBtn">
-              Stop
-            </button>
+        <!-- LIVE look (Owl Quest Q4, training right now): workout-screen.js
+             draws one exercise at a time here, with stars and the owl. The
+             date box and "saves automatically" line above are hidden in this
+             look; the same things sit in a "Workout details" fold instead. -->
+        <div id="workoutFocus"></div>
+
+        <!-- Rest timer (Owl Quest Q4b): a dark pill that floats at the bottom
+             of the screen while you scroll, in both workout views. You start
+             it yourself. Idle it shows 60s / 90s / 120s; while counting down
+             it shows the time, +15s and Skip. app.js puts "is-running" or
+             "is-done" on #restTimer and styles.css swaps the buttons. -->
+        <div class="rest-pill" id="restTimer">
+          <span class="rest-pill__icon" data-icon="timer" aria-hidden="true"></span>
+          <span class="rest-pill__display timer__display" id="timerDisplay" role="timer">Rest</span>
+          <div class="rest-pill__buttons">
+            <button class="rest-pill__btn rest-pill__idle" type="button" data-seconds="60">60s</button>
+            <button class="rest-pill__btn rest-pill__idle" type="button" data-seconds="90">90s</button>
+            <button class="rest-pill__btn rest-pill__idle" type="button" data-seconds="120">120s</button>
+            <button class="rest-pill__btn rest-pill__running" type="button" id="addRestBtn">+15s</button>
+            <button class="rest-pill__btn rest-pill__running rest-pill__btn--skip" type="button" id="stopTimerBtn">Skip</button>
           </div>
         </div>
 
@@ -754,6 +833,32 @@
             Finish
           </button>
         </div>
+      </div>
+    </div>
+
+    <!--
+      All your feathers (Owl Quest, after Q5b): a full page opened by "See all"
+      on the Badges tab's feathers card, with a Back button. badges.js
+      (renderFeathersPage) fills #feathersPageContent.
+    -->
+    <div class="sheet" id="feathersSheet" hidden>
+      <div
+        class="sheet__panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="feathersPageTitle"
+      >
+        <header class="sheet__header sheet__header--back">
+          <button class="btn btn--ghost btn--small back-btn" type="button" id="closeFeathersBtn">
+            <span data-icon="back"></span> Back
+          </button>
+          <div>
+            <h2 class="sheet__title" id="feathersPageTitle">Your feathers</h2>
+            <p class="sheet__subtitle" id="feathersPageCount"></p>
+          </div>
+        </header>
+
+        <div id="feathersPageContent"></div>
       </div>
     </div>
 
@@ -797,34 +902,30 @@
     -->
     <nav class="tabbar" aria-label="Main navigation">
       <button class="tab tab--active" type="button" data-view="today" aria-current="page">
-        <span class="tab__icon" aria-hidden="true">☀️</span>
+        <span class="tab__icon" data-icon="today" aria-hidden="true"></span>
         <span class="tab__label">Today</span>
       </button>
 
       <button class="tab" type="button" data-view="schedule">
-        <span class="tab__icon" aria-hidden="true">📅</span>
+        <span class="tab__icon" data-icon="schedule" aria-hidden="true"></span>
         <span class="tab__label">Schedule</span>
       </button>
 
       <button class="tab" type="button" data-view="progress">
-        <span class="tab__icon" aria-hidden="true">📈</span>
-        <span class="tab__label">Progress</span>
+        <span class="tab__icon" data-icon="badges" aria-hidden="true"></span>
+        <span class="tab__label">Badges</span>
       </button>
 
       <button class="tab" type="button" data-view="friends">
-        <span class="tab__icon" aria-hidden="true">🤝</span>
+        <span class="tab__icon" data-icon="friends" aria-hidden="true"></span>
         <span class="tab__label">Friends</span>
         <!-- Little coral dot: friends.js shows it when a request is waiting or
              someone has nudged you. -->
         <span class="tab__dot" id="friendsTabDot" hidden></span>
       </button>
 
-      <button class="tab" type="button" data-view="settings">
-        <span class="tab__icon" aria-hidden="true">⚙️</span>
-        <span class="tab__label">Settings</span>
-        <!-- Shown when there's a release note you haven't read (Phase 16). -->
-        <span class="tab__dot" id="settingsTabDot" hidden></span>
-      </button>
+      <!-- No Settings tab since Owl Quest Q1c: it opens from the avatar in the
+           top bar instead, so the four everyday tabs get more room. -->
     </nav>
 
     <!--
@@ -838,13 +939,15 @@
         type="button"
         aria-label="Close"
       >
-        ✕
+        <span data-icon="close"></span>
       </button>
       <span class="credits-card__owl" aria-hidden="true">🦉</span>
       <p class="credits-card__title">You found a secret!</p>
       <p class="credits-card__text">
         Built with ❤️ for your journey. Keep showing up. 💪
       </p>
+      <!-- Credit for the open-source icon sets (see icons.js for the licences). -->
+      <p class="credits-card__text">Icons by Lucide and Phosphor.</p>
     </div>
 
     <!--
@@ -865,8 +968,27 @@
     -->
     <script src="exercise-library.js"></script>
 
+    <!-- The app's icons (Lucide + Phosphor, copied in). Loaded before app.js,
+         which uses its icon() helper when drawing buttons. -->
+    <script src="icons.js"></script>
+
     <!-- Our app logic -->
     <script src="app.js"></script>
+
+    <!-- XP and levels (Owl Quest Q2). Uses app.js's helpers, so it comes after it. -->
+    <script src="xp.js"></script>
+
+    <!-- The week path on Today (Owl Quest Q3). Also uses app.js's helpers. -->
+    <script src="week-path.js"></script>
+
+    <!-- The live workout screen (Owl Quest Q4). Also uses app.js's helpers. -->
+    <script src="workout-screen.js"></script>
+
+    <!-- Feathers (badges) on the Badges tab (Owl Quest Q5). Uses app.js + xp.js. -->
+    <script src="badges.js"></script>
+
+    <!-- The stats under the feathers on Badges. Uses app.js + badges.js. -->
+    <script src="stats.js"></script>
 
     <!-- The Friends tab (Phase 12). Loaded after app.js because it uses its
          helpers (showToast, formatDate, showSessionDetail...). -->

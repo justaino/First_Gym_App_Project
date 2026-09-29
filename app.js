@@ -2,11 +2,14 @@
   app.js — all the behaviour for Athena's Arena.
 
   What this file does, in plain English:
-  - Saves and loads data from the browser's localStorage (so it survives refresh).
-  - Manages PROFILES: create one, list them, choose which is active.
-  - Manages EXERCISES for the active profile: add, edit, delete.
+  - Saves and loads data: Supabase (the cloud) is the real copy, and the
+    browser's localStorage is a cache so the app still opens offline.
+  - Manages PROFILES, EXERCISES and WORKOUTS (sessions): add, edit, delete.
+  - Runs workout mode, the rest timer, the Badges tab (see also badges.js and
+    stats.js) and backups.
   - Draws ("renders") the screens whenever the data changes.
-  - Switches between the four tabs (Today / Schedule / Progress / Settings).
+  - Switches between the tabs (Today / Schedule / Progress / Friends / Settings).
+    The Friends tab's own code lives in friends.js.
 
   The code is organised top-to-bottom in sections. Read it in order and it should
   make sense. Functions have descriptive names so you can follow what each does.
@@ -24,8 +27,9 @@ const STORAGE_KEYS = {
   exercises: "gym:exercises",
   sessions: "gym:sessions", // Phase 2: saved workout history
   theme: "gym:theme", // Phase 4: "light" or "dark"
-  // Easter eggs: remembers which workout-count milestones we've already
-  // celebrated, per profile, so the trophy only ever plays once each.
+  // RETIRED in Owl Quest Q5b: this remembered which workout-count trophies had
+  // played. Feathers (badges.js) replaced the trophy, so the app now only uses
+  // this name to delete the old key (see init() and "delete my data").
   celebratedMilestones: "gym:celebratedMilestones",
   // Insights: each profile's weekly workout goal, as { profileId: number }.
   weeklyGoal: "gym:weeklyGoal",
@@ -43,15 +47,15 @@ const STORAGE_KEYS = {
   //   gym:recapSeen:<profileId>:2026-07-20
   // The prefix lets us find (and tidy up) old ones. Per device, not synced.
   recapSeenPrefix: "gym:recapSeen:",
+  // Owl Quest Q4a+: how you like to see a workout while training — "focus"
+  // (one exercise at a time) or "list" (everything on one page). A DISPLAY
+  // setting saved per device, like the theme — not synced.
+  workoutView: "gym:workoutView",
 };
 
 // The weight units you can choose between in Settings.
 const UNITS = ["kg", "lb"];
 const DEFAULT_UNIT = "kg";
-
-// Easter egg: a workout milestone shows a one-time trophy celebration when your
-// total completed-workout count first reaches one of these numbers.
-const WORKOUT_MILESTONES = [7, 30, 50, 100];
 
 // Insights: the default weekly workout goal until the owner sets their own.
 const DEFAULT_WEEKLY_GOAL = 3;
@@ -336,20 +340,27 @@ function createExerciseCard(exercise, draggable) {
   info.appendChild(name);
   info.appendChild(detail);
 
-  // Edit + Delete buttons.
+  // Edit + Delete buttons. They're small round icon buttons (✏️ / 🗑️) rather
+  // than the words "Edit" and "Delete", which took so much room that names got
+  // cut to "Bench…". The aria-label says the full action for screen readers,
+  // and the title shows it as a tooltip on a computer.
   const actions = document.createElement("div");
   actions.className = "exercise__actions";
 
   const editBtn = document.createElement("button");
-  editBtn.className = "btn btn--ghost btn--small";
+  editBtn.className = "icon-action";
   editBtn.type = "button";
-  editBtn.textContent = "Edit";
+  editBtn.innerHTML = iconSvg("edit");
+  editBtn.setAttribute("aria-label", "Edit " + exercise.name);
+  editBtn.title = "Edit";
   editBtn.addEventListener("click", () => openExerciseModalForEdit(exercise.id));
 
   const deleteBtn = document.createElement("button");
-  deleteBtn.className = "btn btn--ghost btn--small";
+  deleteBtn.className = "icon-action";
   deleteBtn.type = "button";
-  deleteBtn.textContent = "Delete";
+  deleteBtn.innerHTML = iconSvg("delete");
+  deleteBtn.setAttribute("aria-label", "Delete " + exercise.name);
+  deleteBtn.title = "Delete";
   deleteBtn.addEventListener("click", () => deleteExercise(exercise.id));
 
   actions.appendChild(editBtn);
@@ -577,7 +588,8 @@ function renderSchedule() {
     startBtn.className = "btn btn--ghost btn--small";
     startBtn.type = "button";
     // Say "Resume" if there's an in-progress workout for this day.
-    startBtn.textContent = findInProgressSession(day) ? "▶ Resume" : "▶ Start";
+    startBtn.innerHTML =
+      iconSvg("play") + (findInProgressSession(day) ? " Resume" : " Start");
     startBtn.addEventListener("click", () => startWorkout(day));
 
     headingRow.appendChild(heading);
@@ -602,7 +614,8 @@ function renderSchedule() {
   });
 }
 
-// Draw the Today view: only today's exercises.
+// Draw the Today view: the Today card at the top (greeting, today's plan and
+// the Start button), then today's exercises underneath.
 function renderToday() {
   const container = document.getElementById("todayList");
   container.innerHTML = "";
@@ -622,13 +635,30 @@ function renderToday() {
     day: "numeric",
   });
 
-  // Phase 11: the once-a-week "week in review" card (draws itself only when
-  // it's a new week, there's something to celebrate, and you haven't dismissed
-  // it yet — otherwise it clears the space).
+  // The pieces of the Today card we fill in below (Owl Quest phase Q1b).
+  const plan = document.getElementById("heroPlan");
+  const planTitle = document.getElementById("heroPlanTitle");
+  const planIcons = document.getElementById("heroPlanIcons");
+  const startBtn = document.getElementById("startTodayBtn");
+  const listHeading = document.getElementById("todayListHeading");
+
+  // Phase 11: last week's recap (a one-line summary you can tap open). It
+  // draws itself only when it's a new week, there's something to celebrate,
+  // and you haven't dismissed it yet — otherwise it clears the space.
   renderTodayRecap();
 
+  // Owl Quest Q2: the level + XP bar in the Today card (see xp.js). It hides
+  // itself when there's no profile.
+  renderLevelBar();
+
+  // Owl Quest Q3: this week's stepping-stone path, under the Today card (see
+  // week-path.js). It hides itself when there's nothing planned or done.
+  renderWeekPath();
+
   if (!activeProfile) {
-    document.getElementById("startTodayBtn").hidden = true;
+    plan.hidden = true;
+    startBtn.hidden = true;
+    listHeading.hidden = true;
     container.appendChild(
       createEmptyState(
         "👋",
@@ -646,21 +676,37 @@ function renderToday() {
     )
   );
 
-  // Only show the button if there's something to do; label it Resume if a
-  // workout for today is already in progress.
-  const startBtn = document.getElementById("startTodayBtn");
-  startBtn.hidden = todaysExercises.length === 0;
-  startBtn.textContent = findInProgressSession(todayName)
-    ? "▶ Resume workout"
-    : "▶ Start workout";
+  plan.hidden = false;
 
+  // Rest day: the Today card says so, and there's no button or list.
   if (todaysExercises.length === 0) {
-    container.appendChild(
-      createEmptyState("🛌", "Nothing planned for today, so enjoy your rest!")
-    );
+    planTitle.textContent = "Rest day. Nothing planned, so enjoy it 🛌";
+    planIcons.textContent = "";
+    startBtn.hidden = true;
+    listHeading.hidden = true;
     return;
   }
 
+  // A workout day: "3 exercises · 9 sets", then each exercise's emoji.
+  const totalSets = todaysExercises.reduce(
+    (sum, exercise) => sum + normalizeExercise(exercise).sets,
+    0
+  );
+  planTitle.textContent =
+    pluralise(todaysExercises.length, "exercise") +
+    " · " +
+    pluralise(totalSets, "set");
+  planIcons.textContent = todaysExercises
+    .map((exercise) => exercise.icon)
+    .join(" ");
+
+  // The big button: labelled Resume if today's workout is already under way.
+  startBtn.hidden = false;
+  startBtn.innerHTML = findInProgressSession(todayName)
+    ? iconSvg("play") + " Resume workout"
+    : iconSvg("play") + " Start workout";
+
+  listHeading.hidden = false;
   todaysExercises.forEach((exercise) => {
     container.appendChild(createExerciseCard(exercise));
   });
@@ -719,10 +765,25 @@ function renderProfiles() {
 }
 
 // Update the little active-profile pill in the top bar.
+// The round avatar in the top bar (Owl Quest Q1c): the active profile's first
+// initial, or "?" with no profile. Tapping it opens Settings.
 function renderActiveProfileChip() {
-  const nameSpan = document.getElementById("activeProfileName");
+  const avatar = document.getElementById("activeProfileChip");
+  const initial = document.getElementById("activeProfileInitial");
   const activeProfile = getActiveProfile();
-  nameSpan.textContent = activeProfile ? activeProfile.name : "No profile";
+
+  if (activeProfile && activeProfile.name.trim() !== "") {
+    // Array.from splits by character properly, so a name that starts with an
+    // emoji or accented letter keeps its whole first character.
+    initial.textContent = Array.from(activeProfile.name.trim())[0].toUpperCase();
+    avatar.setAttribute(
+      "aria-label",
+      "Settings (" + activeProfile.name + "'s profile)"
+    );
+  } else {
+    initial.textContent = "?";
+    avatar.setAttribute("aria-label", "Settings (no profile yet)");
+  }
 }
 
 // A small helper that builds a friendly "nothing here yet" card.
@@ -869,142 +930,8 @@ function formatDate(isoString) {
   });
 }
 
-/* ---- Progress view (Phase 3) ---- */
-
-// Work out midnight on Monday of the current week (start of "this week").
-function getStartOfWeek() {
-  const now = new Date();
-  const jsDay = now.getDay(); // 0 = Sunday ... 6 = Saturday
-  // How many days back to Monday? (Sunday counts as 6 days after Monday.)
-  const daysSinceMonday = jsDay === 0 ? 6 : jsDay - 1;
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - daysSinceMonday);
-  monday.setHours(0, 0, 0, 0);
-  return monday;
-}
-
-// Build a small, interactive bar chart (as an SVG element) from "points".
-// Each point is { date, reps, weight, session }. When any session has a weight,
-// each session shows TWO bars: reps (mint) and weight (lavender). The two
-// colours are scaled to their OWN maximums, so each shows its trend over time.
-// Bars show a tooltip on hover and open that workout's details when clicked.
-function buildBarChartSvg(points) {
-  const width = 240;
-  const height = 60;
-  const groupGap = 6; // gap between sessions
-  const innerGap = 3; // gap between the two bars within a session
-  const namespace = "http://www.w3.org/2000/svg";
-
-  const svg = document.createElementNS(namespace, "svg");
-  svg.setAttribute("viewBox", "0 0 " + width + " " + height);
-  svg.setAttribute("class", "barchart");
-  svg.setAttribute("preserveAspectRatio", "none");
-
-  // Show the weight series only if at least one session recorded a weight.
-  const hasWeight = points.some(
-    (point) => point.weight !== null && point.weight !== undefined
-  );
-
-  // Each colour is normalised to its own max (avoid divide-by-zero with 1).
-  const maxReps = Math.max.apply(null, points.map((p) => p.reps).concat([1]));
-  const maxWeight = Math.max.apply(
-    null,
-    points.map((p) => p.weight || 0).concat([1])
-  );
-
-  const groupWidth =
-    (width - groupGap * (points.length - 1)) / points.length;
-  const barWidth = hasWeight ? (groupWidth - innerGap) / 2 : groupWidth;
-
-  points.forEach((point, index) => {
-    const groupX = index * (groupWidth + groupGap);
-
-    // One tooltip per session, shared by both of its bars.
-    let label = formatDate(point.date) + " · " + point.reps + " reps";
-    if (point.weight !== null && point.weight !== undefined) {
-      label += " · " + formatWeight(point.weight);
-    }
-
-    // Helper to add a single bar.
-    const addBar = (x, value, maxValue, modifierClass) => {
-      const barHeight = Math.max(2, (value / maxValue) * height);
-      const rect = document.createElementNS(namespace, "rect");
-      rect.setAttribute("x", x);
-      rect.setAttribute("y", height - barHeight);
-      rect.setAttribute("width", barWidth);
-      rect.setAttribute("height", barHeight);
-      rect.setAttribute("rx", 3);
-      rect.setAttribute("class", "barchart__bar " + modifierClass);
-
-      const title = document.createElementNS(namespace, "title");
-      title.textContent = label;
-      rect.appendChild(title);
-
-      rect.addEventListener("mouseenter", (event) =>
-        showChartTooltip(label, event.clientX, event.clientY)
-      );
-      rect.addEventListener("mousemove", (event) =>
-        showChartTooltip(label, event.clientX, event.clientY)
-      );
-      rect.addEventListener("mouseleave", hideChartTooltip);
-      rect.addEventListener("click", () => {
-        hideChartTooltip();
-        showSessionDetail(point.session);
-      });
-
-      svg.appendChild(rect);
-    };
-
-    // Reps bar (always). Weight bar second (only when we have weights).
-    addBar(groupX, point.reps, maxReps, "barchart__bar--reps");
-    if (hasWeight) {
-      const weightValue =
-        point.weight !== null && point.weight !== undefined ? point.weight : 0;
-      addBar(
-        groupX + barWidth + innerGap,
-        weightValue,
-        maxWeight,
-        "barchart__bar--weight"
-      );
-    }
-  });
-
-  return svg;
-}
-
-/* ---- Custom chart tooltip (a single floating chip we reuse) ---- */
-
-let chartTooltipEl = null;
-
-// Get (or create once) the tooltip element that floats over the page.
-function getChartTooltip() {
-  if (!chartTooltipEl) {
-    chartTooltipEl = document.createElement("div");
-    chartTooltipEl.className = "chart-tooltip";
-    chartTooltipEl.hidden = true;
-    document.body.appendChild(chartTooltipEl);
-  }
-  return chartTooltipEl;
-}
-
-// Show the tooltip with some text, positioned near the pointer.
-function showChartTooltip(text, x, y) {
-  const tooltip = getChartTooltip();
-  tooltip.textContent = text;
-  tooltip.style.left = x + "px";
-  tooltip.style.top = y + "px";
-  // Default: no tail (the heatmap re-adds it). Keeps chart hovers as plain chips.
-  tooltip.classList.remove("chart-tooltip--bubble");
-  tooltip.hidden = false;
-}
-
-function hideChartTooltip() {
-  if (chartTooltipEl) {
-    chartTooltipEl.hidden = true;
-  }
-}
-
-/* ---- Workout detail pop-up (opened by clicking a chart bar) ---- */
+/* ---- Workout detail pop-up (opened from Recent workouts, the week path, the
+   Exercise progress chart on Badges, and a friend's workouts) ---- */
 
 // Show every exercise from one saved session in a pop-up.
 // `exercisesOverride` (Phase 12) lets the Friends tab pass a FRIEND's exercise
@@ -1095,25 +1022,6 @@ function closeSessionModal() {
   document.getElementById("sessionModal").hidden = true;
 }
 
-// Build one "this week" summary card with two stat tiles.
-function buildWeekSummaryCard(workouts, sets) {
-  const card = document.createElement("div");
-  card.className = "card";
-
-  const title = document.createElement("div");
-  title.className = "history-card__title";
-  title.textContent = "This week";
-  card.appendChild(title);
-
-  const stats = document.createElement("div");
-  stats.className = "stats";
-  stats.appendChild(buildStatTile(workouts, "workouts"));
-  stats.appendChild(buildStatTile(sets, "sets"));
-  card.appendChild(stats);
-
-  return card;
-}
-
 // A single tinted stat tile (big number + label).
 function buildStatTile(number, label) {
   const tile = document.createElement("div");
@@ -1132,90 +1040,10 @@ function buildStatTile(number, label) {
   return tile;
 }
 
-// Build a per-exercise progress card (totals + a small chart).
-function buildExerciseProgressCard(exercise, points, totalSets, lastWeight) {
-  const card = document.createElement("div");
-  card.className = "card";
-
-  // Top row: emoji + name (reuse the styles from the plan cards).
-  const top = document.createElement("div");
-  top.className = "workout-exercise__top";
-
-  const icon = document.createElement("div");
-  icon.className = "exercise__icon";
-  icon.textContent = exercise.icon;
-
-  const info = document.createElement("div");
-  info.className = "exercise__info";
-
-  const name = document.createElement("div");
-  name.className = "exercise__name";
-  name.textContent = exercise.name;
-
-  // Meta line: how many times trained, total sets, and last weight if any.
-  let metaText = points.length + " sessions · " + totalSets + " sets total";
-  if (lastWeight !== null) {
-    metaText += " · last " + lastWeight;
-  }
-  const meta = document.createElement("div");
-  meta.className = "progress-card__meta";
-  meta.textContent = metaText;
-
-  info.appendChild(name);
-  info.appendChild(meta);
-  top.appendChild(icon);
-  top.appendChild(info);
-
-  card.appendChild(top);
-  // Show a chart of the most recent sessions (up to 12 bars).
-  const recentPoints = points.slice(-12);
-  card.appendChild(buildBarChartSvg(recentPoints));
-
-  // If any of those sessions had a weight, show a legend for the two colours.
-  const hasWeight = recentPoints.some(
-    (point) => point.weight !== null && point.weight !== undefined
-  );
-  if (hasWeight) {
-    card.appendChild(buildChartLegend());
-  }
-
-  // A small hint so people know the bars are interactive.
-  const hint = document.createElement("div");
-  hint.className = "chart-hint";
-  hint.textContent = "Tap a bar to see that workout";
-  card.appendChild(hint);
-
-  return card;
-}
-
-// A little legend explaining the two bar colours (reps vs weight).
-function buildChartLegend() {
-  const legend = document.createElement("div");
-  legend.className = "chart-legend";
-
-  const makeItem = (modifier, text) => {
-    const item = document.createElement("span");
-    item.className = "chart-legend__item";
-    const swatch = document.createElement("span");
-    swatch.className = "chart-legend__swatch " + modifier;
-    const labelText = document.createElement("span");
-    labelText.textContent = text;
-    item.appendChild(swatch);
-    item.appendChild(labelText);
-    return item;
-  };
-
-  legend.appendChild(makeItem("chart-legend__swatch--reps", "Reps"));
-  legend.appendChild(
-    makeItem("chart-legend__swatch--weight", "Weight (" + unitLabel() + ")")
-  );
-  return legend;
-}
-
-/* ---- Insights card (Phase 6) ----
-   Motivating stats computed from the saved sessions: a weekly "showing up"
-   streak, days trained this month, lifetime totals, and a personal-records
-   board. All client-side — no new data is stored. */
+/* ---- Week helpers (Phase 6) ----
+   Used by the stats on Badges (stats.js), the week path, feathers and the
+   weekly recap. The Insights card they were written for was replaced by
+   stats.js after Owl Quest Q5. */
 
 // The Monday (local midnight) of the week a date falls in.
 function weekMondayMidnight(date) {
@@ -1253,223 +1081,6 @@ function computeWeekStreak(sessions) {
     cursor.setDate(cursor.getDate() - 7);
   }
   return streak;
-}
-
-// Build the Insights card from a profile's completed sessions.
-function renderInsights(sessions) {
-  const container = document.getElementById("insights");
-  container.innerHTML = "";
-  if (!sessions || sessions.length === 0) {
-    return; // nothing to show yet — the empty states below cover this
-  }
-
-  // --- Crunch the numbers ---
-  const streak = computeWeekStreak(sessions);
-
-  const now = new Date();
-  const daysThisMonth = new Set(
-    sessions
-      .filter((session) => {
-        const d = new Date(session.date);
-        return (
-          d.getFullYear() === now.getFullYear() &&
-          d.getMonth() === now.getMonth()
-        );
-      })
-      .map((session) => dayKeyOf(session.date))
-  ).size;
-
-  let totalSets = 0;
-  let totalReps = 0;
-  let weightMoved = 0; // sum of reps × weight across completed sets
-  const bestByExercise = {}; // exerciseId -> { weight, date }
-
-  sessions.forEach((session) => {
-    session.entries.forEach((entry) => {
-      totalSets += entrySetsDone(entry);
-      totalReps += entryRepsDone(entry);
-
-      // Weight moved only makes sense for the per-set shape (it has reps+weight).
-      if (Array.isArray(entry.sets)) {
-        entry.sets.forEach((set) => {
-          if (set.done && set.weight !== null && set.weight !== undefined) {
-            weightMoved += (Number(set.reps) || 0) * Number(set.weight);
-          }
-        });
-      }
-
-      // Track the heaviest weight ever used for each exercise (a PR).
-      const max = entryMaxWeight(entry);
-      if (max !== null) {
-        const current = bestByExercise[entry.exerciseId];
-        if (!current || max > current.weight) {
-          bestByExercise[entry.exerciseId] = { weight: max, date: session.date };
-        }
-      }
-    });
-  });
-
-  // --- Build the card ---
-  const card = document.createElement("div");
-  card.className = "card";
-
-  const heading = document.createElement("div");
-  heading.className = "history-card__title";
-  heading.textContent = "Insights";
-  card.appendChild(heading);
-
-  // --- "This week" goal ring ---
-  card.appendChild(
-    buildGoalRing(sessions, loadWeeklyGoal(loadActiveProfileId()))
-  );
-
-  // A wrapping grid of stat tiles (reuses the tinted tile look).
-  const stats = document.createElement("div");
-  stats.className = "insights-stats";
-  stats.appendChild(buildStatTile(streak, "week streak 🔥"));
-  stats.appendChild(buildStatTile(daysThisMonth, "days this month"));
-  stats.appendChild(buildStatTile(sessions.length, "workouts"));
-  stats.appendChild(buildStatTile(totalSets, "sets"));
-  stats.appendChild(buildStatTile(totalReps, "reps"));
-  // Only show "weight moved" if any weights were actually recorded.
-  if (weightMoved > 0) {
-    stats.appendChild(
-      buildStatTile(weightMoved.toLocaleString(), unitLabel() + " moved")
-    );
-  }
-  card.appendChild(stats);
-
-  // --- Volume trend (this month vs last) — only when there's weighted volume ---
-  const volumeTrend = buildVolumeTrend(sessions);
-  if (volumeTrend) {
-    card.appendChild(volumeTrend);
-  }
-
-  // --- Calendar heatmap of the last 12 weeks ---
-  card.appendChild(buildHeatmap(sessions));
-
-  // --- Personal-records board (only exercises that still exist) ---
-  const prList = Object.keys(bestByExercise)
-    .map((id) => ({ exercise: findExerciseById(id), best: bestByExercise[id] }))
-    .filter((item) => item.exercise)
-    .sort((a, b) => b.best.weight - a.best.weight);
-
-  if (prList.length > 0) {
-    const prHeading = document.createElement("div");
-    prHeading.className = "pr-board__heading";
-    prHeading.textContent = "Personal records 🏅";
-    card.appendChild(prHeading);
-
-    prList.forEach((item) => {
-      const row = document.createElement("div");
-      row.className = "pr-row";
-
-      const icon = document.createElement("div");
-      icon.className = "exercise__icon";
-      icon.textContent = item.exercise.icon;
-
-      const info = document.createElement("div");
-      info.className = "exercise__info";
-      const name = document.createElement("div");
-      name.className = "exercise__name";
-      name.textContent = item.exercise.name;
-      const date = document.createElement("div");
-      date.className = "pr-row__date";
-      date.textContent = formatDate(item.best.date);
-      info.appendChild(name);
-      info.appendChild(date);
-
-      const best = document.createElement("div");
-      best.className = "pr-row__best";
-      best.textContent = formatWeight(item.best.weight);
-
-      row.appendChild(icon);
-      row.appendChild(info);
-      row.appendChild(best);
-      card.appendChild(row);
-    });
-  }
-
-  // --- "Since you started" trend callouts (weight gains/drops per exercise) ---
-  const trend = buildTrendCallouts(sessions);
-  if (trend) {
-    card.appendChild(trend);
-  }
-
-  container.appendChild(card);
-}
-
-// Build the "Since you started" callouts: for each exercise trained with weights
-// at least twice, compare the first weighted session's heaviest weight to the
-// latest one. Shows the biggest movements (up or down), capped at 3 lines.
-function buildTrendCallouts(sessions) {
-  const sorted = sessions
-    .slice()
-    .sort((a, b) => new Date(a.date) - new Date(b.date));
-  const exercises = getExercisesForActiveProfile();
-  const callouts = [];
-
-  exercises.forEach((exercise) => {
-    const weights = [];
-    sorted.forEach((session) => {
-      const entry = session.entries.find(
-        (item) => item.exerciseId === exercise.id
-      );
-      if (entry) {
-        const max = entryMaxWeight(entry);
-        if (max !== null) {
-          weights.push(max);
-        }
-      }
-    });
-    // Need a starting point and a current point to show a trend.
-    if (weights.length >= 2) {
-      const change = weights[weights.length - 1] - weights[0];
-      if (change !== 0) {
-        callouts.push({ exercise: exercise, change: change });
-      }
-    }
-  });
-
-  if (callouts.length === 0) {
-    return null;
-  }
-
-  // Biggest movements first (up or down), keep the top few.
-  callouts.sort((a, b) => Math.abs(b.change) - Math.abs(a.change));
-  const top = callouts.slice(0, 3);
-
-  const wrap = document.createElement("div");
-
-  const heading = document.createElement("div");
-  heading.className = "pr-board__heading";
-  heading.textContent = "Since you started 📈";
-  wrap.appendChild(heading);
-
-  top.forEach((item) => {
-    const row = document.createElement("div");
-    row.className = "pr-row"; // reuse the personal-records row styling
-
-    const icon = document.createElement("div");
-    icon.className = "exercise__icon";
-    icon.textContent = item.exercise.icon;
-
-    const name = document.createElement("div");
-    name.className = "exercise__name";
-    name.textContent = item.exercise.name;
-
-    const change = document.createElement("div");
-    const up = item.change > 0;
-    change.className = "trend-change " + (up ? "is-up" : "is-down");
-    change.textContent = (up ? "↑ " : "↓ ") + formatWeight(Math.abs(item.change));
-
-    row.appendChild(icon);
-    row.appendChild(name);
-    row.appendChild(change);
-    wrap.appendChild(row);
-  });
-
-  return wrap;
 }
 
 /* ---- Weekly goal (Phase 6) ----
@@ -1540,89 +1151,8 @@ function handleUnitChange(event) {
   renderAll();
   // If a workout is open behind Settings, refresh its labels too.
   if (activeSession) {
-    renderWorkoutItems();
+    redrawWorkout();
   }
-}
-
-// Build the "this week" goal ring: an SVG circle that fills toward the goal.
-function buildGoalRing(sessions, goal) {
-  // How many workouts so far this week.
-  const startOfWeek = getStartOfWeek();
-  const count = sessions.filter(
-    (session) => new Date(session.date) >= startOfWeek
-  ).length;
-  const progress = goal > 0 ? Math.min(count / goal, 1) : 0;
-
-  const wrap = document.createElement("div");
-  wrap.className = "goal";
-
-  // Draw the ring as SVG: a faint full-circle track + a coral arc on top.
-  const ns = "http://www.w3.org/2000/svg";
-  const size = 96;
-  const stroke = 10;
-  const radius = (size - stroke) / 2;
-  const circumference = 2 * Math.PI * radius;
-
-  const svg = document.createElementNS(ns, "svg");
-  svg.setAttribute("class", "goal__ring");
-  svg.setAttribute("viewBox", "0 0 " + size + " " + size);
-
-  // Group the two circles so we can rotate them to start at the top (12 o'clock).
-  const g = document.createElementNS(ns, "g");
-  g.setAttribute("transform", "rotate(-90 " + size / 2 + " " + size / 2 + ")");
-
-  const track = document.createElementNS(ns, "circle");
-  track.setAttribute("class", "goal__track");
-  track.setAttribute("cx", size / 2);
-  track.setAttribute("cy", size / 2);
-  track.setAttribute("r", radius);
-  track.setAttribute("fill", "none");
-  track.setAttribute("stroke-width", stroke);
-
-  const arc = document.createElementNS(ns, "circle");
-  arc.setAttribute("class", "goal__arc");
-  arc.setAttribute("cx", size / 2);
-  arc.setAttribute("cy", size / 2);
-  arc.setAttribute("r", radius);
-  arc.setAttribute("fill", "none");
-  arc.setAttribute("stroke-width", stroke);
-  arc.setAttribute("stroke-linecap", "round");
-  arc.setAttribute("stroke-dasharray", circumference);
-  arc.setAttribute("stroke-dashoffset", circumference * (1 - progress));
-
-  g.appendChild(track);
-  g.appendChild(arc);
-  svg.appendChild(g);
-
-  // The count in the middle (not rotated).
-  const text = document.createElementNS(ns, "text");
-  text.setAttribute("class", "goal__text");
-  text.setAttribute("x", size / 2);
-  text.setAttribute("y", size / 2);
-  text.setAttribute("text-anchor", "middle");
-  text.setAttribute("dominant-baseline", "central");
-  text.textContent = count + "/" + goal;
-  svg.appendChild(text);
-
-  wrap.appendChild(svg);
-
-  // The label beside the ring.
-  const info = document.createElement("div");
-  info.className = "goal__info";
-  const title = document.createElement("div");
-  title.className = "goal__title";
-  title.textContent = "This week";
-  const sub = document.createElement("div");
-  sub.className = "goal__sub";
-  sub.textContent =
-    count >= goal
-      ? "Goal smashed! 🎉"
-      : count + " of " + goal + " workouts done";
-  info.appendChild(title);
-  info.appendChild(sub);
-  wrap.appendChild(info);
-
-  return wrap;
 }
 
 // Total "volume" in one session = reps × weight, added up over the sets you
@@ -1644,183 +1174,19 @@ function sessionVolume(session) {
   return vol;
 }
 
-// Build the "volume this month vs last month" line. Returns null when there's
-// no weighted volume to show (e.g. bodyweight-only history).
-function buildVolumeTrend(sessions) {
-  const now = new Date();
-  const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-
-  let thisMonth = 0;
-  let lastMonth = 0;
-  sessions.forEach((session) => {
-    const d = new Date(session.date);
-    if (
-      d.getFullYear() === now.getFullYear() &&
-      d.getMonth() === now.getMonth()
-    ) {
-      thisMonth += sessionVolume(session);
-    } else if (
-      d.getFullYear() === prevMonth.getFullYear() &&
-      d.getMonth() === prevMonth.getMonth()
-    ) {
-      lastMonth += sessionVolume(session);
-    }
-  });
-
-  // Nothing weighted in either month → don't show the line at all.
-  if (thisMonth === 0 && lastMonth === 0) {
-    return null;
-  }
-
-  const wrap = document.createElement("div");
-  wrap.className = "volume-trend";
-
-  const label = document.createElement("span");
-  label.className = "volume-trend__label";
-  label.textContent = "Volume this month";
-
-  const value = document.createElement("span");
-  value.className = "volume-trend__value";
-  // Volume is reps × weight, so it's shown in whichever unit you've picked.
-  value.textContent = formatWeight(thisMonth.toLocaleString());
-
-  wrap.appendChild(label);
-  wrap.appendChild(value);
-
-  const change = document.createElement("span");
-  change.className = "volume-trend__change";
-  if (lastMonth > 0) {
-    const pct = Math.round(((thisMonth - lastMonth) / lastMonth) * 100);
-    if (pct > 0) {
-      change.classList.add("is-up");
-      change.textContent = "↑ " + pct + "% vs last month";
-    } else if (pct < 0) {
-      change.classList.add("is-down");
-      change.textContent = "↓ " + Math.abs(pct) + "% vs last month";
-    } else {
-      change.textContent = "same as last month";
-    }
-  } else {
-    // No weighted volume last month to compare against.
-    change.textContent = "first month with weights 💪";
-  }
-  wrap.appendChild(change);
-
-  return wrap;
-}
-
-// Tapping a heatmap square shows a little rounded bubble (reusing the chart
-// tooltip) with that day's info, then hides it after a moment. This is the
-// mobile-friendly version of the hover tooltip (phones can't hover).
-let heatmapTooltipTimer = null;
-function showHeatmapTooltip(label, event) {
-  showChartTooltip(label, event.clientX, event.clientY);
-  // Add the speech-bubble tail (only the heatmap uses this variant).
-  getChartTooltip().classList.add("chart-tooltip--bubble");
-  if (heatmapTooltipTimer) {
-    clearTimeout(heatmapTooltipTimer);
-  }
-  heatmapTooltipTimer = setTimeout(hideChartTooltip, 1700);
-}
-
-// Build a GitHub-style heatmap of the last 12 weeks: one little square per day,
-// tinted by how many sets were done that day (darker = more). Helps you see your
-// consistency at a glance ("don't break the chain").
-function buildHeatmap(sessions) {
-  const WEEKS = 12;
-
-  // Total sets done on each calendar day.
-  const setsByDay = {};
-  sessions.forEach((session) => {
-    const key = dayKeyOf(session.date);
-    const sets = session.entries.reduce(
-      (sum, entry) => sum + entrySetsDone(entry),
-      0
-    );
-    setsByDay[key] = (setsByDay[key] || 0) + sets;
-  });
-
-  const wrap = document.createElement("div");
-
-  const heading = document.createElement("div");
-  heading.className = "heatmap-heading";
-  heading.textContent = "Last 12 weeks";
-  wrap.appendChild(heading);
-
-  const grid = document.createElement("div");
-  grid.className = "heatmap";
-
-  // Start from the Monday 11 weeks before this week (12 columns total).
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const startMonday = weekMondayMidnight(today);
-  startMonday.setDate(startMonday.getDate() - (WEEKS - 1) * 7);
-
-  // Fill column-by-column (each column is a week; rows are Mon→Sun).
-  for (let col = 0; col < WEEKS; col = col + 1) {
-    for (let row = 0; row < 7; row = row + 1) {
-      const cellDate = new Date(startMonday);
-      cellDate.setDate(startMonday.getDate() + col * 7 + row);
-
-      const sets = setsByDay[dayKeyOf(cellDate)] || 0;
-      let level = 0;
-      if (sets >= 6) {
-        level = 3;
-      } else if (sets >= 3) {
-        level = 2;
-      } else if (sets >= 1) {
-        level = 1;
-      }
-
-      const label =
-        formatDate(cellDate.toISOString()) +
-        (sets > 0 ? " · " + sets + " sets" : " · rest");
-
-      const cell = document.createElement("div");
-      cell.className = "hm-cell hm-cell--l" + level;
-      // Days after today aren't "missed" — just not here yet; dim them.
-      if (cellDate > today) {
-        cell.classList.add("hm-cell--future");
-      }
-      cell.title = label; // desktop hover
-      // Tap/click shows the same info in a bubble (works on touch screens).
-      cell.addEventListener("click", (event) => showHeatmapTooltip(label, event));
-      grid.appendChild(cell);
-    }
-  }
-  wrap.appendChild(grid);
-
-  // A small "Less → More" legend.
-  const legend = document.createElement("div");
-  legend.className = "heatmap-legend";
-  const less = document.createElement("span");
-  less.textContent = "Less";
-  legend.appendChild(less);
-  [0, 1, 2, 3].forEach((lvl) => {
-    const swatch = document.createElement("span");
-    swatch.className = "hm-cell hm-cell--l" + lvl;
-    legend.appendChild(swatch);
-  });
-  const more = document.createElement("span");
-  more.textContent = "More";
-  legend.appendChild(more);
-  wrap.appendChild(legend);
-
-  return wrap;
-}
-
 /* ---- Weekly recap (Phase 11) ----
-   A friendly summary of LAST week (Monday → Sunday), shown in two places:
-     1. a "Last week" card on Progress, always available;
-     2. the same numbers once at the top of Today on your first visit in a new
-        week, as a dismissible "Your week in review 🎉" card.
+   A friendly summary of LAST week (Monday → Sunday), shown once at the top of
+   Today on your first visit in a new week: a one-line summary that opens the
+   full "Your week in review 🎉" card. (Until the stats redesign after Owl
+   Quest Q5 there was also a "Last week" card on Progress; Week by week on
+   Badges covers that now.)
    Everything is worked out on the fly from your saved workouts — the only thing
    stored is a small "you've seen it" flag per profile per week (per device). */
 
 // The Monday→Sunday window of LAST week, as { start, end }.
 // `start` is last week's Monday at midnight; `end` is THIS week's Monday at
 // midnight and is exclusive, so a workout dated today never counts as "last
-// week". Reuses the same Monday maths as the Insights card.
+// week". Reuses the same Monday maths as the week helpers above.
 function lastWeekRange() {
   const thisMonday = weekMondayMidnight(new Date());
   const lastMonday = new Date(thisMonday);
@@ -1931,7 +1297,7 @@ function buildRecapCard(recap, options) {
     const close = document.createElement("button");
     close.className = "recap__close";
     close.type = "button";
-    close.textContent = "✕";
+    close.innerHTML = iconSvg("close");
     close.setAttribute("aria-label", "Dismiss this week's recap");
     close.addEventListener("click", options.onDismiss);
     head.appendChild(close);
@@ -2087,32 +1453,108 @@ function renderTodayRecap() {
     return;
   }
 
+  // Dismissing (the ✕ on either version) hides it until next week.
+  const dismiss = () => {
+    markWeeklyRecapSeen(activeId, mondayKey);
+    todayRecapOpen = false;
+    renderTodayRecap(); // redraw → it disappears
+  };
+
+  // Owl Quest Q1b: start as a one-line summary so it doesn't push today's
+  // workout off the screen. Tapping it opens the full card.
+  if (!todayRecapOpen) {
+    container.appendChild(buildRecapSummaryRow(recap, dismiss));
+    return;
+  }
+
   container.appendChild(
     buildRecapCard(recap, {
       title: "Your week in review 🎉",
-      onDismiss: () => {
-        markWeeklyRecapSeen(activeId, mondayKey);
-        renderTodayRecap(); // redraw → the card disappears
-      },
+      onDismiss: dismiss,
     })
   );
+}
+
+// Whether the Today recap is opened up into the full card. Kept in memory
+// only, so it starts folded each time the app opens.
+let todayRecapOpen = false;
+
+// The folded, one-line version of last week's recap for the Today tab, e.g.
+//   🎉 Last week: 3 of 3 workouts · 2 new records   ›   ✕
+// Tapping the text opens the full card; the ✕ dismisses it for the week.
+function buildRecapSummaryRow(recap, onDismiss) {
+  const row = document.createElement("div");
+  row.className = "recap-row";
+
+  const open = document.createElement("button");
+  open.type = "button";
+  open.className = "recap-row__open";
+  open.setAttribute("aria-label", "Open last week's recap");
+
+  const text = document.createElement("span");
+  text.className = "recap-row__text";
+  text.textContent = describeRecapInOneLine(recap);
+
+  const chevron = document.createElement("span");
+  chevron.className = "recap-row__chevron";
+  chevron.setAttribute("aria-hidden", "true");
+  chevron.textContent = "›";
+
+  open.appendChild(text);
+  open.appendChild(chevron);
+  open.addEventListener("click", () => {
+    todayRecapOpen = true;
+    renderTodayRecap(); // redraw as the full card
+  });
+
+  const close = document.createElement("button");
+  close.type = "button";
+  close.className = "recap__close";
+  close.innerHTML = iconSvg("close");
+  close.setAttribute("aria-label", "Dismiss this week's recap");
+  close.addEventListener("click", onDismiss);
+
+  row.appendChild(open);
+  row.appendChild(close);
+  return row;
+}
+
+// Last week in a few words: the goal result first, then the best bit of news
+// (new records if there were any, otherwise how many sets you did).
+function describeRecapInOneLine(recap) {
+  const goalMet = recap.workouts >= recap.goal;
+  let line =
+    (goalMet ? "🎉 " : "💪 ") +
+    "Last week: " +
+    recap.workouts +
+    " of " +
+    recap.goal +
+    " workouts";
+  if (recap.records.length > 0) {
+    line +=
+      " · " +
+      recap.records.length +
+      (recap.records.length === 1 ? " new record" : " new records");
+  } else {
+    line += " · " + pluralise(recap.sets, "set");
+  }
+  return line;
 }
 
 // Draw the whole Progress view.
 function renderProgress() {
   const subtitle = document.getElementById("progressSubtitle");
-  const summary = document.getElementById("weekSummary");
-  const heading = document.getElementById("byExerciseHeading");
-  const list = document.getElementById("exerciseProgressList");
-  summary.innerHTML = "";
-  list.innerHTML = "";
-  document.getElementById("insights").innerHTML = ""; // cleared; filled below
+
+  // Owl Quest Q5a: the "Your feathers" card at the top (badges.js). It clears
+  // itself when there's no profile.
+  renderFeathers();
 
   const activeProfile = getActiveProfile();
   if (!activeProfile) {
     subtitle.textContent = "No profile selected";
-    heading.hidden = true;
-    summary.appendChild(
+    const stats = document.getElementById("stats");
+    stats.innerHTML = "";
+    stats.appendChild(
       createEmptyState("👤", "Create a profile in Settings to get started.")
     );
     return;
@@ -2120,101 +1562,21 @@ function renderProgress() {
   subtitle.textContent = activeProfile.name + "'s activity";
 
   const activeId = loadActiveProfileId();
-  // Only finished workouts count towards progress (skip in-progress ones).
+  // Only finished workouts count towards stats (skip in-progress ones).
   const sessions = loadList(STORAGE_KEYS.sessions).filter(
     (session) =>
       session.profileId === activeId && isCompletedSession(session)
   );
 
-  // --- Insights card (streak, days, lifetime totals, personal records) ---
-  renderInsights(sessions);
-
-  // --- "This week" summary ---
-  const startOfWeek = getStartOfWeek();
-  const weekSessions = sessions.filter(
-    (session) => new Date(session.date) >= startOfWeek
-  );
-  const workoutsThisWeek = weekSessions.length;
-  const setsThisWeek = weekSessions.reduce(
-    (sum, session) =>
-      sum +
-      session.entries.reduce((inner, entry) => inner + entrySetsDone(entry), 0),
-    0
-  );
-  summary.appendChild(buildWeekSummaryCard(workoutsThisWeek, setsThisWeek));
-
-  // --- "Last week" recap (Phase 11) ---
-  // Only once there's some history: with no workouts at all, the empty state
-  // further down already says so, and an empty recap would just be noise.
-  if (sessions.length > 0) {
-    summary.appendChild(
-      buildRecapCard(computeLastWeekRecap(sessions), { title: "Last week" })
-    );
-  }
-
-  // --- Per-exercise breakdown ---
-  if (sessions.length === 0) {
-    heading.hidden = true;
-    list.appendChild(
-      createEmptyState("📊", "No workouts yet. Finish one to see your progress.")
-    );
-    return;
-  }
-
-  // Sort oldest → newest so the chart reads left (older) to right (newer).
-  const sortedSessions = sessions
-    .slice()
-    .sort((a, b) => new Date(a.date) - new Date(b.date));
-
-  const exercises = getExercisesForActiveProfile();
-  exercises.forEach((exercise) => {
-    // For each session this exercise appears in, remember one "point" of data.
-    // We keep the whole session so a bar can show its full details when clicked.
-    const points = [];
-    let totalSets = 0;
-    let lastWeight = null;
-
-    sortedSessions.forEach((session) => {
-      const entry = session.entries.find(
-        (item) => item.exerciseId === exercise.id
-      );
-      // Only include sessions where this exercise was actually trained
-      // (at least one set ticked done) — skip ones left untouched.
-      if (entry && entrySetsDone(entry) > 0) {
-        const setsDone = entrySetsDone(entry);
-        const entryWeight = entryLastWeight(entry);
-        points.push({
-          date: session.date,
-          reps: entryRepsDone(entry), // mint bar = total reps done
-          weight: entryMaxWeight(entry), // lavender bar = heaviest weight
-          session: session,
-        });
-        totalSets += setsDone;
-        if (entryWeight !== null) {
-          lastWeight = entryWeight;
-        }
-      }
-    });
-
-    // Only show exercises that have actually been trained.
-    if (points.length > 0) {
-      list.appendChild(
-        buildExerciseProgressCard(exercise, points, totalSets, lastWeight)
-      );
-    }
-  });
-
-  heading.hidden = list.children.length === 0;
-  if (list.children.length === 0) {
-    list.appendChild(
-      createEmptyState("📊", "Finish a workout to see per-exercise progress.")
-    );
-  }
+  // After Owl Quest Q5: This month, Week by week, Records and Exercise
+  // progress, all in stats.js. (They replaced the Insights card, the This
+  // week / Last week cards and the per-exercise bar charts.)
+  renderStats(sessions);
 }
 
 /* ---- "There's an update" dot (Phase 16) ----
    whats-new.js holds the release notes. If its newest entry is dated later
-   than the last one you opened, a dot appears on the Settings tab and on the
+   than the last one you opened, a dot appears on the avatar (top bar) and on the
    What's new button. Opening the page clears it. Per device, like the theme. */
 
 // The date of the newest release note, e.g. "2026-07-25".
@@ -2652,6 +2014,9 @@ async function onUserLoggedIn(session) {
     setSyncOverlay(false);
   }
   ensureValidActiveProfile();
+  // Quietly finish (or remove) any workouts left open long ago, now that this
+  // device has the latest copy of everything.
+  closeStaleWorkouts();
   renderAll();
   // Phase 12: make sure people can find you by email, then load your friends.
   initFriendsOnLogin();
@@ -2908,10 +2273,6 @@ async function deleteExercise(id) {
       await deleteSessionFromCloud(sessionId);
     }
   }
-
-  // Removing workouts may lower a profile's count below a celebrated milestone,
-  // so reconcile the trophy tracker too.
-  reconcileCelebratedMilestones();
 
   renderAll();
 }
@@ -3541,6 +2902,77 @@ function setupExerciseSuggestions() {
 // localStorage), or null when the workout sheet is closed.
 let activeSession = null;
 
+// Owl Quest Q4: the workout sheet is used in two situations.
+//   "live" — training right now. You choose how it looks with the toggle at the
+//            top (Q4a+): one exercise at a time with stars and the owl
+//            (workout-screen.js), or everything in one list.
+//   "edit" — fixing a saved workout from history: always the long list
+//            (renderWorkoutItems below), which is easier for corrections.
+let workoutMode = "edit";
+
+// The two live views, and the one new people start on.
+const WORKOUT_VIEWS = ["focus", "list"];
+const DEFAULT_WORKOUT_VIEW = "focus";
+
+// Which live view this device prefers (remembered between workouts).
+function loadWorkoutView() {
+  const saved = localStorage.getItem(STORAGE_KEYS.workoutView);
+  return WORKOUT_VIEWS.includes(saved) ? saved : DEFAULT_WORKOUT_VIEW;
+}
+function saveWorkoutView(view) {
+  if (WORKOUT_VIEWS.includes(view)) {
+    localStorage.setItem(STORAGE_KEYS.workoutView, view);
+  }
+}
+
+// Is the one-exercise-at-a-time screen showing right now?
+function isFocusViewShowing() {
+  return workoutMode === "live" && loadWorkoutView() === "focus";
+}
+
+// Switch the sheet between live and edit, and set its classes (styles.css):
+//   "sheet--live"  shows the view toggle (only while training)
+//   "sheet--focus" shows the one-at-a-time screen and hides the long list
+function setWorkoutMode(mode) {
+  workoutMode = mode;
+  applyWorkoutViewClasses();
+}
+function applyWorkoutViewClasses() {
+  const sheet = document.getElementById("workoutOverlay");
+  sheet.classList.toggle("sheet--live", workoutMode === "live");
+  sheet.classList.toggle("sheet--focus", isFocusViewShowing());
+
+  // Light up the toggle button for the current view.
+  document.querySelectorAll("#workoutViewToggle [data-view]").forEach((button) => {
+    const isCurrent = button.dataset.view === loadWorkoutView();
+    button.classList.toggle("view-toggle__btn--current", isCurrent);
+    button.setAttribute("aria-pressed", isCurrent ? "true" : "false");
+  });
+}
+
+// The toggle at the top of a live workout: remember the choice, then redraw.
+// `exerciseIndex` (optional) says which exercise to show in the focus view —
+// used when you tap an exercise's name in the list.
+function switchWorkoutView(view, exerciseIndex) {
+  saveWorkoutView(view);
+  if (typeof exerciseIndex === "number") {
+    focusExerciseIndex = exerciseIndex;
+  }
+  applyWorkoutViewClasses();
+  redrawWorkout();
+  document.querySelector("#workoutOverlay .sheet__panel").scrollTop = 0;
+}
+
+// Redraw whichever look is showing. Everything that changes a set (tick, add,
+// remove) calls this, so both looks stay up to date.
+function redrawWorkout() {
+  if (isFocusViewShowing()) {
+    renderWorkoutFocus();
+  } else {
+    renderWorkoutItems();
+  }
+}
+
 // --- Session helpers (also used by history & progress) ---
 
 // Is this a finished session? Old sessions (no status) count as completed.
@@ -3568,26 +3000,6 @@ function sessionExercisesDone(session) {
 // exercises). Only works for words that pluralise by adding an "s".
 function pluralise(count, word) {
   return count + " " + word + (count === 1 ? "" : "s");
-}
-
-// The last weight recorded in an entry (per-set new shape, or old single weight).
-function entryLastWeight(entry) {
-  if (Array.isArray(entry.sets)) {
-    let weight = null;
-    entry.sets.forEach((set) => {
-      // Only sets the user actually ticked done count as "performed".
-      if (set.done && set.weight !== null && set.weight !== undefined) {
-        weight = set.weight;
-      }
-    });
-    return weight;
-  }
-  // Old shape: a weight only counts if at least one set was done.
-  return (entry.setsDone || 0) > 0 &&
-    entry.weight !== null &&
-    entry.weight !== undefined
-    ? entry.weight
-    : null;
 }
 
 // Total reps actually done in an entry (sum of done sets' reps). Old sessions
@@ -3779,6 +3191,8 @@ function buildLastNoteHint(exerciseId, excludeSessionId) {
 }
 
 // Find an in-progress session for the active profile + day (to resume), or null.
+// A workout left open for ages (see isStaleWorkout) is never resumed — otherwise
+// a Tuesday workout abandoned weeks ago would pop up again next Tuesday.
 function findInProgressSession(day) {
   const activeId = loadActiveProfileId();
   return (
@@ -3786,9 +3200,73 @@ function findInProgressSession(day) {
       (session) =>
         session.profileId === activeId &&
         session.day === day &&
-        session.status === "in-progress"
+        session.status === "in-progress" &&
+        !isStaleWorkout(session)
     ) || null
   );
+}
+
+// --- Workouts left open (fix, 2026-09-29) ---
+
+// How long an unfinished workout can sit untouched before we treat it as
+// "left open" and close it. 12 hours means a late workout that runs past
+// midnight is still fine to resume.
+const STALE_WORKOUT_HOURS = 12;
+
+// Is this an unfinished workout nobody has touched for STALE_WORKOUT_HOURS?
+function isStaleWorkout(session) {
+  if (session.status !== "in-progress") {
+    return false;
+  }
+  const ageInHours = (Date.now() - sessionTime(session)) / (1000 * 60 * 60);
+  return ageInHours > STALE_WORKOUT_HOURS;
+}
+
+// Quietly tidy away workouts that were left open:
+//   - First, drop any entries for exercises that have since been deleted (so no
+//     "(deleted exercise)" rows are left behind).
+//   - If any sets were ticked, FINISH it: it's saved to your history as normal.
+//   - If nothing was ticked, REMOVE it: with no sets done it isn't a workout
+//     (the same rule as the Finish button).
+// Runs after the login sync and whenever a workout starts. Changes go to the
+// cloud too; if you're offline, the next login sync catches up.
+function closeStaleWorkouts() {
+  const sessions = loadList(STORAGE_KEYS.sessions);
+  const exerciseIds = loadList(STORAGE_KEYS.exercises).map((exercise) => exercise.id);
+  const kept = [];
+  let changed = false;
+
+  sessions.forEach((session) => {
+    // Leave everything else alone, including a workout that's open right now.
+    const isOpenNow = activeSession && activeSession.id === session.id;
+    if (!isStaleWorkout(session) || isOpenNow) {
+      kept.push(session);
+      return;
+    }
+
+    changed = true;
+    const entries = session.entries.filter((entry) =>
+      exerciseIds.includes(entry.exerciseId)
+    );
+    const setsDone = entries.reduce((sum, entry) => sum + entrySetsDone(entry), 0);
+
+    if (setsDone > 0) {
+      const finished = {
+        ...session,
+        entries: entries,
+        status: "completed",
+        updatedAt: new Date().toISOString(),
+      };
+      kept.push(finished);
+      pushSessionToCloud(finished);
+    } else {
+      deleteSessionFromCloud(session.id); // not kept → removed locally too
+    }
+  });
+
+  if (changed) {
+    saveList(STORAGE_KEYS.sessions, kept);
+  }
 }
 
 // Save the active session into gym:sessions (replace if present, else add).
@@ -3814,6 +3292,9 @@ function findExerciseById(id) {
 
 // Begin a NEW workout for a day, or resume the in-progress one if it exists.
 function startWorkout(day) {
+  // Tidy away any workouts left open long ago before we look for one to resume.
+  closeStaleWorkouts();
+
   let session = findInProgressSession(day);
 
   if (!session) {
@@ -3850,8 +3331,13 @@ function startWorkout(day) {
 
   document.getElementById("workoutTitle").textContent = day + " workout";
   resetTimerDisplay();
-  renderWorkoutItems();
-  populateWorkoutDate();
+  // Live training: open on the first exercise that still has sets to do (so
+  // resuming picks up where you left off). See workout-screen.js.
+  populateWorkoutDate(); // before drawing: the live screen copies the date
+  setWorkoutMode("live");
+  focusExerciseIndex = firstUnfinishedExerciseIndex(session);
+  focusEditSetsOpen = false;
+  redrawWorkout();
   document.getElementById("workoutOverlay").hidden = false;
 }
 
@@ -3908,9 +3394,17 @@ function renderWorkoutItems() {
 
     const info = document.createElement("div");
     info.className = "exercise__info";
-    const name = document.createElement("div");
+    // While training (Q4a+), the name is a button that opens this exercise in
+    // the one-at-a-time view. When editing a saved workout it's plain text.
+    const name = document.createElement(workoutMode === "live" ? "button" : "div");
     name.className = "exercise__name";
     name.textContent = exercise ? exercise.name : "(deleted exercise)";
+    if (workoutMode === "live") {
+      name.type = "button";
+      name.classList.add("exercise__name--link");
+      name.title = "Show this exercise on its own";
+      name.addEventListener("click", () => switchWorkoutView("focus", entryIndex));
+    }
     info.appendChild(name);
 
     // Phase 9: a small grey reminder of what you did last time. It's only added
@@ -3962,7 +3456,7 @@ function renderWorkoutItems() {
     const addBtn = document.createElement("button");
     addBtn.type = "button";
     addBtn.className = "btn btn--ghost btn--small wset-add";
-    addBtn.textContent = "＋ Add set";
+    addBtn.innerHTML = iconSvg("plus") + " Add set";
     addBtn.addEventListener("click", () => addWorkoutSet(entryIndex));
     card.appendChild(addBtn);
 
@@ -4070,7 +3564,7 @@ function buildWorkoutSetRow(entryIndex, setIndex, set) {
   const removeBtn = document.createElement("button");
   removeBtn.type = "button";
   removeBtn.className = "wset-remove";
-  removeBtn.textContent = "✕";
+  removeBtn.innerHTML = iconSvg("close");
   removeBtn.setAttribute("aria-label", "Remove set " + (setIndex + 1));
   removeBtn.addEventListener("click", () =>
     removeWorkoutSet(entryIndex, setIndex)
@@ -4088,7 +3582,7 @@ function toggleWorkoutSet(entryIndex, setIndex) {
   const set = activeSession.entries[entryIndex].sets[setIndex];
   set.done = !set.done;
   persistActiveSession();
-  renderWorkoutItems();
+  redrawWorkout();
 }
 
 // Add a set for today, seeded from the last set's values (and save).
@@ -4101,7 +3595,7 @@ function addWorkoutSet(entryIndex) {
     done: false,
   });
   persistActiveSession();
-  renderWorkoutItems();
+  redrawWorkout();
 }
 
 // Remove a set for today (keep at least one), then save.
@@ -4115,7 +3609,7 @@ function removeWorkoutSet(entryIndex, setIndex) {
   }
   sets.splice(setIndex, 1);
   persistActiveSession();
-  renderWorkoutItems();
+  redrawWorkout();
 }
 
 // Finish: mark the in-progress session completed, then close.
@@ -4139,21 +3633,36 @@ function finishWorkout() {
     return;
   }
 
+  // Owl Quest Q2b: your XP BEFORE this workout counts (it's still "in
+  // progress" at this point, so xp.js leaves it out).
+  const xpBefore = computeTotalXp().total;
+  // Owl Quest Q5b: the same trick for feathers — which ones you had before.
+  const feathersBefore = earnedFeatherIds();
+
   activeSession.status = "completed";
   persistActiveSession();
 
+  // ...and AFTER. The difference is what this workout earned, and comparing
+  // the two tells us if it took you up a level.
+  const xpAfter = computeTotalXp().total;
+  const xpGained = xpAfter - xpBefore;
+  const levelUp = detectLevelUp(xpBefore, xpAfter);
+  const newFeathers = detectNewFeathers(feathersBefore); // badges.js
+
   // Easter eggs: work out any celebrations BEFORE we clear activeSession.
-  // (detectWorkoutMilestone also records the milestone so it only plays once.)
   const personalRecords = detectPersonalRecords(activeSession);
-  const milestone = detectWorkoutMilestone();
 
   closeWorkoutOverlay();
   activeSession = null;
   renderAll();
-  window.alert("Workout saved! " + totalSets + " sets done 💪");
+  window.alert(
+    "Workout saved! " + totalSets + " sets done · +" + xpGained + " XP 💪"
+  );
 
-  // After the alert is dismissed, play any celebrations on a clean screen.
-  celebrateAfterWorkout(personalRecords, milestone);
+  // After the alert is dismissed, play any celebrations on a clean screen:
+  // the "+170 XP" pop on the level bar, then PR / level up / feather cards.
+  showXpGain(xpGained);
+  celebrateAfterWorkout(personalRecords, levelUp, newFeathers);
 }
 
 // Discard: delete the in-progress session entirely (after a confirm).
@@ -4245,7 +3754,8 @@ function editSession(sessionId) {
   document.getElementById("workoutTitle").textContent =
     (session.day || "Workout") + " workout";
   resetTimerDisplay();
-  renderWorkoutItems();
+  setWorkoutMode("edit"); // fixing a saved workout: the full list
+  redrawWorkout();
   populateWorkoutDate();
   document.getElementById("workoutOverlay").hidden = false;
 }
@@ -4263,9 +3773,6 @@ async function deleteSession(sessionId) {
     (item) => item.id !== sessionId
   );
   saveList(STORAGE_KEYS.sessions, sessions);
-  // Easter egg upkeep: if this drop took you below a celebrated milestone,
-  // forget it so re-reaching that count triggers the trophy again.
-  reconcileCelebratedMilestones();
   renderAll();
 }
 
@@ -4325,9 +3832,11 @@ function startRest(seconds) {
   restRemaining = seconds;
   restEndsAt = Date.now() + seconds * 1000; // the moment it should hit zero
 
-  const display = document.getElementById("timerDisplay");
-  display.classList.remove("is-done");
-  display.classList.add("is-running");
+  // Owl Quest Q4b: the state lives on the whole floating pill (#restTimer), so
+  // styles.css can swap its buttons: 60/90/120s when idle, +15s/Skip when running.
+  const pill = document.getElementById("restTimer");
+  pill.classList.remove("is-done");
+  pill.classList.add("is-running");
   updateTimerDisplay();
 
   // Tick a few times a second. Each tick recalculates the time left from the
@@ -4352,19 +3861,27 @@ function tickRest() {
 // Called when the countdown reaches zero: beep + show "Done".
 function finishRest() {
   stopRest();
-  const display = document.getElementById("timerDisplay");
-  display.textContent = "Done! 💪";
-  display.classList.add("is-done");
+  document.getElementById("timerDisplay").textContent = "Done! 💪";
+  document.getElementById("restTimer").classList.add("is-done");
   playBeep();
 }
 
-// Stop the timer (used by Stop button, finishing, and closing the sheet).
+// Stop the timer (used by finishing, closing the sheet, and resetting).
 function stopRest() {
   if (restIntervalId !== null) {
     clearInterval(restIntervalId);
     restIntervalId = null;
   }
-  document.getElementById("timerDisplay").classList.remove("is-running");
+  document.getElementById("restTimer").classList.remove("is-running");
+}
+
+// Owl Quest Q4b: "+15s" — push the end time back while the timer is running.
+function addRestTime(seconds) {
+  if (restIntervalId === null) {
+    return; // nothing running
+  }
+  restEndsAt += seconds * 1000;
+  tickRest(); // redraw straight away
 }
 
 // Show the time left as M:SS (e.g. "1:30").
@@ -4376,12 +3893,12 @@ function updateTimerDisplay() {
     minutes + ":" + paddedSeconds;
 }
 
-// Reset the timer back to its idle look (called when a workout starts).
+// Reset the timer back to its idle look (called when a workout starts, and by
+// the Skip button).
 function resetTimerDisplay() {
   stopRest();
-  const display = document.getElementById("timerDisplay");
-  display.classList.remove("is-done");
-  display.textContent = "Rest timer";
+  document.getElementById("restTimer").classList.remove("is-done");
+  document.getElementById("timerDisplay").textContent = "Rest";
 }
 
 // Play a friendly double-beep using the browser's Web Audio API (no sound files).
@@ -4621,21 +4138,35 @@ function importData(file) {
    The choice is saved so it sticks between visits.
    ========================================================================= */
 
+// The colour a phone paints its status bar / browser bar in, per theme. These
+// match --bg-top in styles.css so the bar blends into the top of the page.
+const THEME_BAR_COLOURS = { light: "#e2d9f7", dark: "#2b2350" };
+
 // Apply a theme ("light" or "dark") to the page and update the toggle button.
 function applyTheme(theme) {
   const toggle = document.getElementById("themeToggle");
 
+  // Recolour the phone's status bar to match (the <meta name="theme-color">
+  // tag in index.html). Owl Quest phase Q1a.
+  const barColourTag = document.querySelector('meta[name="theme-color"]');
+  if (barColourTag) {
+    barColourTag.setAttribute(
+      "content",
+      theme === "dark" ? THEME_BAR_COLOURS.dark : THEME_BAR_COLOURS.light
+    );
+  }
+
   if (theme === "dark") {
     document.documentElement.setAttribute("data-theme", "dark");
     if (toggle) {
-      toggle.textContent = "☀️"; // tapping now switches back to light
+      toggle.innerHTML = iconSvg("sun"); // tapping now switches back to light
       toggle.setAttribute("aria-label", "Switch to light mode");
       toggle.setAttribute("aria-pressed", "true");
     }
   } else {
     document.documentElement.removeAttribute("data-theme");
     if (toggle) {
-      toggle.textContent = "🌙"; // tapping switches to dark
+      toggle.innerHTML = iconSvg("moon"); // tapping switches to dark
       toggle.setAttribute("aria-label", "Switch to dark mode");
       toggle.setAttribute("aria-pressed", "false");
     }
@@ -4672,7 +4203,8 @@ function toggleTheme() {
    None of this touches your saved workouts — it only adds little surprises:
      1. Type "athena" anywhere to summon a flying owl + "Wisdom +1" toast.
      3. Confetti + a "New PR!" card when you beat a past weight for an exercise.
-     4. A one-time trophy when your total workouts reaches a milestone (7, 30 …).
+     (4. The workout-milestone trophy was retired in Owl Quest Q5b: feathers,
+         in badges.js, celebrate those counts now.)
      7. Tap the app title 5 times quickly to reveal a hidden credits card.
    ========================================================================= */
 
@@ -4713,7 +4245,7 @@ function showToast(message) {
 }
 
 // Show a big centred celebration card (emoji + title + subtitle) that
-// auto-dismisses. Used for both the "New PR!" and milestone trophies.
+// auto-dismisses. Used for the PR, level-up and new-feather cards.
 function showCelebrationCard(emoji, title, subtitle) {
   const card = document.createElement("div");
   card.className = "celebrate";
@@ -4846,112 +4378,58 @@ function detectPersonalRecords(session) {
   return records;
 }
 
-/* ---- Egg #4: one-time trophy when you hit a workout milestone ---- */
-
-// Read/save the map of { profileId: [milestones already celebrated] }.
-function loadCelebratedMap() {
-  const text = localStorage.getItem(STORAGE_KEYS.celebratedMilestones);
-  if (!text) {
-    return {};
-  }
-  try {
-    return JSON.parse(text);
-  } catch (error) {
-    return {};
-  }
-}
-function saveCelebratedMap(map) {
-  localStorage.setItem(
-    STORAGE_KEYS.celebratedMilestones,
-    JSON.stringify(map)
-  );
-}
-
-// Keep the "already celebrated" list honest: if a profile's completed-workout
-// count has dropped below a milestone we'd celebrated (e.g. you deleted a
-// workout), forget that milestone so reaching it again re-triggers the trophy.
-// Safe to call any time; it only removes milestones above the current count.
-function reconcileCelebratedMilestones() {
-  const map = loadCelebratedMap();
-  let changed = false;
-
-  // For each profile we've recorded milestones for...
-  Object.keys(map).forEach((profileId) => {
-    const completedCount = loadList(STORAGE_KEYS.sessions).filter(
-      (item) => item.profileId === profileId && isCompletedSession(item)
-    ).length;
-
-    // Keep only milestones you've actually still reached.
-    const kept = (map[profileId] || []).filter(
-      (milestone) => milestone <= completedCount
-    );
-    if (kept.length !== (map[profileId] || []).length) {
-      changed = true;
-    }
-    map[profileId] = kept;
-  });
-
-  if (changed) {
-    saveCelebratedMap(map);
-  }
-}
-
-// If the active profile's completed-workout count has just reached a milestone
-// we haven't celebrated yet, record it and return that number. Otherwise null.
-function detectWorkoutMilestone() {
-  const activeId = loadActiveProfileId();
-  if (!activeId) {
-    return null;
-  }
-
-  const completedCount = loadList(STORAGE_KEYS.sessions).filter(
-    (item) => item.profileId === activeId && isCompletedSession(item)
-  ).length;
-
-  // Is this exact count one of our milestones?
-  if (!WORKOUT_MILESTONES.includes(completedCount)) {
-    return null;
-  }
-
-  // Have we already celebrated it for this profile? If so, do nothing.
-  const map = loadCelebratedMap();
-  const already = map[activeId] || [];
-  if (already.includes(completedCount)) {
-    return null;
-  }
-
-  // Remember it so the trophy only ever plays once per profile per milestone.
-  already.push(completedCount);
-  map[activeId] = already;
-  saveCelebratedMap(map);
-
-  return completedCount;
-}
-
-// Play the celebrations after a workout: PR first, then any milestone trophy.
-function celebrateAfterWorkout(personalRecords, milestone) {
-  let delay = 0;
+// Play the celebrations after a workout, one after another: a PR first, then
+// a level up (Owl Quest Q2b), then any new feathers (Q5b).
+//   levelUp     — the new level from detectLevelUp() in xp.js, or null
+//   newFeathers — feathers earned by this workout, from detectNewFeathers() in
+//                 badges.js (an empty list if none)
+function celebrateAfterWorkout(personalRecords, levelUp, newFeathers) {
+  // Build a list of celebrations to play, in order. Each one is a small
+  // function that throws the confetti and shows its card.
+  const celebrations = [];
 
   if (personalRecords.length > 0) {
-    launchConfetti();
-    // Build a friendly line, e.g. "Squat 60 kg · Bench 40 kg".
-    const summary = personalRecords
-      .map((record) => record.name + " " + formatWeight(record.weight))
-      .join(" · ");
-    showCelebrationCard("🏅", "New personal record!", summary);
-    delay = 3000; // let the PR card clear before the trophy appears
+    celebrations.push(() => {
+      launchConfetti();
+      // Build a friendly line, e.g. "Squat 60 kg · Bench 40 kg".
+      const summary = personalRecords
+        .map((record) => record.name + " " + formatWeight(record.weight))
+        .join(" · ");
+      showCelebrationCard("🏅", "New personal record!", summary);
+    });
   }
 
-  if (milestone) {
-    setTimeout(() => {
+  if (levelUp) {
+    celebrations.push(() => {
+      launchConfetti(100);
+      showCelebrationCard(
+        "🦉",
+        levelUp.isMax ? "Top level!" : "Level up!",
+        "Level " + levelUp.level + " · " + levelUp.name
+      );
+    });
+  }
+
+  // One card for all the new feathers, e.g. "2 new feathers!" and their names.
+  // (This replaced the old 🏆 trophy at 7 / 30 / 50 / 100 workouts, which are
+  // feathers now.)
+  if (newFeathers && newFeathers.length > 0) {
+    celebrations.push(() => {
       launchConfetti(120);
       showCelebrationCard(
-        "🏆",
-        milestone + " workouts done!",
-        "What a streak! Keep it up 💪"
+        "🪶",
+        newFeathers.length === 1
+          ? "New feather!"
+          : newFeathers.length + " new feathers!",
+        newFeathers.map((feather) => feather.name).join(" · ")
       );
-    }, delay);
+    });
   }
+
+  // Play them 3 seconds apart, so each card clears before the next appears.
+  celebrations.forEach((celebrate, index) => {
+    setTimeout(celebrate, index * 3000);
+  });
 }
 
 /* ---- Egg #7: tap the app title 5 times quickly for a credits card ---- */
@@ -5103,6 +4581,17 @@ function switchView(viewName) {
     }
   });
 
+  // Settings has no tab any more (Owl Quest Q1c), so light up the avatar that
+  // opens it instead, and tell screen readers it's the current page.
+  const avatar = document.getElementById("activeProfileChip");
+  const onSettings = viewName === "settings";
+  avatar.classList.toggle("avatar-btn--active", onSettings);
+  if (onSettings) {
+    avatar.setAttribute("aria-current", "page");
+  } else {
+    avatar.removeAttribute("aria-current");
+  }
+
   // Phase 12: opening the Friends tab refreshes it, so the "went today" ticks
   // and nudge buttons are up to date each time you look.
   if (viewName === "friends") {
@@ -5166,16 +4655,25 @@ function init() {
     .getElementById("workoutDateInput")
     .addEventListener("change", handleWorkoutDateChange);
 
+  // Q4a+: the "One at a time | List" toggle at the top of a live workout.
+  document.querySelectorAll("#workoutViewToggle [data-view]").forEach((button) => {
+    button.addEventListener("click", () => switchWorkoutView(button.dataset.view));
+  });
+
   // Rest timer: the 60/90/120 buttons each have a data-seconds value.
-  document.querySelectorAll(".timer-btn[data-seconds]").forEach((button) => {
+  document.querySelectorAll(".rest-pill__btn[data-seconds]").forEach((button) => {
     button.addEventListener("click", () => {
       startRest(Number(button.dataset.seconds));
     });
   });
-  // The Stop button stops the countdown and resets the display.
+  // Skip stops the countdown and puts the pill back to its idle look.
   document
     .getElementById("stopTimerBtn")
     .addEventListener("click", resetTimerDisplay);
+  // +15s adds a little more rest to a running timer (Q4b).
+  document
+    .getElementById("addRestBtn")
+    .addEventListener("click", () => addRestTime(15));
 
   // When you come BACK to the app (switch back, unlock the screen), immediately
   // re-check a running timer — phones freeze our code in the background, so this
@@ -5283,11 +4781,15 @@ function init() {
     const goal = clampNumber(Number(event.target.value), 1, 14);
     event.target.value = goal; // reflect any clamping
     saveWeeklyGoal(activeId, goal);
-    renderProgress(); // redraw the ring with the new goal
+    renderProgress(); // redraw Week by week with the new goal line
   });
 
   // Wire up the just-for-fun easter eggs (typing "athena", title taps, etc.).
   setupEasterEggs();
+
+  // Owl Quest Q5b retired the workout-milestone trophy; tidy away the key it
+  // used to keep on this device. (Harmless if it isn't there.)
+  localStorage.removeItem(STORAGE_KEYS.celebratedMilestones);
 
   // PWA (Phase 5): register the service worker for offline + installability,
   // and wire up the "Install app" button.
@@ -5304,7 +4806,7 @@ function init() {
   // The app always opens on the Today tab (set as the active view in index.html).
   renderAll();
 
-  console.log("Athena's Arena loaded. Phase 4 ready ✅");
+  console.log("Athena's Arena loaded ✅");
 }
 
 // Wait until the page's HTML is ready, then start the app.
