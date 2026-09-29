@@ -747,6 +747,14 @@ per device), no friend badges (Q6), no heavy-lift clubs (kg/lb is only a label).
   "2 new feathers!") with confetti, after the PR and level-up cards. The 🏆
   workout-milestone trophy and its stored tracker are retired.
 
+- ✅ **Q5c — Shorter feathers card + a feathers page** *(on `dev` 2026-09-29, cache `v67`,
+  awaiting owner test)*: owner's request after the stats preview — 18 medallions made the
+  Badges tab too long. The card now shows the count, up to 4 earned feathers, "See all ›"
+  and a **Suggested feather** (a different one each day, from the 3 closest plus any
+  "do it once" feathers — it was a fixed "Next feather"); See all opens a full-page sheet
+  with a ‹ Back button, the full grid and tap-for-details. **Heavy Mover → Rep Counter**
+  (2,000 reps), since kg moved is being dropped from the stats.
+
 **Phase Q5 is complete.** Q6 (team quests) is deferred; next is a redesign of the stats
 under the feathers (owner's request, 2026-09-29).
 

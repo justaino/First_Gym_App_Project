@@ -732,8 +732,13 @@ missed stone, plan something for a day earlier this week that you didn't train.
 ## 5r. Feathers (badges) — Owl Quest Q5
 
 The **Badges** tab (still `data-view="progress"` / `renderProgress()` in the code; only the
-label and title changed) starts with the "Your feathers" card, drawn by `renderFeathers()`
-in `badges.js` into `#feathers`. Nothing is stored: it's recalculated from the active
+label and title changed) starts with a short "Your feathers" card, drawn by
+`renderFeathers()` in `badges.js` into `#feathers`: the count, "See all ›", up to
+`FEATHERS_PREVIEW_COUNT` (4) earned medallions (the last earned ones in list order) and
+the suggested feather. **See all** opens `#feathersSheet`, a full-page sheet like the guide
+(`openFeathersPage()` / `closeFeathersPage()`, ‹ Back button `#closeFeathersBtn`, Escape
+also closes it), which `renderFeathersPage()` fills with the full grid, the tapped
+feather's details and Next feather (Q5c). Nothing is stored: it's recalculated from the active
 profile's finished workouts every time the tab draws.
 
 - **The list:** `FEATHERS` at the top of `badges.js` — `id`, Lucide `icon`, `tone`
@@ -743,14 +748,20 @@ profile's finished workouts every time the tab draws.
   run of weeks with a workout, `longestWeekStreak()`), `busiestWeek` (most workouts in one
   Monday–Sunday week), `weekendWarrior` (a Saturday then the Sunday after,
   `trainedOnAWeekend()`), `records` (`countPersonalRecords()` from xp.js), `sets`,
-  `weightMoved` (reps × weight of ticked sets), `differentExercises`, `notes` (non-empty
+  `reps` (`entryRepsDone()`, for Rep Counter — it replaced Heavy Mover / `weightMoved`
+  in Q5c), `differentExercises`, `notes` (non-empty
   entry notes), `earlyBird` (a workout **started** before 07:00), `lateShift` (started at
   21:00 or later) and `level` (xp.js). A workout whose date was edited is at noon, so it
   never counts as early or late.
-- **Earned** = `current >= target` (`computeFeathers()`). **Next feather** = the locked
-  feather with a unit that's furthest along; ties go to the one earlier in the list.
-- **Tapping** a medallion sets `selectedFeatherId` (memory only) and redraws with a details
-  box; tapping it again closes it.
+- **Earned** = `current >= target` (`computeFeathers()`). **Suggested feather**
+  (`pickSuggestedFeather()`, owner's request in Q5c — it was a fixed "Next feather"): the
+  pool is the 3 locked counting feathers you're closest to (`SUGGESTION_POOL_CLOSEST`) plus
+  every locked yes/no feather; the pick is `pool[dayNumber % pool.length]`, so it's the
+  same all day (the tab redraws often), changes the next day, and moves on once earned.
+  Counting feathers show progress + bar; yes/no ones show their `how` text.
+- **Tapping** a medallion on the feathers page sets `selectedFeatherId` (memory only) and
+  redraws the page with a details box; tapping it again closes it. Opening the page
+  always starts with nothing selected.
 - **Colours:** `--medal-*` tokens (butter, coral, mint, lavender + edges, `--medal-ink`,
   `--medal-locked*`), light and dark.
 - **After a workout (Q5b):** `finishWorkout()` takes `earnedFeatherIds()` just before
@@ -897,8 +908,21 @@ Newest first. Add a line here whenever behaviour changes.
 > Entries below marked "on `dev`, awaiting owner test" were written at build time.
 > Everything up to 2026-07-28 has since been tested and released to `main`.
 
-- **2026-09-29** — **Owl Quest Q5b — new feather celebration (on `dev`, awaiting owner
-  test):**
+- **2026-09-29** — **Owl Quest Q5c — shorter feathers card + feathers page (on `dev`,
+  awaiting owner test):** see §5r.
+  - `badges.js`: `renderFeathers()` now draws the short card; new `renderFeathersPage()`,
+    `openFeathersPage()`, `closeFeathersPage()`, `buildFeathersHead()`,
+    `FEATHERS_PREVIEW_COUNT`. Heavy Mover → **Rep Counter** (`reps` ≥ 2,000;
+    `weightMoved` removed from `computeFeatherStats()`). "Next feather" became a
+    **Suggested feather** that changes daily (`pickSuggestedFeather()`).
+  - `index.html`: new `#feathersSheet` (Back button, title, `#feathersPageCount`,
+    `#feathersPageContent`).
+  - `icons.js`: Lucide `weight` → `activity`; Phosphor `back` / `forward` carets.
+  - `styles.css`: `.feathers__row`, `.feathers__more`, `.feathers__none`,
+    `.feathers__see-all`, `.sheet__header--back`, `.back-btn`, `.sheet__subtitle`.
+  - Guide + What's new wording. Cache `v67`.
+
+- **2026-09-29** — **Owl Quest Q5b — new feather celebration (committed to `dev`):**
   - `badges.js`: `earnedFeatherIds()`, `detectNewFeathers(beforeIds)`.
   - `app.js` `finishWorkout()`: feathers before/after, then
     `celebrateAfterWorkout(personalRecords, levelUp, newFeathers)` — the arguments

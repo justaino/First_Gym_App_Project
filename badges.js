@@ -7,9 +7,10 @@
     - everyone's past workouts count straight away,
     - every device shows the same feathers.
 
-  The "Your feathers" card at the top of the Badges tab shows every feather:
-  earned ones in colour, locked ones in grey. Tap one to see how to earn it and
-  how close you are. Underneath, "Next feather" is the locked one you're closest to.
+  On the Badges tab, a short "Your feathers" card shows your count, a few earned
+  feathers and a suggested feather to aim for (it changes each day). "See all" opens a full page with every
+  feather: earned ones in colour, locked ones in grey. Tap one there to see how
+  to earn it and how close you are.
 
   ── HOW TO CHANGE THE FEATHERS ───────────────────────────────────────────
   Edit the FEATHERS list below. Each feather says which number it measures
@@ -18,8 +19,9 @@
   ─────────────────────────────────────────────────────────────────────────
 
   Loaded after app.js and xp.js, and uses their helpers (loadList,
-  loadActiveProfileId, isCompletedSession, entrySetsDone, weekKeyOf, dayKeyOf,
-  unitLabel, computeTotalXp, levelForXp, countPersonalRecords, iconSvg).
+  loadActiveProfileId, isCompletedSession, entrySetsDone, entryRepsDone,
+  weekKeyOf, dayKeyOf, unitLabel, computeTotalXp, levelForXp,
+  countPersonalRecords, iconSvg).
 */
 
 /* =========================================================================
@@ -35,7 +37,8 @@
 //   measure — which number from computeFeatherStats() it checks
 //   target  — the number to reach
 //   unit    — words for the progress line ("18 of 30 workouts"). Leave it out
-//             for yes/no feathers, which just say "Not yet".
+//             for yes/no feathers, which just say "Not yet". "{unit}" would be
+//             swapped for kg/lb if a feather ever needs it.
 const FEATHERS = [
   // Showing up
   { id: "first-flight", icon: "egg", tone: "butter", name: "First Flight", how: "Finish your first workout.", measure: "workouts", target: 1, unit: "workout" },
@@ -54,7 +57,9 @@ const FEATHERS = [
   { id: "first-record", icon: "trophy", tone: "mint", name: "First Record", how: "Beat your heaviest weight on any exercise.", measure: "records", target: 1, unit: "record" },
   { id: "record-breaker", icon: "crown", tone: "mint", name: "Record Breaker", how: "Set 10 personal records.", measure: "records", target: 10, unit: "records" },
   { id: "set-machine", icon: "dumbbell", tone: "mint", name: "Set Machine", how: "Tick 500 sets.", measure: "sets", target: 500, unit: "sets" },
-  { id: "heavy-mover", icon: "weight", tone: "mint", name: "Heavy Mover", how: "Move 10,000 in total (reps × weight, added up).", measure: "weightMoved", target: 10000, unit: "{unit} moved" },
+  // Rep Counter replaced "Heavy Mover" (10,000 kg moved) — kg/lb is only a label
+  // in this app, and weight moved grew too fast to mean much.
+  { id: "rep-counter", icon: "activity", tone: "mint", name: "Rep Counter", how: "Tick 2,000 reps in total.", measure: "reps", target: 2000, unit: "reps" },
 
   // Habits
   { id: "mix-it-up", icon: "shuffle", tone: "lavender", name: "Mix It Up", how: "Train 10 different exercises.", measure: "differentExercises", target: 10, unit: "exercises" },
@@ -78,7 +83,7 @@ function computeFeatherStats(profileId) {
   );
 
   let sets = 0;
-  let weightMoved = 0;
+  let reps = 0;
   let notes = 0;
   let earlyBird = 0;
   let lateShift = 0;
@@ -104,19 +109,12 @@ function computeFeatherStats(profileId) {
     session.entries.forEach((entry) => {
       const done = entrySetsDone(entry);
       sets += done;
+      reps += entryRepsDone(entry); // app.js: reps of ticked sets only
       if (done > 0) {
         exercisesTrained.add(entry.exerciseId);
       }
       if (entry.note && entry.note.trim() !== "") {
         notes += 1;
-      }
-      // Weight moved = reps × weight for every ticked set (per-set shape only).
-      if (Array.isArray(entry.sets)) {
-        entry.sets.forEach((set) => {
-          if (set.done && set.weight !== null && set.weight !== undefined) {
-            weightMoved += (Number(set.reps) || 0) * Number(set.weight);
-          }
-        });
       }
     });
   });
@@ -128,7 +126,7 @@ function computeFeatherStats(profileId) {
     weekendWarrior: trainedOnAWeekend(sessions, daysTrained) ? 1 : 0,
     records: countPersonalRecords(sessions), // xp.js
     sets: sets,
-    weightMoved: Math.round(weightMoved),
+    reps: reps,
     differentExercises: exercisesTrained.size,
     notes: notes,
     earlyBird: earlyBird,
@@ -217,13 +215,17 @@ function detectNewFeathers(beforeIds) {
 }
 
 /* =========================================================================
-   4. DRAWING THE "YOUR FEATHERS" CARD
+   4. DRAWING — a short card on the Badges tab, and a full page for all 18
    ========================================================================= */
 
-// Which feather's details are open (memory only; tap it again to close).
+// How many earned feathers the short card shows before "See all".
+const FEATHERS_PREVIEW_COUNT = 4;
+
+// Which feather's details are open on the full page (memory only; tap it again
+// to close).
 let selectedFeatherId = null;
 
-// Draw the card at the top of the Badges tab. Called from renderProgress().
+// The short card at the top of the Badges tab. Called from renderProgress().
 function renderFeathers() {
   const container = document.getElementById("feathers");
   container.innerHTML = "";
@@ -232,12 +234,52 @@ function renderFeathers() {
   }
 
   const feathers = computeFeathers();
-  const earnedCount = feathers.filter((item) => item.earned).length;
+  const earned = feathers.filter((item) => item.earned);
 
   const card = document.createElement("div");
   card.className = "card feathers";
 
-  // Heading row: "Your feathers" and "7 of 18".
+  // Heading row: "Your feathers  4 of 18" on the left, "See all ›" on the right.
+  const head = buildFeathersHead(earned.length, feathers.length);
+  const seeAll = document.createElement("button");
+  seeAll.type = "button";
+  seeAll.className = "btn btn--ghost btn--small feathers__see-all";
+  seeAll.innerHTML = "See all " + iconSvg("forward");
+  seeAll.setAttribute("aria-label", "See all " + feathers.length + " feathers");
+  seeAll.addEventListener("click", openFeathersPage);
+  head.appendChild(seeAll);
+  card.appendChild(head);
+
+  // A row of up to 4 earned feathers — the last ones in the list, which tend to
+  // be the harder ones. With none earned, a friendly line.
+  const row = document.createElement("div");
+  row.className = "feathers__row";
+  if (earned.length === 0) {
+    const none = document.createElement("p");
+    none.className = "feathers__none";
+    none.textContent = "No feathers yet. Your first workout earns one!";
+    row.appendChild(none);
+  } else {
+    earned.slice(-FEATHERS_PREVIEW_COUNT).forEach((item) => {
+      const medal = buildMedal(item, "feather-medal--small");
+      medal.title = item.feather.name;
+      row.appendChild(medal);
+    });
+    if (earned.length > FEATHERS_PREVIEW_COUNT) {
+      const more = document.createElement("span");
+      more.className = "feathers__more";
+      more.textContent = "+" + (earned.length - FEATHERS_PREVIEW_COUNT);
+      row.appendChild(more);
+    }
+  }
+  card.appendChild(row);
+
+  card.appendChild(buildNextFeather(feathers));
+  container.appendChild(card);
+}
+
+// "Your feathers  7 of 18" for the short card (the button is added after).
+function buildFeathersHead(earnedCount, total) {
   const head = document.createElement("div");
   head.className = "feathers__head";
   const title = document.createElement("h2");
@@ -245,18 +287,31 @@ function renderFeathers() {
   title.textContent = "Your feathers";
   const count = document.createElement("span");
   count.className = "feathers__count";
-  count.textContent = earnedCount + " of " + feathers.length;
+  count.textContent = earnedCount + " of " + total;
   head.appendChild(title);
   head.appendChild(count);
-  card.appendChild(head);
+  return head;
+}
 
-  // The grid of medallions. Each is a button: tap for details.
+// The full page (a sheet, like the guide): every feather in a grid, the
+// details of the tapped one, and the suggested feather.
+function renderFeathersPage() {
+  const container = document.getElementById("feathersPageContent");
+  container.innerHTML = "";
+
+  const feathers = computeFeathers();
+  const earnedCount = feathers.filter((item) => item.earned).length;
+  document.getElementById("feathersPageCount").textContent =
+    earnedCount + " of " + feathers.length + " earned";
+
+  const card = document.createElement("div");
+  card.className = "card feathers";
+
   const grid = document.createElement("div");
   grid.className = "feathers__grid";
   feathers.forEach((item) => grid.appendChild(buildFeatherButton(item)));
   card.appendChild(grid);
 
-  // Details of the tapped feather, if any.
   const selected = feathers.find((item) => item.feather.id === selectedFeatherId);
   if (selected) {
     card.appendChild(buildFeatherDetail(selected));
@@ -265,6 +320,32 @@ function renderFeathers() {
   card.appendChild(buildNextFeather(feathers));
   container.appendChild(card);
 }
+
+// Open and close the full page.
+function openFeathersPage() {
+  selectedFeatherId = null; // always open tidy, with no details showing
+  renderFeathersPage();
+  const sheet = document.getElementById("feathersSheet");
+  sheet.hidden = false;
+  sheet.querySelector(".sheet__panel").scrollTop = 0;
+  document.getElementById("closeFeathersBtn").focus();
+}
+function closeFeathersPage() {
+  document.getElementById("feathersSheet").hidden = true;
+}
+
+// Wire up the Back button (and Escape) once the page exists.
+document.addEventListener("DOMContentLoaded", () => {
+  document
+    .getElementById("closeFeathersBtn")
+    .addEventListener("click", closeFeathersPage);
+  document.addEventListener("keydown", (event) => {
+    const sheet = document.getElementById("feathersSheet");
+    if (event.key === "Escape" && !sheet.hidden) {
+      closeFeathersPage();
+    }
+  });
+});
 
 // A round medallion with the feather's icon: coloured when earned, grey when not.
 function buildMedal(item, extraClass) {
@@ -302,7 +383,7 @@ function buildFeatherButton(item) {
   // Tap to open its details; tap again to close them.
   button.addEventListener("click", () => {
     selectedFeatherId = isSelected ? null : item.feather.id;
-    renderFeathers();
+    renderFeathersPage();
   });
   return button;
 }
@@ -362,37 +443,67 @@ function buildFeatherDetail(item) {
   return box;
 }
 
-// "Next feather": the locked feather you're closest to (by how far along you
-// are). Yes/no feathers are skipped, since they have no "closest".
+// How many of your closest counting feathers go into the daily suggestion pool.
+const SUGGESTION_POOL_CLOSEST = 3;
+
+// Pick today's suggested feather, or null if every feather is earned.
+// The pool is the 3 counting feathers you're closest to, plus every "do it
+// once" feather you haven't got (Early Bird, Weekend Warrior…). The pick
+// depends on today's date, so it stays put all day (the tab redraws a lot)
+// and moves on tomorrow — or as soon as you earn it.
+function pickSuggestedFeather(feathers) {
+  const locked = feathers.filter((item) => !item.earned);
+  const closest = locked
+    .filter((item) => item.feather.unit)
+    .sort((a, b) => b.fraction - a.fraction) // closest first
+    .slice(0, SUGGESTION_POOL_CLOSEST);
+  const doItOnce = locked.filter((item) => !item.feather.unit);
+  const pool = closest.concat(doItOnce);
+  if (pool.length === 0) {
+    return null;
+  }
+
+  // A number that goes up by one each day (days since 1 Jan 1970, local time).
+  const now = new Date();
+  const dayNumber = Math.floor(
+    Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / 86400000
+  );
+  return pool[dayNumber % pool.length];
+}
+
+// "Suggested feather": one locked feather to aim for today (see above).
+// Counting feathers show your progress; "do it once" ones say how to earn them.
 function buildNextFeather(feathers) {
   const row = document.createElement("div");
   row.className = "feather-next";
 
-  const candidates = feathers.filter((item) => !item.earned && item.feather.unit);
-  if (candidates.length === 0) {
-    row.textContent = feathers.every((item) => item.earned)
-      ? "Every feather collected. Athena would be proud 🦉"
-      : "Only the surprise feathers are left. Keep training!";
+  const next = pickSuggestedFeather(feathers);
+  if (!next) {
+    row.textContent = "Every feather collected. Athena would be proud 🦉";
     return row;
   }
-
-  // Closest first; if two are equally close, the one earlier in the list wins.
-  const next = candidates.reduce((best, item) =>
-    item.fraction > best.fraction ? item : best
-  );
 
   row.appendChild(buildMedal(next, "feather-medal--small"));
   const text = document.createElement("div");
   text.className = "feather-next__text";
+  // A small "Suggested feather" label, then the feather's name.
+  const label = document.createElement("p");
+  label.className = "feather-next__label";
+  label.textContent = "Suggested feather";
   const title = document.createElement("p");
   title.className = "feather-next__title";
-  title.textContent = "Next feather: " + next.feather.name;
-  const progress = document.createElement("p");
-  progress.className = "feather-next__progress";
-  progress.textContent = describeFeatherProgress(next);
+  title.textContent = next.feather.name;
+  const detail = document.createElement("p");
+  detail.className = "feather-next__progress";
+  text.appendChild(label);
   text.appendChild(title);
-  text.appendChild(progress);
-  text.appendChild(buildFeatherBar(next));
+  text.appendChild(detail);
+  if (next.feather.unit) {
+    detail.textContent = describeFeatherProgress(next);
+    text.appendChild(buildFeatherBar(next));
+  } else {
+    detail.textContent = next.feather.how; // e.g. "Start a workout before 7am."
+  }
   row.appendChild(text);
   return row;
 }

@@ -842,6 +842,32 @@
     </div>
 
     <!--
+      All your feathers (Owl Quest, after Q5b): a full page opened by "See all"
+      on the Badges tab's feathers card, with a Back button. badges.js
+      (renderFeathersPage) fills #feathersPageContent.
+    -->
+    <div class="sheet" id="feathersSheet" hidden>
+      <div
+        class="sheet__panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="feathersPageTitle"
+      >
+        <header class="sheet__header sheet__header--back">
+          <button class="btn btn--ghost btn--small back-btn" type="button" id="closeFeathersBtn">
+            <span data-icon="back"></span> Back
+          </button>
+          <div>
+            <h2 class="sheet__title" id="feathersPageTitle">Your feathers</h2>
+            <p class="sheet__subtitle" id="feathersPageCount"></p>
+          </div>
+        </header>
+
+        <div id="feathersPageContent"></div>
+      </div>
+    </div>
+
+    <!--
       The guide (Phase 13). A full-screen sheet, same pattern as workout mode.
       guide.js fills #guideContent from the lists at the top of that file.
     -->

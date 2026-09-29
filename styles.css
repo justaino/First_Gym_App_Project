@@ -3065,7 +3065,6 @@ body {
 }
 .feathers__head {
   display: flex;
-  justify-content: space-between;
   align-items: baseline;
   gap: 10px;
 }
@@ -3205,4 +3204,51 @@ body {
   height: 100%;
   border-radius: var(--radius-pill);
   background: var(--purple);
+}
+
+
+/* ---- Feathers: the short card on Badges + the full page (after Q5b) ---- */
+/* The row of a few earned medallions, a "+3", and "See all ›" on the right. */
+.feathers__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.feathers__more {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--muted);
+}
+.feathers__none {
+  font-weight: 700;
+  color: var(--muted);
+}
+.feathers__see-all {
+  margin-left: auto; /* push to the right end of the heading row */
+  color: var(--purple);
+  white-space: nowrap;
+}
+
+/* A sheet header with a Back button on the left and the title beside it. */
+.sheet__header--back {
+  justify-content: flex-start;
+  gap: 12px;
+}
+.back-btn {
+  color: var(--text);
+  background: var(--card);
+  box-shadow: 0 3px 0 var(--edge);
+}
+.feather-next__label {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--purple);
+}
+.sheet__subtitle {
+  margin-top: 2px;
+  font-weight: 700;
+  color: var(--muted);
 }
