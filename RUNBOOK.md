@@ -80,6 +80,7 @@ All keys start with `gym:`.
 | `gym:sessions` | Saved + in-progress workouts (the history). |
 | `gym:theme` | `"light"` or `"dark"`. |
 | `gym:unit` | `"kg"` or `"lb"` — the weight label shown throughout the app (display only; per device, not synced). |
+| `gym:workoutView` | `"focus"` or `"list"` — how a live workout looks (Q4a+; per device, not synced; default `focus`). |
 | `gym:weeklyGoal` | Each profile's weekly workout goal, `{ profileId: n }` (per device, not synced). See §5c. |
 | `gym:syncedUserId` | Which logged-in account the local cache belongs to, so one person's data is never uploaded into another's account. See §5d. |
 | `gym:celebratedMilestones` | Easter-egg bookkeeping: which workout-count milestones each profile has already celebrated, so the trophy only plays once. |
@@ -738,6 +739,15 @@ The workout sheet (`#workoutOverlay`) has **two looks**, set by `setWorkoutMode(
 - **edit** — `editSession()` (Recent workouts → edit). The original long list
   (`renderWorkoutItems()`), unchanged.
 
+**Choosing the live view (Q4a+):** a live workout shows the "⭐ One at a time | ☰ List"
+toggle (`#workoutViewToggle`). `switchWorkoutView(view, exerciseIndex?)` saves the choice
+to `gym:workoutView` (`loadWorkoutView()` / `saveWorkoutView()`, default `"focus"`),
+updates the classes and redraws. Classes on the sheet: `sheet--live` (training — shows the
+toggle) and `sheet--focus` (one-at-a-time showing — hides the list, date row and save
+note). `isFocusViewShowing()` = live + `"focus"`. In List view while training, each
+exercise name is a button (`.exercise__name--link`) that calls
+`switchWorkoutView("focus", entryIndex)`. Editing a saved workout never shows the toggle.
+
 `redrawWorkout()` redraws whichever look is showing; `toggleWorkoutSet()`,
 `addWorkoutSet()`, `removeWorkoutSet()` and the unit change all call it.
 
@@ -829,8 +839,19 @@ Newest first. Add a line here whenever behaviour changes.
 > Entries below marked "on `dev`, awaiting owner test" were written at build time.
 > Everything up to 2026-07-28 has since been tested and released to `main`.
 
-- **2026-09-29** — **Owl Quest Q4a — one exercise at a time (on `dev`, awaiting owner
-  test):**
+- **2026-09-29** — **Owl Quest Q4a+ — choose your view (on `dev`, awaiting owner test):**
+  owner's request: people should be able to see the whole day without clicking through.
+  - `app.js`: new key `STORAGE_KEYS.workoutView` (`gym:workoutView`), `WORKOUT_VIEWS`,
+    `loadWorkoutView()`, `saveWorkoutView()`, `isFocusViewShowing()`,
+    `applyWorkoutViewClasses()`, `switchWorkoutView()`; `redrawWorkout()` now picks by
+    `isFocusViewShowing()`. `renderWorkoutItems()` makes the name a button while live.
+    Toggle clicks wired in `init()`.
+  - `index.html`: `#workoutViewToggle` (two `data-view` buttons) under the sheet header.
+  - `styles.css`: hide rules now key off `.sheet--focus`; `.view-toggle*`,
+    `.exercise__name--link`; new token `--view-toggle-current` (light + dark).
+  - Guide, What's new, §3 key table, §5p. Cache `v59`.
+
+- **2026-09-29** — **Owl Quest Q4a — one exercise at a time (committed to `dev`):**
   - New file `workout-screen.js` (in `index.html` after `week-path.js`, and in
     `APP_SHELL`): the live screen (see §5p).
   - `app.js`: `workoutMode`, `setWorkoutMode()`, `redrawWorkout()`. `startWorkout()`

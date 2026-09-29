@@ -45,6 +45,10 @@ const STORAGE_KEYS = {
   //   gym:recapSeen:<profileId>:2026-07-20
   // The prefix lets us find (and tidy up) old ones. Per device, not synced.
   recapSeenPrefix: "gym:recapSeen:",
+  // Owl Quest Q4a+: how you like to see a workout while training — "focus"
+  // (one exercise at a time) or "list" (everything on one page). A DISPLAY
+  // setting saved per device, like the theme — not synced.
+  workoutView: "gym:workoutView",
 };
 
 // The weight units you can choose between in Settings.
@@ -3679,26 +3683,71 @@ function setupExerciseSuggestions() {
 // localStorage), or null when the workout sheet is closed.
 let activeSession = null;
 
-// Owl Quest Q4: the workout sheet has two looks.
-//   "live" — training right now: one exercise at a time, with stars and the
-//            owl (drawn by workout-screen.js).
-//   "edit" — fixing a saved workout from history: every exercise in one long
-//            list (renderWorkoutItems below), which is easier for corrections.
+// Owl Quest Q4: the workout sheet is used in two situations.
+//   "live" — training right now. You choose how it looks with the toggle at the
+//            top (Q4a+): one exercise at a time with stars and the owl
+//            (workout-screen.js), or everything in one list.
+//   "edit" — fixing a saved workout from history: always the long list
+//            (renderWorkoutItems below), which is easier for corrections.
 let workoutMode = "edit";
 
-// Switch the sheet between its two looks. The "sheet--live" class hides the
-// long-list parts in live mode (see styles.css).
+// The two live views, and the one new people start on.
+const WORKOUT_VIEWS = ["focus", "list"];
+const DEFAULT_WORKOUT_VIEW = "focus";
+
+// Which live view this device prefers (remembered between workouts).
+function loadWorkoutView() {
+  const saved = localStorage.getItem(STORAGE_KEYS.workoutView);
+  return WORKOUT_VIEWS.includes(saved) ? saved : DEFAULT_WORKOUT_VIEW;
+}
+function saveWorkoutView(view) {
+  if (WORKOUT_VIEWS.includes(view)) {
+    localStorage.setItem(STORAGE_KEYS.workoutView, view);
+  }
+}
+
+// Is the one-exercise-at-a-time screen showing right now?
+function isFocusViewShowing() {
+  return workoutMode === "live" && loadWorkoutView() === "focus";
+}
+
+// Switch the sheet between live and edit, and set its classes (styles.css):
+//   "sheet--live"  shows the view toggle (only while training)
+//   "sheet--focus" shows the one-at-a-time screen and hides the long list
 function setWorkoutMode(mode) {
   workoutMode = mode;
-  document
-    .getElementById("workoutOverlay")
-    .classList.toggle("sheet--live", mode === "live");
+  applyWorkoutViewClasses();
+}
+function applyWorkoutViewClasses() {
+  const sheet = document.getElementById("workoutOverlay");
+  sheet.classList.toggle("sheet--live", workoutMode === "live");
+  sheet.classList.toggle("sheet--focus", isFocusViewShowing());
+
+  // Light up the toggle button for the current view.
+  document.querySelectorAll("#workoutViewToggle [data-view]").forEach((button) => {
+    const isCurrent = button.dataset.view === loadWorkoutView();
+    button.classList.toggle("view-toggle__btn--current", isCurrent);
+    button.setAttribute("aria-pressed", isCurrent ? "true" : "false");
+  });
+}
+
+// The toggle at the top of a live workout: remember the choice, then redraw.
+// `exerciseIndex` (optional) says which exercise to show in the focus view —
+// used when you tap an exercise's name in the list.
+function switchWorkoutView(view, exerciseIndex) {
+  saveWorkoutView(view);
+  if (typeof exerciseIndex === "number") {
+    focusExerciseIndex = exerciseIndex;
+  }
+  applyWorkoutViewClasses();
+  redrawWorkout();
+  document.querySelector("#workoutOverlay .sheet__panel").scrollTop = 0;
 }
 
 // Redraw whichever look is showing. Everything that changes a set (tick, add,
 // remove) calls this, so both looks stay up to date.
 function redrawWorkout() {
-  if (workoutMode === "live") {
+  if (isFocusViewShowing()) {
     renderWorkoutFocus();
   } else {
     renderWorkoutItems();
@@ -4146,9 +4195,17 @@ function renderWorkoutItems() {
 
     const info = document.createElement("div");
     info.className = "exercise__info";
-    const name = document.createElement("div");
+    // While training (Q4a+), the name is a button that opens this exercise in
+    // the one-at-a-time view. When editing a saved workout it's plain text.
+    const name = document.createElement(workoutMode === "live" ? "button" : "div");
     name.className = "exercise__name";
     name.textContent = exercise ? exercise.name : "(deleted exercise)";
+    if (workoutMode === "live") {
+      name.type = "button";
+      name.classList.add("exercise__name--link");
+      name.title = "Show this exercise on its own";
+      name.addEventListener("click", () => switchWorkoutView("focus", entryIndex));
+    }
     info.appendChild(name);
 
     // Phase 9: a small grey reminder of what you did last time. It's only added
@@ -5464,6 +5521,11 @@ function init() {
   document
     .getElementById("workoutDateInput")
     .addEventListener("change", handleWorkoutDateChange);
+
+  // Q4a+: the "One at a time | List" toggle at the top of a live workout.
+  document.querySelectorAll("#workoutViewToggle [data-view]").forEach((button) => {
+    button.addEventListener("click", () => switchWorkoutView(button.dataset.view));
+  });
 
   // Rest timer: the 60/90/120 buttons each have a data-seconds value.
   document.querySelectorAll(".timer-btn[data-seconds]").forEach((button) => {

@@ -40,6 +40,7 @@ const RELEASES = [
       "Tap a ⭐ when a set is done and watch the +10 XP float up. Tap it again if you tapped by mistake.",
       "The owl is your coach now: it tells you what you lifted last time and reminds you of the note you left yourself.",
       "Next › lights up when an exercise is done, and the row of emoji at the top lets you jump to any exercise if a machine is busy.",
+      "Rather see the whole day on one page? Tap ☰ List at the top of your workout. Your phone remembers which you like.",
       "Need to add a set or fix a number? Edit sets has the full table. Editing an old workout still shows everything on one page.",
     ],
   },

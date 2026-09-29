@@ -707,13 +707,17 @@ RUNBOOK §5o.
 tick a set; no automatic jump to the next exercise (Next › lights up instead); editing a
 saved workout keeps the old full-list editor; stars ⭐ for sets.
 
-- ✅ **Q4a — One exercise at a time** *(on `dev` 2026-09-29, cache `v58`, awaiting owner
-  test)*: new `workout-screen.js`. Live workouts show one exercise: a row of exercise
+- ✅ **Q4a — One exercise at a time** *(on `dev` 2026-09-29, cache `v58`)*: new `workout-screen.js`. Live workouts show one exercise: a row of exercise
   emoji to jump between, a progress bar for the whole workout, the owl's speech bubble
   (last time + last note), the next set's reps/weight in big boxes, a star per set
   ("+10 XP" pops on a tick), "Edit sets" (the old table, folded), the note button,
   ‹ Previous / Next › (Finish ✓ on the last one) and a "Workout details" fold with the
   date. Same data, same saving. Details in RUNBOOK §5p.
+- ✅ **Q4a+ — Choose your view** *(on `dev` 2026-09-29, cache `v59`, awaiting owner
+  test)*: owner's request after Q4a — a "⭐ One at a time | ☰ List" toggle at the top of
+  a live workout. List is the page-of-everything view; the choice is remembered per
+  device (`gym:workoutView`, default one at a time). In the list, tapping an exercise's
+  name opens it in the one-at-a-time view.
 - ☐ **Q4b — Floating rest timer**: the timer becomes a pill that floats at the bottom of
   the screen ("⏱ 1:24 · +15s · Skip"), started by hand (60 / 90 / 120s).
 

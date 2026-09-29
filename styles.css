@@ -62,6 +62,8 @@
   /* Owl Quest Q4: the live workout screen's stars. */
   --star-done-bg: #fff6d6; /* a ticked set: warm butter tile */
   --star-done-edge: #e8cc6a;
+  /* Q4a+: the chosen half of the workout view toggle (same tint as the active tab). */
+  --view-toggle-current: rgba(185, 167, 224, 0.25);
 
   /* "Ink" buttons: dark on light pages, light on dark ones. Used for the big
      Start workout button, which sits on the colourful Today card where a coral
@@ -122,6 +124,7 @@
 
   --star-done-bg: #4a3f1c; /* a warm glow on the night sky */
   --star-done-edge: #b8912b;
+  --view-toggle-current: rgba(201, 184, 255, 0.18);
 
   --ink: #f1eefb;
   --ink-text: #231d42;
@@ -2632,13 +2635,61 @@ body {
    and hides the long list; without it (editing a saved workout) it's the
    other way round.
    ========================================================================= */
-.sheet--live #workoutList,
-.sheet--live #workoutSaveNote,
-.sheet--live #workoutDateRow {
+.sheet--focus #workoutList,
+.sheet--focus #workoutSaveNote,
+.sheet--focus #workoutDateRow {
   display: none;
 }
-.sheet:not(.sheet--live) #workoutFocus {
+.sheet:not(.sheet--focus) #workoutFocus {
   display: none;
+}
+
+/* Q4a+: the "⭐ One at a time | ☰ List" toggle, only while training. Two
+   halves of one pill; the chosen one is tinted lavender with purple text,
+   like the active tab. */
+.sheet:not(.sheet--live) #workoutViewToggle {
+  display: none;
+}
+.view-toggle {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 16px;
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  box-shadow: 0 3px 0 var(--edge);
+}
+.view-toggle__btn {
+  flex: 1;
+  border: none;
+  border-radius: var(--radius-pill);
+  padding: 8px 10px;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+}
+.view-toggle__btn--current {
+  background: var(--view-toggle-current);
+  color: var(--purple);
+}
+
+/* In the list view while training, an exercise's name is a button that opens
+   it in the one-at-a-time view. Keep it looking like the name, just tappable. */
+.exercise__name--link {
+  border: none;
+  background: none;
+  padding: 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--lavender);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
 }
 #workoutFocus {
   display: flex;

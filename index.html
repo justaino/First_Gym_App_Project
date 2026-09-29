@@ -781,6 +781,14 @@
           </button>
         </header>
 
+        <!-- Owl Quest Q4a+: while training, choose how the workout looks.
+             Only shown for a live workout (not when editing a saved one).
+             app.js remembers the choice on this device (gym:workoutView). -->
+        <div class="view-toggle" id="workoutViewToggle" role="group" aria-label="Workout view">
+          <button class="view-toggle__btn" type="button" data-view="focus">⭐ One at a time</button>
+          <button class="view-toggle__btn" type="button" data-view="list">☰ List</button>
+        </div>
+
         <!-- Saved-as-you-go note -->
         <p class="sheet__note" id="workoutSaveNote">Progress saves automatically as you go.</p>
 
