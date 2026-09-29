@@ -92,7 +92,7 @@ const GUIDE_SECTIONS = [
       "Edit sets opens the full table for the exercise on screen, to add or remove a set or fix a number. Workout details has the date.",
       "Prefer to see the whole day at once? Tap ☰ List at the top of a workout. The app remembers your choice on this phone, and ⭐ One at a time switches back. In the list, tap an exercise's name to open just that one.",
       "Editing an old workout from Recent workouts always shows everything on one page, which is easier for fixing mistakes.",
-      "The rest timer has 60s / 90s / 120s buttons and beeps when it's up. It keeps counting correctly even if you lock your phone or switch apps.",
+      "The rest timer is the dark pill that stays at the bottom of the screen while you scroll. Tap 60s, 90s or 120s to start it, +15s for a bit longer, or Skip to stop. It beeps when it's up, and keeps counting correctly even if you lock your phone or switch apps.",
       "📝 Add note under an exercise is somewhere to leave yourself a message, like \"next week try 2.5kg more\". It saves as you type and stays with that day's workout.",
       "Notes are yours alone. Even close friends who can see your workouts never see them.",
       "Progress saves as you go. Close is safe; Discard throws the session away.",

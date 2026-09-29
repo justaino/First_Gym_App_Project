@@ -711,15 +711,23 @@ saved workout keeps the old full-list editor; stars ⭐ for sets.
   emoji to jump between, a progress bar for the whole workout, the owl's speech bubble
   (last time + last note), the next set's reps/weight in big boxes, a star per set
   ("+10 XP" pops on a tick), "Edit sets" (the old table, folded), the note button,
-  ‹ Previous / Next › (Finish ✓ on the last one) and a "Workout details" fold with the
+  ‹ Previous / Next › (no Next on the last one) and a "Workout details" fold with the
   date. Same data, same saving. Details in RUNBOOK §5p.
-- ✅ **Q4a+ — Choose your view** *(on `dev` 2026-09-29, cache `v59`, awaiting owner
-  test)*: owner's request after Q4a — a "⭐ One at a time | ☰ List" toggle at the top of
+- ✅ **Q4a+ — Choose your view** *(on `dev` 2026-09-29, cache `v59`)*: owner's request after Q4a — a "⭐ One at a time | ☰ List" toggle at the top of
   a live workout. List is the page-of-everything view; the choice is remembered per
   device (`gym:workoutView`, default one at a time). In the list, tapping an exercise's
   name opens it in the one-at-a-time view.
-- ☐ **Q4b — Floating rest timer**: the timer becomes a pill that floats at the bottom of
-  the screen ("⏱ 1:24 · +15s · Skip"), started by hand (60 / 90 / 120s).
+- ✅ **Q4b — Floating rest timer** *(on `dev` 2026-09-29, cache `v60`, awaiting owner
+  test)*: the timer card became a dark "ink" pill (`#restTimer`) stuck to the bottom of
+  the sheet with `position: sticky`, in both views. Idle: "⏱ Rest · 60s 90s 120s";
+  running: "⏱ 1:24 · +15s · Skip" (coral time); done: "Done! 💪" in mint. Started by
+  hand only (owner's decision). Also (owner's feedback): ‹ Previous / Next › are now
+  compact pills at each end of the row, and Next turns **purple** when the exercise is
+  done (it was coral, the same as Finish). The last exercise has no Next (it used to show
+  a small "Finish ✓" right above the big Finish); the row is skipped for a one-exercise
+  workout.
+
+**Phase Q4 is complete** once the owner has tested Q4b. Next up is Q5 (badges).
 
 ### Phase Q5 — Badges ("feathers") ☐
 A badge wall computed from history (first workout, streaks, weight clubs, records…) and a

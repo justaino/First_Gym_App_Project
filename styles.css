@@ -64,6 +64,8 @@
   --star-done-edge: #e8cc6a;
   /* Q4a+: the chosen half of the workout view toggle (same tint as the active tab). */
   --view-toggle-current: rgba(185, 167, 224, 0.25);
+  /* Q4b: the buttons on the rest timer pill (see-through white on dark ink). */
+  --rest-chip-bg: rgba(255, 255, 255, 0.14);
 
   /* "Ink" buttons: dark on light pages, light on dark ones. Used for the big
      Start workout button, which sits on the colourful Today card where a coral
@@ -125,6 +127,7 @@
   --star-done-bg: #4a3f1c; /* a warm glow on the night sky */
   --star-done-edge: #b8912b;
   --view-toggle-current: rgba(201, 184, 255, 0.18);
+  --rest-chip-bg: rgba(35, 29, 66, 0.1); /* the pill is light in dark mode */
 
   --ink: #f1eefb;
   --ink-text: #231d42;
@@ -951,54 +954,65 @@ body {
   color: #fff;
 }
 
-/* ---- Rest timer ---- */
-.timer {
-  text-align: center;
+/* ---- Rest timer (Owl Quest Q4b: a floating pill) ----
+   "position: sticky" keeps it pinned to the bottom of the workout sheet while
+   you scroll, then it settles in its normal place (above Discard / Finish)
+   when you reach the end. It's a dark "ink" pill in light mode and a light one
+   in dark mode (the --ink tokens flip). */
+.rest-pill {
+  position: sticky;
+  bottom: 12px;
+  z-index: 5; /* above the exercise cards as they scroll underneath */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 18px 0 16px;
+  padding: 8px 8px 8px 16px;
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  color: var(--ink-text);
+  box-shadow: 0 4px 0 var(--ink-edge), var(--shadow-soft);
 }
-.timer__display {
-  font-size: 40px;
+.rest-pill__icon {
+  font-size: 18px;
+}
+.rest-pill__display {
+  flex: 1;
+  font-size: 22px;
   font-weight: 800;
-  margin-bottom: 6px;
+  font-variant-numeric: tabular-nums; /* digits don't jiggle as they change */
+  white-space: nowrap;
 }
-/* While counting down, pulse gently in coral */
-.timer__display.is-running {
+/* Counting down: the time turns coral. Finished: mint. */
+.rest-pill.is-running .rest-pill__display {
   color: var(--coral);
-  animation: timer-pulse 1s ease-in-out infinite;
 }
-/* When it reaches zero, flash mint */
-.timer__display.is-done {
+.rest-pill.is-done .rest-pill__display {
   color: var(--mint);
 }
-@keyframes timer-pulse {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.06);
-  }
-}
-
-.timer__buttons {
+.rest-pill__buttons {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: center;
+  gap: 6px;
 }
-.timer-btn {
+.rest-pill__btn {
   border: none;
   cursor: pointer;
-  font-family: inherit;
-  font-weight: 800;
-  font-size: 14px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
   border-radius: var(--radius-pill);
-  padding: 10px 16px;
-  color: var(--text);
-  background-color: rgba(246, 211, 101, 0.3); /* soft butter */
+  padding: 8px 12px;
+  background: var(--rest-chip-bg);
+  color: var(--ink-text);
 }
-.timer-btn--stop {
-  background-color: rgba(154, 154, 154, 0.18); /* soft grey */
-  color: var(--muted);
+.rest-pill__btn--skip {
+  background: var(--coral);
+  color: var(--on-accent);
+}
+/* Idle: only the 60/90/120 buttons. Running: only +15s and Skip. */
+.rest-pill.is-running .rest-pill__idle,
+.rest-pill:not(.is-running) .rest-pill__running {
+  display: none;
 }
 
 /* ---- History card (a saved workout) ---- */
@@ -2929,13 +2943,25 @@ body {
   margin-bottom: 6px;
 }
 
-/* ‹ Previous / Next › — two equal buttons side by side. */
+/* ‹ Previous / Next › — two compact pills, one at each end of the row, so
+   they don't compete with the big Finish button below. */
 .focus-nav {
   display: flex;
+  justify-content: space-between;
   gap: 12px;
 }
 .focus-nav .btn {
-  flex: 1;
+  font-size: 15px;
+  padding: 9px 20px;
+}
+/* Next, once the exercise is done: purple, like the active tab and avatar. */
+.btn--next-ready {
+  background-color: var(--purple);
+  color: var(--avatar-text);
+  box-shadow: 0 4px 0 var(--purple-edge);
+}
+.btn--next-ready:active {
+  box-shadow: 0 1px 0 var(--purple-edge);
 }
 /* The ghost buttons here get a card background so they look tappable. */
 .focus-nav .btn--ghost {

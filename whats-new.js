@@ -41,6 +41,7 @@ const RELEASES = [
       "The owl is your coach now: it tells you what you lifted last time and reminds you of the note you left yourself.",
       "Next › lights up when an exercise is done, and the row of emoji at the top lets you jump to any exercise if a machine is busy.",
       "Rather see the whole day on one page? Tap ☰ List at the top of your workout. Your phone remembers which you like.",
+      "The rest timer now floats at the bottom of the screen, so it's always in reach. Start it with 60s, 90s or 120s, add +15s if you need a bit longer, or Skip.",
       "Need to add a set or fix a number? Edit sets has the full table. Editing an old workout still shows everything on one page.",
     ],
   },

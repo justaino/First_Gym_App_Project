@@ -758,9 +758,18 @@ when the exercise is done, otherwise `buildLastTimeHint()` + "Can you match it?"
 "First time on this one" — plus `buildLastNoteHint()`) → the next unticked set in big
 boxes → a star per set (`tapStar()` toggles `done`, saves, redraws and pops "+10 XP") →
 "Edit sets" fold (the old `buildWorkoutSetRow()` rows + Add set) → note button
-(`buildWorkoutNote()`) → ‹ Previous / Next › (coral once the exercise is done; "Finish ✓"
-calls `finishWorkout()` on the last) + "Up next" → "Workout details" fold with a date box
+(`buildWorkoutNote()`) → ‹ Previous / Next › (purple once the exercise is done; no Next
+on the last — the big Finish is the way out) + "Up next" → "Workout details" fold with a date box
 that copies into `#workoutDateInput` and calls `handleWorkoutDateChange()`.
+
+**Rest timer (Q4b):** the `#restTimer` pill sits just above Discard / Finish with
+`position: sticky; bottom: 12px`, so it floats over the content while you scroll (both
+views) and settles in place at the end. The state classes moved from `#timerDisplay` to
+`#restTimer`: `is-running` swaps the 60/90/120s buttons (`.rest-pill__idle`) for +15s
+(`#addRestBtn` → `addRestTime(15)`, which moves `restEndsAt` on) and Skip
+(`#stopTimerBtn` → `resetTimerDisplay()`); `is-done` turns the text mint. The countdown
+itself (wall-clock `restEndsAt`, `visibilitychange` catch-up, beep) is unchanged. Colours:
+`--ink` / `--ink-text` / `--ink-edge` (they flip in dark mode) + new `--rest-chip-bg`.
 
 **Memory only:** `focusExerciseIndex` (which exercise is showing) and `focusEditSetsOpen`.
 Starting or resuming opens on `firstUnfinishedExerciseIndex()`. Nothing about the data or
@@ -839,7 +848,26 @@ Newest first. Add a line here whenever behaviour changes.
 > Entries below marked "on `dev`, awaiting owner test" were written at build time.
 > Everything up to 2026-07-28 has since been tested and released to `main`.
 
-- **2026-09-29** — **Owl Quest Q4a+ — choose your view (on `dev`, awaiting owner test):**
+- **2026-09-29** — **Owl Quest Q4b — floating rest timer (on `dev`, awaiting owner test):**
+  - `index.html`: the `.card.timer` became `.rest-pill#restTimer` (icon, `#timerDisplay`
+    with `role="timer"`, 60/90/120s buttons, new `#addRestBtn` "+15s", `#stopTimerBtn`
+    now labelled "Skip").
+  - `app.js`: `startRest()`, `finishRest()`, `stopRest()`, `resetTimerDisplay()` put
+    `is-running` / `is-done` on `#restTimer` instead of the display; idle text "Rest"
+    (was "Rest timer"). New `addRestTime(seconds)`. The duration buttons are selected by
+    `.rest-pill__btn[data-seconds]`; +15s wired in `init()`.
+  - `styles.css`: old `.timer*` / `.timer-btn*` rules replaced by `.rest-pill*`; new token
+    `--rest-chip-bg` (light + dark).
+  - Guide (Workout mode), What's new, ROADMAP (Q4 complete), §5p. Cache `v60`.
+  - Owner's feedback, same step: `.focus-nav .btn` are compact (15px, `9px 20px`, no
+    longer `flex: 1`; the row is `space-between`), and a finished exercise's Next uses
+    the new `.btn--next-ready` (`--purple` / `--avatar-text` / `--purple-edge`) instead of
+    `btn--primary`, so it doesn't match the coral Finish. Cache `v61`.
+  - Then (owner's choice "A"): `buildFocusNav()` no longer adds the small "Finish ✓" on
+    the last exercise — the big Finish below is the only one — and skips the whole row
+    when the workout has a single exercise. Cache `v62`.
+
+- **2026-09-29** — **Owl Quest Q4a+ — choose your view (committed to `dev`):**
   owner's request: people should be able to see the whole day without clicking through.
   - `app.js`: new key `STORAGE_KEYS.workoutView` (`gym:workoutView`), `WORKOUT_VIEWS`,
     `loadWorkoutView()`, `saveWorkoutView()`, `isFocusViewShowing()`,

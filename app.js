@@ -4635,9 +4635,11 @@ function startRest(seconds) {
   restRemaining = seconds;
   restEndsAt = Date.now() + seconds * 1000; // the moment it should hit zero
 
-  const display = document.getElementById("timerDisplay");
-  display.classList.remove("is-done");
-  display.classList.add("is-running");
+  // Owl Quest Q4b: the state lives on the whole floating pill (#restTimer), so
+  // styles.css can swap its buttons: 60/90/120s when idle, +15s/Skip when running.
+  const pill = document.getElementById("restTimer");
+  pill.classList.remove("is-done");
+  pill.classList.add("is-running");
   updateTimerDisplay();
 
   // Tick a few times a second. Each tick recalculates the time left from the
@@ -4662,19 +4664,27 @@ function tickRest() {
 // Called when the countdown reaches zero: beep + show "Done".
 function finishRest() {
   stopRest();
-  const display = document.getElementById("timerDisplay");
-  display.textContent = "Done! 💪";
-  display.classList.add("is-done");
+  document.getElementById("timerDisplay").textContent = "Done! 💪";
+  document.getElementById("restTimer").classList.add("is-done");
   playBeep();
 }
 
-// Stop the timer (used by Stop button, finishing, and closing the sheet).
+// Stop the timer (used by finishing, closing the sheet, and resetting).
 function stopRest() {
   if (restIntervalId !== null) {
     clearInterval(restIntervalId);
     restIntervalId = null;
   }
-  document.getElementById("timerDisplay").classList.remove("is-running");
+  document.getElementById("restTimer").classList.remove("is-running");
+}
+
+// Owl Quest Q4b: "+15s" — push the end time back while the timer is running.
+function addRestTime(seconds) {
+  if (restIntervalId === null) {
+    return; // nothing running
+  }
+  restEndsAt += seconds * 1000;
+  tickRest(); // redraw straight away
 }
 
 // Show the time left as M:SS (e.g. "1:30").
@@ -4686,12 +4696,12 @@ function updateTimerDisplay() {
     minutes + ":" + paddedSeconds;
 }
 
-// Reset the timer back to its idle look (called when a workout starts).
+// Reset the timer back to its idle look (called when a workout starts, and by
+// the Skip button).
 function resetTimerDisplay() {
   stopRest();
-  const display = document.getElementById("timerDisplay");
-  display.classList.remove("is-done");
-  display.textContent = "Rest timer";
+  document.getElementById("restTimer").classList.remove("is-done");
+  document.getElementById("timerDisplay").textContent = "Rest";
 }
 
 // Play a friendly double-beep using the browser's Web Audio API (no sound files).
@@ -5528,15 +5538,19 @@ function init() {
   });
 
   // Rest timer: the 60/90/120 buttons each have a data-seconds value.
-  document.querySelectorAll(".timer-btn[data-seconds]").forEach((button) => {
+  document.querySelectorAll(".rest-pill__btn[data-seconds]").forEach((button) => {
     button.addEventListener("click", () => {
       startRest(Number(button.dataset.seconds));
     });
   });
-  // The Stop button stops the countdown and resets the display.
+  // Skip stops the countdown and puts the pill back to its idle look.
   document
     .getElementById("stopTimerBtn")
     .addEventListener("click", resetTimerDisplay);
+  // +15s adds a little more rest to a running timer (Q4b).
+  document
+    .getElementById("addRestBtn")
+    .addEventListener("click", () => addRestTime(15));
 
   // When you come BACK to the app (switch back, unlock the screen), immediately
   // re-check a running timer — phones freeze our code in the background, so this

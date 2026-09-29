@@ -10,7 +10,7 @@
     Set 2 of 3   [ 10 ] reps [ 40 ] kg  ← the next set to do, big and editable
     ⭐ ⭐ ☆                               ← tap a star when a set is done
     ▸ Edit sets   📝 Add note           ← the full set table, folded away
-    ‹ Previous          Next ›          ← (Next becomes "Finish ✓" at the end)
+    ‹ Previous          Next ›          ← (no Next on the last one: use Finish)
     Up next: 💪 Overhead Press · 3 sets
     ▸ Workout details (date)
 
@@ -399,8 +399,9 @@ function buildEditSets(entryIndex, entry) {
   return details;
 }
 
-// ‹ Previous / Next › (or "Finish ✓" on the last exercise), then a line
-// saying what's next.
+// ‹ Previous / Next ›, then a line saying what's next. The last exercise has no
+// Next: the big Finish button below is the way out (the owl says so), so there
+// aren't two Finish buttons stacked on top of each other.
 function buildFocusNav(entryIndex, entry) {
   const entries = activeSession.entries;
   const isFirst = entryIndex === 0;
@@ -420,22 +421,23 @@ function buildFocusNav(entryIndex, entry) {
   prev.disabled = isFirst;
   prev.addEventListener("click", () => goToExercise(entryIndex - 1));
 
-  const next = document.createElement("button");
-  next.type = "button";
-  if (isLast) {
-    next.className = "btn btn--primary";
-    next.textContent = "Finish ✓";
-    next.addEventListener("click", finishWorkout);
-  } else {
-    // Next "lights up" (coral) once this exercise is done.
-    next.className = complete ? "btn btn--primary" : "btn btn--ghost";
+  nav.appendChild(prev);
+
+  if (!isLast) {
+    // Next "lights up" (purple) once this exercise is done. Purple rather than
+    // coral, so it never looks like the Finish button.
+    const next = document.createElement("button");
+    next.type = "button";
+    next.className = complete ? "btn btn--next-ready" : "btn btn--ghost";
     next.textContent = "Next ›";
     next.addEventListener("click", () => goToExercise(entryIndex + 1));
+    nav.appendChild(next);
   }
 
-  nav.appendChild(prev);
-  nav.appendChild(next);
-  wrap.appendChild(nav);
+  // A one-exercise workout needs neither button, so skip the row entirely.
+  if (!(isFirst && isLast)) {
+    wrap.appendChild(nav);
+  }
 
   // "Up next: 💪 Overhead Press · 3 sets"
   if (!isLast) {

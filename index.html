@@ -809,16 +809,20 @@
              look; the same things sit in a "Workout details" fold instead. -->
         <div id="workoutFocus"></div>
 
-        <!-- Rest timer -->
-        <div class="card timer">
-          <div class="timer__display" id="timerDisplay">Rest timer</div>
-          <div class="timer__buttons">
-            <button class="timer-btn" type="button" data-seconds="60">60s</button>
-            <button class="timer-btn" type="button" data-seconds="90">90s</button>
-            <button class="timer-btn" type="button" data-seconds="120">120s</button>
-            <button class="timer-btn timer-btn--stop" type="button" id="stopTimerBtn">
-              Stop
-            </button>
+        <!-- Rest timer (Owl Quest Q4b): a dark pill that floats at the bottom
+             of the screen while you scroll, in both workout views. You start
+             it yourself. Idle it shows 60s / 90s / 120s; while counting down
+             it shows the time, +15s and Skip. app.js puts "is-running" or
+             "is-done" on #restTimer and styles.css swaps the buttons. -->
+        <div class="rest-pill" id="restTimer">
+          <span class="rest-pill__icon" aria-hidden="true">⏱</span>
+          <span class="rest-pill__display timer__display" id="timerDisplay" role="timer">Rest</span>
+          <div class="rest-pill__buttons">
+            <button class="rest-pill__btn rest-pill__idle" type="button" data-seconds="60">60s</button>
+            <button class="rest-pill__btn rest-pill__idle" type="button" data-seconds="90">90s</button>
+            <button class="rest-pill__btn rest-pill__idle" type="button" data-seconds="120">120s</button>
+            <button class="rest-pill__btn rest-pill__running" type="button" id="addRestBtn">+15s</button>
+            <button class="rest-pill__btn rest-pill__running rest-pill__btn--skip" type="button" id="stopTimerBtn">Skip</button>
           </div>
         </div>
 
