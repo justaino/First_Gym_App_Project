@@ -31,6 +31,19 @@
 const RELEASES = [
   {
     date: "2026-09-29",
+    title: "Collect feathers",
+    intro:
+      "The Progress tab is now called Badges, and it has something new to " +
+      "collect at the top.",
+    items: [
+      "Earn feathers for showing up, streaks, personal records, early starts, late sessions and more. There are 18 to find.",
+      "Your past workouts count, so open Badges and see which ones you've already got.",
+      "Tap any feather to see how to earn it and how close you are. Next feather shows the one you're nearest to.",
+      "Your stats, records and charts are all still there, just underneath.",
+    ],
+  },
+  {
+    date: "2026-09-29",
     title: "One exercise at a time",
     intro:
       "Training mode has been rebuilt so it's easier to use with one hand " +

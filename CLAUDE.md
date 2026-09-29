@@ -39,6 +39,7 @@ JavaScript frameworks). Build accordingly: explain things simply and comment the
 | `xp.js` | XP and levels (computed from saved workouts, never stored) |
 | `week-path.js` | The "This week" stepping-stone path on Today (computed, never stored) |
 | `workout-screen.js` | The live workout screen: one exercise at a time, stars, the owl coach |
+| `badges.js` | Feathers (badges) on the Badges tab — computed from history, never stored |
 | `icons.js` | The app's icons (Lucide + Phosphor Duotone SVGs, with their licences) |
 | `exercise-library.js` | Data only: built-in exercise suggestions |
 | `guide.js` | In-app guide (wording in lists at the top) |
@@ -148,8 +149,8 @@ and give any new colour a dark-mode value too.
 - **Fonts:** **Baloo 2** (`--font-display`) for headings, titles, buttons and big
   numbers; **Nunito** (`--font-body`) for sentences, labels and forms. Both come from
   Google Fonts.
-- Floating, rounded bottom tab bar with **four** tabs (Today, Schedule, Progress,
-  Friends), icon + label; the active tab is tinted lavender with purple text. **Settings
+- Floating, rounded bottom tab bar with **four** tabs (Today, Schedule, Badges, Friends;
+  the Badges tab is still called `progress` in the code), icon + label; the active tab is tinted lavender with purple text. **Settings
   opens from the round purple avatar** (the profile's initial) in the top bar, which also
   carries the What's new dot. Emoji as exercise icons. The owl is the app's mascot.
 - **Icons (owner's choice, 2026-09-29):** **Lucide** (thin outlines) for the tab bar and

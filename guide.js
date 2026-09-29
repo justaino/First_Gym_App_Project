@@ -100,10 +100,13 @@ const GUIDE_SECTIONS = [
     ],
   },
   {
-    icon: "📈",
-    title: "Progress",
-    summary: "Streaks, records and charts",
+    icon: "🪶",
+    title: "Badges",
+    summary: "Feathers, streaks, records and charts",
     items: [
+      "Your feathers are badges you earn by training: your first workout, streaks, records, early starts and more. Earned ones are in colour, the rest are grey.",
+      "Tap a feather to see how to earn it and how close you are. Next feather shows the one you're nearest to.",
+      "Your past workouts count, so you may have a few already.",
       "The ring at the top shows workouts done this week against your weekly goal (set it in Settings).",
       "Week streak counts how many weeks in a row you've trained at least once.",
       "The 12-week grid is one square per day, and darker means more sets. Tap a square to see that day.",
@@ -136,7 +139,7 @@ const GUIDE_SECTIONS = [
     items: [
       "Settings opens from the round avatar with your initial, in the top corner. A little coral dot on it means there's something new on the What's new page.",
       "Your workouts are saved to your account, so logging in on another device brings everything with you.",
-      "Weekly goal sets the target for the ring on Progress.",
+      "Weekly goal sets the target for the ring on Badges.",
       "Weight unit switches every label between kg and lb. It only changes the label, so your saved numbers are never converted.",
       "The 🌙 button in the top corner switches between light and dark. It's remembered on this device only.",
       "Backup → Export downloads a copy of your data as a file. Import merges one back in. Worth doing before any big clear-out.",

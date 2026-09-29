@@ -24,6 +24,7 @@ devices (see §5d — the cloud is the source of truth, localStorage is the cach
 | `supabase.js` / `auth.js` | The cloud connection and the login gate (Phase 7). |
 | `friends.js` | The Friends tab: requests, buddies, nudges, close friends (Phase 12). |
 | `guide.js` | The in-app guide. All its wording is in two lists at the top (Phase 13). |
+| `badges.js` | Feathers (badges) on the Badges tab (Owl Quest Q5). The list is at the top. |
 | `icons.js` | The app's icons: Lucide (tabs, badges) + Phosphor Duotone (buttons) as SVGs, with their licences. |
 | `xp.js` | XP and levels, worked out from saved workouts. The rules are at the top (Owl Quest Q2). |
 | `week-path.js` | The "This week" stepping-stone path on Today (Owl Quest Q3). |
@@ -729,6 +730,33 @@ Colours are `--stone-*`, `--path-line` and `--on-accent` tokens (light + dark).
 **Testing:** add an exercise to another day in Schedule → a new stone appears. To see a
 missed stone, plan something for a day earlier this week that you didn't train.
 
+## 5r. Feathers (badges) — Owl Quest Q5
+
+The **Badges** tab (still `data-view="progress"` / `renderProgress()` in the code; only the
+label and title changed) starts with the "Your feathers" card, drawn by `renderFeathers()`
+in `badges.js` into `#feathers`. Nothing is stored: it's recalculated from the active
+profile's finished workouts every time the tab draws.
+
+- **The list:** `FEATHERS` at the top of `badges.js` — `id`, Lucide `icon`, `tone`
+  (medallion colour), `name`, `how`, `measure`, `target`, optional `unit` (progress words;
+  `{unit}` becomes kg/lb; no unit = a yes/no feather that says "Not yet").
+- **The numbers:** `computeFeatherStats()` returns `workouts`, `longestStreak` (longest
+  run of weeks with a workout, `longestWeekStreak()`), `busiestWeek` (most workouts in one
+  Monday–Sunday week), `weekendWarrior` (a Saturday then the Sunday after,
+  `trainedOnAWeekend()`), `records` (`countPersonalRecords()` from xp.js), `sets`,
+  `weightMoved` (reps × weight of ticked sets), `differentExercises`, `notes` (non-empty
+  entry notes), `earlyBird` (a workout **started** before 07:00), `lateShift` (started at
+  21:00 or later) and `level` (xp.js). A workout whose date was edited is at noon, so it
+  never counts as early or late.
+- **Earned** = `current >= target` (`computeFeathers()`). **Next feather** = the locked
+  feather with a unit that's furthest along; ties go to the one earlier in the list.
+- **Tapping** a medallion sets `selectedFeatherId` (memory only) and redraws with a details
+  box; tapping it again closes it.
+- **Colours:** `--medal-*` tokens (butter, coral, mint, lavender + edges, `--medal-ink`,
+  `--medal-locked*`), light and dark.
+- **Console:** `listFeathers()` prints a table of every feather and your progress;
+  `computeFeatherStats()` shows the raw numbers.
+
 ## 5q. Icons (icons.js)
 
 Two open-source sets, copied in as SVG text (no library, works offline):
@@ -872,7 +900,20 @@ Newest first. Add a line here whenever behaviour changes.
 > Entries below marked "on `dev`, awaiting owner test" were written at build time.
 > Everything up to 2026-07-28 has since been tested and released to `main`.
 
-- **2026-09-29** — **Modern icons (on `dev`, awaiting owner test):** see §5q.
+- **2026-09-29** — **Owl Quest Q5a — the feathers card (on `dev`, awaiting owner test):**
+  see §5r.
+  - New `badges.js` (in `index.html` after `workout-screen.js`, and in `APP_SHELL`).
+  - `index.html`: the tab label and view title are now **Badges** (`data-view` is still
+    `progress`); new `#feathers` above `#insights`; the tab uses the Lucide `badges`
+    (award) icon. `renderProgress()` calls `renderFeathers()` first.
+  - `icons.js`: the Progress chart icon became `badges`; 19 Lucide badge icons added.
+  - `styles.css`: `.feathers*`, `.feather*`, `.feather-medal*`, `.feather-detail*`,
+    `.feather-next*`, `.feather-bar*`; new `--medal-*` tokens (light + dark).
+  - Guide (the section is now "Badges"), What's new ("Collect feathers"), ROADMAP (Q5
+    split), `CLAUDE.md`. Cache `v64`.
+
+- **2026-09-29** — **Modern icons (tested by the owner, staged for its own commit):**
+  see §5q.
   - New `icons.js` (19 icons + licences; in `index.html` before `app.js`, and in
     `APP_SHELL`): `ICONS`, `iconSvg(name)`, `fillIconPlaceholders()`.
   - `index.html`: `data-icon` placeholders on the four tabs, the theme button, Start

@@ -2248,6 +2248,10 @@ function renderProgress() {
   list.innerHTML = "";
   document.getElementById("insights").innerHTML = ""; // cleared; filled below
 
+  // Owl Quest Q5a: the "Your feathers" card at the top (badges.js). It clears
+  // itself when there's no profile.
+  renderFeathers();
+
   const activeProfile = getActiveProfile();
   if (!activeProfile) {
     subtitle.textContent = "No profile selected";

@@ -64,6 +64,20 @@
   --star-done-edge: #e8cc6a;
   --star-gold: #e3a21a; /* the filled star on a done set (deep enough on butter) */
   --star-empty: #b3abcc; /* the outline star on a set still to do */
+
+  /* Owl Quest Q5a: feather medallions on the Badges tab. */
+  --medal-butter: #f6d365;
+  --medal-butter-edge: #d9ae3a;
+  --medal-coral: #f5a3a3;
+  --medal-coral-edge: #d97676;
+  --medal-mint: #9fe0da;
+  --medal-mint-edge: #5fc4bc;
+  --medal-lavender: #d6caf3;
+  --medal-lavender-edge: #a996dc;
+  --medal-ink: #2c2546; /* the icon on an earned medallion */
+  --medal-locked: #ece8f6;
+  --medal-locked-edge: #d9d2ee;
+  --medal-locked-ink: #aaa3c4;
   /* Q4a+: the chosen half of the workout view toggle (same tint as the active tab). */
   --view-toggle-current: rgba(185, 167, 224, 0.25);
   /* Q4b: the buttons on the rest timer pill (see-through white on dark ink). */
@@ -130,6 +144,19 @@
   --star-done-edge: #b8912b;
   --star-gold: #f6d365;
   --star-empty: #7a71a8;
+
+  --medal-butter: #f6d365;
+  --medal-butter-edge: #b8912b;
+  --medal-coral: #ef7c7c;
+  --medal-coral-edge: #b04f4f;
+  --medal-mint: #5fc4bc;
+  --medal-mint-edge: #3a8f88;
+  --medal-lavender: #b9a7e0;
+  --medal-lavender-edge: #7f6cb5;
+  --medal-ink: #231d42;
+  --medal-locked: #2d2654;
+  --medal-locked-edge: #1c1738;
+  --medal-locked-ink: #6f66a0;
   --view-toggle-current: rgba(201, 184, 255, 0.18);
   --rest-chip-bg: rgba(35, 29, 66, 0.1); /* the pill is light in dark mode */
 
@@ -3025,4 +3052,157 @@ body {
   width: 20px;
   height: 20px;
   vertical-align: -0.2em;
+}
+
+
+/* =========================================================================
+   OWL QUEST Q5a — "Your feathers" on the Badges tab (drawn by badges.js)
+   ========================================================================= */
+.feathers {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.feathers__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+}
+.feathers__title {
+  font-size: 20px;
+  font-weight: 800;
+}
+.feathers__count {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--muted);
+}
+
+/* Three medallions per row. */
+.feathers__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px 8px;
+}
+.feather {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 2px;
+  border: none;
+  border-radius: 18px;
+  background: none;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+}
+.feather--locked {
+  color: var(--muted);
+}
+.feather--selected {
+  background: var(--view-toggle-current); /* the same soft lavender tint as the toggle */
+}
+.feather:focus-visible {
+  outline: 3px solid var(--purple);
+  outline-offset: 2px;
+}
+.feather__name {
+  overflow-wrap: anywhere;
+}
+
+/* The round medallion: a coloured disc with a solid edge underneath (like the
+   chunky buttons), a soft white ring inside, and a Lucide icon in the middle. */
+.feather-medal {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: var(--medal-ink);
+}
+.feather-medal .ic {
+  width: 30px;
+  height: 30px;
+  vertical-align: 0;
+}
+.feather-medal--butter {
+  background: var(--medal-butter);
+  box-shadow: 0 4px 0 var(--medal-butter-edge), inset 0 0 0 4px rgba(255, 255, 255, 0.35);
+}
+.feather-medal--coral {
+  background: var(--medal-coral);
+  box-shadow: 0 4px 0 var(--medal-coral-edge), inset 0 0 0 4px rgba(255, 255, 255, 0.35);
+}
+.feather-medal--mint {
+  background: var(--medal-mint);
+  box-shadow: 0 4px 0 var(--medal-mint-edge), inset 0 0 0 4px rgba(255, 255, 255, 0.35);
+}
+.feather-medal--lavender {
+  background: var(--medal-lavender);
+  box-shadow: 0 4px 0 var(--medal-lavender-edge), inset 0 0 0 4px rgba(255, 255, 255, 0.35);
+}
+/* Not earned yet: grey, whatever its colour will be. (Comes after the colours
+   so it wins.) */
+.feather-medal--locked {
+  background: var(--medal-locked);
+  box-shadow: 0 4px 0 var(--medal-locked-edge);
+  color: var(--medal-locked-ink);
+}
+.feather-medal--small {
+  width: 46px;
+  height: 46px;
+}
+.feather-medal--small .ic {
+  width: 22px;
+  height: 22px;
+}
+
+/* The details of the tapped feather, and the "Next feather" row. */
+.feather-detail,
+.feather-next {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: var(--bg);
+  font-weight: 700;
+}
+.feather-detail__text,
+.feather-next__text {
+  flex: 1;
+  min-width: 0;
+}
+.feather-detail__name,
+.feather-next__title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 16px;
+}
+.feather-detail__how,
+.feather-detail__progress,
+.feather-next__progress {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.feather-bar {
+  height: 8px;
+  margin-top: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--border);
+  overflow: hidden;
+}
+.feather-bar__fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--purple);
 }
